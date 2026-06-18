@@ -57,7 +57,7 @@ const steps = [
   {
     icon: Calculator,
     title: "Margem e nota organizadas",
-    desc: "Cálculo automático da margem e dados da nota fiscal prontos pro seu contador.",
+    desc: "Cálculo automático da margem e dados da nota prontos pro seu contador.",
   },
 ];
 
