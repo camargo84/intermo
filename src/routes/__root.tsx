@@ -94,14 +94,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         name: "description",
         content:
-          "Intermo: do WhatsApp ao contrato assinado em menos de 5 minutos. Plataforma de intermediação para empresários que vendem sob encomenda.",
+          "Intermo: transforme a conversa em contrato assinado em minutos, com validade jurídica. Para empresários que vendem sob encomenda.",
       },
       { name: "theme-color", content: "#1f3a7a" },
       { property: "og:site_name", content: "Intermo" },
       { property: "og:title", content: "Intermo — Intermediar ficou simples." },
       {
         property: "og:description",
-        content: "Do WhatsApp ao contrato assinado em menos de 5 minutos.",
+        content: "Da conversa ao contrato assinado em minutos, com validade jurídica.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
