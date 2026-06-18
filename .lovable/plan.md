@@ -1,16 +1,25 @@
-## Revisão de copy da landing — remoção de promessas de WhatsApp e nota fiscal
+## Objetivo
+Remover toda menção a "nota fiscal", "NFS", "imposto" e "DAS" da landing page (`src/routes/index.tsx`), ajustando copy e ícone conforme especificado. Nenhuma alteração de layout, paleta ou tokens.
 
-Escopo: landing page (hero, header, pricing, FAQ e rodapé) + meta tags globais.
+## Escopo
+Apenas `src/routes/index.tsx`. Meta tags em `__root.tsx` já estão limpas.
 
-### Problemas encontrados
-1. **Meta tags em `src/routes/__root.tsx`** — description e `og:description` ainda dizem "Do WhatsApp ao contrato assinado em menos de 5 minutos".
-2. **Step em `src/routes/index.tsx`** — "Margem e nota organizadas" ainda usa "dados da **nota fiscal** prontos pro seu contador", quando a copy aprovada é "dados da **nota** prontos pro seu contador" (sem a palavra "fiscal", pois não emitimos NF).
+## Mudanças
 
-### Correções
-- Substituir as meta tags de `__root.tsx` para remover a menção ao WhatsApp e manter a narrativa de "transformar a conversa em contrato" (alinhada ao hero atual).
-- Substituir "nota fiscal" por "nota" na descrição do passo 4 em `index.tsx`.
+1. **Passo 4 — "Como funciona"**
+   - Título: `Margem e nota organizadas` → `Tudo pronto pro seu contador`
+   - Texto: `Cálculo automático da margem e dados da nota prontos pro seu contador.` → `As informações de cada transação ficam organizadas e prontas pra você enviar ao seu contador. Sem planilha, sem garimpo.`
+   - Ícone: `Calculator` → `FileSpreadsheet` (neutro, organização/planilha)
 
-Nenhuma outra menção a WhatsApp ou emissão de nota fiscal foi encontrada no restante do projeto.
+2. **Lista de benefícios (Pricing)**
+   - Substituir item `Dados da nota prontos pro contador` por `Transações organizadas pro seu contador`
+   - Remover qualquer outro item que cite imposto/DAS/NF (nenhum presente atualmente)
 
-### Fora do escopo
-Sem alterações em layout, paleta, tokens, componentes de marca, shell, dashboard ou rotas de auth/legais.
+3. **Bloco "Por que Intermo" (diferenciais)**
+   - Subtítulo da seção: ajustar `organiza a nota` para referência neutra às informações/transações
+   - Card "Mais que assinatura": `Margem calculada automaticamente e dados da nota prontos pro seu contador` → `Margem calculada automaticamente e transações organizadas pro seu contador`
+
+## O que NÃO muda
+- Layout, cores, tipografia, espaçamentos, animações
+- Componentes de brand, shell, auth, rotas autenticadas
+- Termos, privacidade, e-mails

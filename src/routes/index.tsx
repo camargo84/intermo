@@ -2,9 +2,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowRight,
   BadgeCheck,
-  Calculator,
   CheckCircle2,
   FileSignature,
+  FileSpreadsheet,
   PenLine,
   ShieldCheck,
   Sparkles,
