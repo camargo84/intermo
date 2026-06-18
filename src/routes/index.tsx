@@ -55,9 +55,9 @@ const steps = [
     desc: "O cliente assina pelo link com validade jurídica garantida pela Lei 14.063/2020.",
   },
   {
-    icon: Calculator,
-    title: "Margem e nota organizadas",
-    desc: "Cálculo automático da margem e dados da nota prontos pro seu contador.",
+    icon: FileSpreadsheet,
+    title: "Tudo pronto pro seu contador",
+    desc: "As informações de cada transação ficam organizadas e prontas pra você enviar ao seu contador. Sem planilha, sem garimpo.",
   },
 ];
 
@@ -66,7 +66,7 @@ const planFeatures = [
   "Assinatura digital com validade jurídica inclusa",
   "Modelo de contrato sempre atualizado",
   "Cálculo automático de margem",
-  "Dados da nota prontos pro contador",
+  "Transações organizadas pro seu contador",
   "Sem fidelidade",
 ];
 
@@ -162,7 +162,7 @@ function Landing() {
             <div className="mx-auto max-w-2xl text-center">
               <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Por que Intermo</h2>
               <p className="mt-4 text-muted-foreground">
-                Assinar um PDF qualquer um faz. A Intermo entrega o contrato certo, calcula sua margem e organiza a nota — não só a assinatura.
+                Assinar um PDF qualquer um faz. A Intermo entrega o contrato certo, calcula sua margem e organiza as transações — não só a assinatura.
               </p>
             </div>
             <div className="mt-12 grid gap-6 md:grid-cols-3">
@@ -190,7 +190,7 @@ function Landing() {
                 </span>
                 <h3 className="mt-4 text-lg font-semibold">Mais que assinatura</h3>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Margem calculada automaticamente e dados da nota prontos pro seu contador — tudo no mesmo lugar.
+                  Margem calculada automaticamente e transações organizadas pro seu contador — tudo no mesmo lugar.
                 </p>
               </Card>
             </div>
