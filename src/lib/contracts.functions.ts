@@ -114,6 +114,10 @@ export const sendContractToAutentique = createServerFn({ method: "POST" })
     z.object({ contractId: z.string().uuid() }).parse(input),
   )
   .handler(async ({ data, context }) => {
+    const { data: hasSub } = await context.supabase
+      .rpc("has_active_subscription", { _user_id: context.userId });
+    if (!hasSub) throw new Error("Sua assinatura não está ativa.");
+
     const { data: contract, error } = await context.supabase
       .from("contracts")
       .select("*")
