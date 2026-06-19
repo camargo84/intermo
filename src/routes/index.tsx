@@ -229,10 +229,10 @@ function Landing() {
                   ))}
                 </ul>
                 <Button size="lg" asChild className="mt-8 w-full bg-brand text-primary-foreground hover:opacity-90">
-                  <Link to="/signup">Experimente grátis por 7 dias</Link>
+                  <Link to="/signup">Assinar agora</Link>
                 </Button>
                 <p className="mt-3 text-center text-xs text-muted-foreground">
-                  Sem cartão. Até 3 contratos no teste.
+                  7 dias de garantia. Não gostou? Devolvemos 100%. Cancele quando quiser.
                 </p>
               </div>
             </Card>
