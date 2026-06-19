@@ -1,66 +1,108 @@
-# Pele "Sandclock terminal" no Intermo — implementação
+## Decisões assumidas (escolhi pelo menor custo de manutenção)
 
-Aplico o sistema visual do `DESIGN.md` na landing Intermo. Produto intacto: contratos para vendas sob encomenda, R$ 119/mês, garantia de 7 dias, CTA "Assinar agora". Pele + recomposição visual, sem mexer em auth, server functions, webhook, rotas autenticadas, contratos, PDFs, Termos, Privacidade ou dashboard.
+| Item | Escolha | Por quê |
+|---|---|---|
+| Pagamento | **AbacatePay** (PIX recorrente + cartão) via API + webhook | Pedido do usuário; provedor BR, sem MOR estrangeiro |
+| Modelo de cobrança | **Cobrar e reembolsar em até 7 dias** se pedido | PIX não suporta "trial gratuito" nativo; reembolso manual é raro e simples |
+| NFS | **Escondido da v1** (rota fica, fora do menu) | Integração fiscal é projeto à parte, gera ticket pesado |
+| Financeiro v1 | Receita do mês e margem; **remove "DAS estimado"** | Cálculo tributário depende de regime; promete suporte que não queremos |
+| Auth | E-mail/senha + Google + **HIBP ligado** + confirmação obrigatória | Padrão Lovable, menos reset de senha vazada |
+| Domínio | Publica em `.lovable.app` primeiro, domínio próprio depois | Destrava go-live sem esperar DNS |
+| E-mails | Lovable Email com subdomínio `notify.<dominio>` (quando o domínio vier) | Menos manutenção que SMTP próprio |
+| Observabilidade | `last_error` já existe + página admin de falhas | Não introduzir Sentry externo agora |
 
-## Decisões já travadas
-- **Satoshi** (Fontshare) como substituto de Aeonik.
-- **Painel de stats**: fade-in único ao entrar na viewport, sem loop, com `prefers-reduced-motion` respeitado. Valores qualitativos (sem números fabricados); sem badge `DEMO`.
-- **ThemeToggle removido** da landing (dark-only). Mantido nos shells autenticados.
-- **Base legal**: NÃO citar número de lei. Selo da strip diz apenas "Validade jurídica".
+Se algo aí estiver errado, me corrige antes de eu começar.
 
-## 1. Tokens — `src/styles.css`
-- `.dark` reescrito com tokens Sandclock (Abyss `#0a0a0a`, Carbon `#171717`, Graphite `#222`, Ash `#9b9b9b`, Chalk `#fff`, Signal Mint `#3fe280`).
-- `@theme inline` exporta `--color-abyss/carbon/graphite/ash/chalk/signal-mint` para utilities (`bg-abyss`, `border-graphite`, `text-signal-mint`).
-- Remover gradientes `--background-image-brand*` e radial steel/cool; sistema flat. Sombra única: `--shadow-subtle`.
-- Body em tracking normal. Nenhum `letter-spacing` global. `.eyebrow` (uppercase 12px, tracking 0.12em, Ash) para labels.
-- `.font-display` aplica Satoshi 400 com tracking -0.025em — usada só na headline do hero e no preço.
-- Fontes: `--font-sans: Inter`, `--font-display: Satoshi`. Mono removida.
-- Light mode (`:root`) vira fallback técnico mínimo (não exposto na landing).
+---
 
-## 2. Root — `src/routes/__root.tsx`
-- `<link>` Google Fonts: Inter 400/500 + Satoshi 400 via Fontshare.
-- Remover preconnects de Geist e os links de Geist/Geist Mono.
-- Remover `<AmbientBackground />` do `RootComponent`.
-- `theme-color` meta passa a `#0a0a0a`.
+## Plano de produção (3 sprints)
 
-## 3. Componentes shadcn
-- `Button` (`src/components/ui/button.tsx`): variant `default` → mint fill, text Abyss, radius 16, sombra subtle. `outline` → border Graphite, text Chalk. Nova variant `pill` → fill Chalk, text Abyss, radius full (CTA da navbar). Size `default` h-11 para tap target AA.
-- `Card` (`src/components/ui/card.tsx`): radius 12, bg Carbon, border Graphite, sem shadow. Variant `live` (border Signal Mint) reservada ao painel de stats.
-- `Badge` (`src/components/ui/badge.tsx`): pill Graphite + Chalk, Inter 500 12px.
-- `Wordmark` (`src/components/brand/Wordmark.tsx`): "inter" Chalk + "mo" Signal Mint.
+### Sprint 1 — Receita destravada (bloqueador)
 
-## 4. Novos arquivos
-- `src/hooks/use-count-up.ts` — RAF + IntersectionObserver, easeOutCubic, dispara uma vez, respeita reduced-motion. Mantido para uso futuro caso surja métrica real.
-- `src/components/landing/LivePanel.tsx` — painel Carbon com borda mint, 3 stats qualitativas, fade-in escalonado uma única vez.
+**1.1 Tabela `profiles` + trigger**
+- Migração: `public.profiles` (`id` PK→`auth.users.id`, `owner_name`, `company_fantasy_name`, `company_legal_name`, `company_cnpj` UNIQUE, `company_email`, `company_phone`, `accepted_terms_at`, `accepted_terms_version`, timestamps).
+- Trigger `on_auth_user_created` copia `raw_user_meta_data` → `profiles`.
+- RLS: dono lê/edita só o próprio. GRANTs `authenticated` + `service_role`.
+- Migrar `configuracoes` para editar `profiles` (não `user_metadata`).
+- `createContract` passa a popular emissor a partir do `profiles`.
 
-## 5. Landing — `src/routes/index.tsx`
-Recomposição completa, sem mexer em produto.
+**1.2 AbacatePay — assinatura R$ 119/mês**
+- Pedir secrets via `add_secret`: `ABACATEPAY_API_KEY`, `ABACATEPAY_WEBHOOK_SECRET`.
+- Tabela `public.subscriptions` (`user_id` UNIQUE, `provider='abacatepay'`, `customer_id`, `subscription_id`, `status` ∈ {`pending`,`active`,`past_due`,`canceled`,`refunded`}, `current_period_end`, `last_payment_at`, `cancel_at`, timestamps). RLS: dono SELECT; service_role ALL.
+- Server fn `createAbacateCheckout` (autenticada): cria/recupera customer, cria cobrança mensal R$ 119, devolve URL de pagamento (PIX QR / link).
+- Server route pública `/api/public/abacate-webhook`: verifica assinatura HMAC com `ABACATEPAY_WEBHOOK_SECRET`, atualiza `subscriptions` por evento (`billing.paid`, `billing.failed`, `subscription.canceled`, `refund.created`). Idempotente por `event_id` em tabela `webhook_events`.
+- Server fn `cancelSubscription` e `getMySubscription`.
 
-- **Top bar**: max-w 1200, hairline bottom Graphite. Logo à esquerda; nav central (Como funciona · Preço · Dúvidas) com underline mint 3px no item ativo via scrollspy `IntersectionObserver`; direita: link `Entrar` (ghost) + Button variant `pill` "Assinar agora".
-- **Hero split 7/5**:
-  - Esquerda: `<h1 class="font-display">` Satoshi 72px (clamp para mobile) — *Do "fechado" ao contrato assinado em minutos.* Sem itálico.
-  - Direita: parágrafo Ash 16px + stack vertical: Button primary "Assinar agora" + Button outline "Ver como funciona". Microcopy 14px Ash: *"7 dias de garantia. Não gostou? Devolvemos 100%."*
-- **Strip de confiança**: 4 selos brancos, sem bordas — `Validade jurídica` · `Assinatura digital` · `Dados criptografados` · `LGPD`. Ícone line 16px + label Inter 14px.
-- **Painel de stats Intermo** (`LivePanel`): Carbon + border Signal Mint (única ocorrência), 3 colunas qualitativas, fade-in único.
-- **Como funciona**: grid 2×2 de cards (4 passos atuais), ícone branco line 20px, título 20px Inter 500, body 14px Ash.
-- **Por que Intermo**: 3 cards mesma receita, sem mint.
-- **Plano**: max-w 720 centralizado, card Carbon hairline Graphite. Eyebrow `PLANO INTERMO`. Valor `R$ 119` em `font-display` 72px + `/mês` 20px Ash inline. 6 features com check mint 16px. Button primary full-width "Assinar agora". Microcopy 14px Ash: *"Cobrança imediata. 7 dias de garantia. Devolvemos 100% se não gostar. Cancele quando quiser."*
-- **FAQ**: 3 cards flat (sem accordion). Conteúdo canônico já aprovado ("Como funciona a garantia?", "Funciona pelo celular?", "Tem limite de contratos?").
-- **Footer**: logo + © · Termos · Privacidade · Entrar. Hairline top Graphite.
+**1.3 Guard de acesso por assinatura**
+- Helper SQL/`has_active_subscription(uid)` SECURITY DEFINER.
+- Server fn `createContract` e `sendContractToAutentique` rejeitam quando `status` ∉ {`active`}.
+- UI: banner persistente em `_authenticated` quando sem assinatura ativa → CTA "Reativar".
+- Fluxo signup: após criar conta → redireciona para `/_authenticated/assinatura` (página nova) com o checkout PIX embedado.
 
-## 6. Auth (sem reescrita de layout)
-- `signup.tsx` / `login.tsx` herdam os tokens. Garantir subtitle do signup exatamente: *"7 dias de garantia. Não gostou? Devolvemos 100%."*
+**1.4 Página `configuracoes` → aba Assinatura**
+- Status, próxima cobrança, última cobrança, botão "Cancelar assinatura", botão "Solicitar reembolso (7 dias)" (abre mailto/ticket — operacional, sem automação).
 
-## Arquivos tocados
-- `src/styles.css`
-- `src/routes/__root.tsx`
-- `src/routes/index.tsx`
-- `src/components/ui/button.tsx`
-- `src/components/ui/card.tsx`
-- `src/components/ui/badge.tsx`
-- `src/components/brand/Wordmark.tsx`
-- `src/components/landing/LivePanel.tsx` (novo)
-- `src/hooks/use-count-up.ts` (novo)
+### Sprint 2 — Confiança e operação
 
-## Fora de escopo
-Lógica de auth, server functions, webhook, rotas autenticadas, contratos, PDFs, Termos, Privacidade, dashboard, preço, garantia.
+**2.1 Papéis (admin para suporte)**
+- Enum `app_role` + tabela `user_roles` + função `has_role()` (padrão Lovable).
+- Layout `_authenticated/_admin/route.tsx` com gate `has_role('admin')`.
+- Página `_admin/contratos-falha`: lista `contracts.status='error'` com `last_error`.
+- Página `_admin/assinaturas`: status agregado.
+
+**2.2 Quota mensal real**
+- Coluna `monthly_contract_quota` (default 200) em `subscriptions`.
+- RPC `current_month_contract_count()` para o usuário logado.
+- Dashboard troca dados mock por dados reais.
+- `createContract` bloqueia quando `count >= quota`; UI mostra aviso a partir de 80%.
+
+**2.3 E-mails transacionais (Lovable Email)**
+- Templates: confirmação de cadastro, reset de senha, "contrato enviado", "contrato assinado", "pagamento falhou".
+- Disparo no webhook AbacatePay (falha) e webhook Autentique (enviado/assinado).
+- Domínio de envio fica para quando o cliente trouxer o domínio próprio.
+
+**2.4 Hardening**
+- `configure_auth`: HIBP on, confirm e-mail obrigatório.
+- `configure_social_auth`: Google.
+- Rate-limit por user_id em `createContract` e `createAbacateCheckout` (tabela `rate_limits` + check no início do handler).
+- Confirmar verificação timing-safe no webhook Autentique (auditar `autentique-webhook.$.tsx`).
+- `security--run_security_scan` + tratar críticos.
+
+### Sprint 3 — Polimento e go-live
+
+**3.1 Páginas funcionais**
+- **Financeiro**: soma `value_cents` de contratos `signed` no mês corrente + acumulado do ano + margem (configurável em `profiles.default_margin_pct`). Remove card DAS.
+- **NFS**: tirar do menu (manter rota com ComingSoon para reativar depois).
+
+**3.2 SEO / OG**
+- `head()` por rota pública com `og:title`, `og:description`, `og:image`, twitter card.
+- `robots.txt` + `sitemap.xml` via server route `/api/public/sitemap.xml`.
+
+**3.3 LGPD + termos**
+- Banner cookies (aceitar/recusar analytics).
+- `accepted_terms_version` em `profiles`; bloquear ação se versão atual > aceita.
+
+**3.4 Operação e go-live**
+- Server route `/api/public/health` (200 + commit).
+- Smoke test ponta a ponta: signup → checkout PIX → webhook → criar contrato → enviar Autentique → webhook assinatura → financeiro atualiza.
+- `preview_ui--publish` para `intermo.lovable.app`.
+- Configurar domínio próprio depois (instruções DNS).
+
+---
+
+## Resumo dos riscos que ficam para o cliente
+
+1. **AbacatePay não tem cobrança recorrente automática em todos os planos** — se a API for one-shot, vamos precisar agendar geração de fatura mensal via `pg_cron` (incluído no Sprint 1 se necessário; verifico na implementação).
+2. **Reembolso é manual** — operação responde por e-mail e estorna no painel AbacatePay; nada de UI para isso na v1.
+3. **NFS off** — comunicar nos Termos que NFS é responsabilidade do cliente nesta versão.
+4. **DAS removido do dashboard** — evitar promessa de cálculo fiscal.
+
+---
+
+## O que vou precisar de você quando o plano for aprovado
+
+- Conta AbacatePay criada e a **API key** + **webhook secret** (pedirei via `add_secret`, não cola aqui no chat).
+- Confirmar o nome do produto que aparece na fatura ("Intermo — Assinatura mensal").
+- Domínio próprio (opcional na v1).
+
+Aprova esse plano que eu começo pelo Sprint 1.
