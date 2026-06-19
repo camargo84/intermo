@@ -22,10 +22,15 @@ import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authentic
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
 import { Route as AuthenticatedAssinaturaRouteImport } from './routes/_authenticated/assinatura'
+import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/_admin/route'
 import { Route as AuthenticatedContratosIndexRouteImport } from './routes/_authenticated/contratos.index'
+import { Route as ApiPublicHealthRouteImport } from './routes/api/public/health'
 import { Route as ApiPublicAbacateWebhookRouteImport } from './routes/api/public/abacate-webhook'
 import { Route as AuthenticatedContratosNovoRouteImport } from './routes/_authenticated/contratos.novo'
 import { Route as AuthenticatedContratosContractIdRouteImport } from './routes/_authenticated/contratos.$contractId'
+import { Route as AuthenticatedAdminContratosFalhaRouteImport } from './routes/_authenticated/_admin/contratos-falha'
+import { Route as AuthenticatedAdminAssinaturasRouteImport } from './routes/_authenticated/_admin/assinaturas'
+import { Route as ApiPublicSitemapXmlRouteImport } from './routes/api/public/sitemap.xml'
 import { Route as ApiPublicAutentiqueWebhookSplatRouteImport } from './routes/api/public/autentique-webhook.$'
 
 const TermosRoute = TermosRouteImport.update({
@@ -93,12 +98,21 @@ const AuthenticatedAssinaturaRoute = AuthenticatedAssinaturaRouteImport.update({
   path: '/assinatura',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminRouteRoute = AuthenticatedAdminRouteRouteImport.update({
+  id: '/_admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedContratosIndexRoute =
   AuthenticatedContratosIndexRouteImport.update({
     id: '/contratos/',
     path: '/contratos/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicHealthRoute = ApiPublicHealthRouteImport.update({
+  id: '/api/public/health',
+  path: '/api/public/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicAbacateWebhookRoute = ApiPublicAbacateWebhookRouteImport.update({
   id: '/api/public/abacate-webhook',
   path: '/api/public/abacate-webhook',
@@ -116,6 +130,23 @@ const AuthenticatedContratosContractIdRoute =
     path: '/contratos/$contractId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminContratosFalhaRoute =
+  AuthenticatedAdminContratosFalhaRouteImport.update({
+    id: '/contratos-falha',
+    path: '/contratos-falha',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedAdminAssinaturasRoute =
+  AuthenticatedAdminAssinaturasRouteImport.update({
+    id: '/assinaturas',
+    path: '/assinaturas',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const ApiPublicSitemapXmlRoute = ApiPublicSitemapXmlRouteImport.update({
+  id: '/api/public/sitemap/xml',
+  path: '/api/public/sitemap/xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicAutentiqueWebhookSplatRoute =
   ApiPublicAutentiqueWebhookSplatRouteImport.update({
     id: '/api/public/autentique-webhook/$',
@@ -136,11 +167,15 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/nfs': typeof AuthenticatedNfsRoute
+  '/assinaturas': typeof AuthenticatedAdminAssinaturasRoute
+  '/contratos-falha': typeof AuthenticatedAdminContratosFalhaRoute
   '/contratos/$contractId': typeof AuthenticatedContratosContractIdRoute
   '/contratos/novo': typeof AuthenticatedContratosNovoRoute
   '/api/public/abacate-webhook': typeof ApiPublicAbacateWebhookRoute
+  '/api/public/health': typeof ApiPublicHealthRoute
   '/contratos/': typeof AuthenticatedContratosIndexRoute
   '/api/public/autentique-webhook/$': typeof ApiPublicAutentiqueWebhookSplatRoute
+  '/api/public/sitemap/xml': typeof ApiPublicSitemapXmlRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -155,11 +190,15 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/nfs': typeof AuthenticatedNfsRoute
+  '/assinaturas': typeof AuthenticatedAdminAssinaturasRoute
+  '/contratos-falha': typeof AuthenticatedAdminContratosFalhaRoute
   '/contratos/$contractId': typeof AuthenticatedContratosContractIdRoute
   '/contratos/novo': typeof AuthenticatedContratosNovoRoute
   '/api/public/abacate-webhook': typeof ApiPublicAbacateWebhookRoute
+  '/api/public/health': typeof ApiPublicHealthRoute
   '/contratos': typeof AuthenticatedContratosIndexRoute
   '/api/public/autentique-webhook/$': typeof ApiPublicAutentiqueWebhookSplatRoute
+  '/api/public/sitemap/xml': typeof ApiPublicSitemapXmlRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -171,16 +210,21 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/termos': typeof TermosRoute
+  '/_authenticated/_admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/_authenticated/assinatura': typeof AuthenticatedAssinaturaRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/financeiro': typeof AuthenticatedFinanceiroRoute
   '/_authenticated/nfs': typeof AuthenticatedNfsRoute
+  '/_authenticated/_admin/assinaturas': typeof AuthenticatedAdminAssinaturasRoute
+  '/_authenticated/_admin/contratos-falha': typeof AuthenticatedAdminContratosFalhaRoute
   '/_authenticated/contratos/$contractId': typeof AuthenticatedContratosContractIdRoute
   '/_authenticated/contratos/novo': typeof AuthenticatedContratosNovoRoute
   '/api/public/abacate-webhook': typeof ApiPublicAbacateWebhookRoute
+  '/api/public/health': typeof ApiPublicHealthRoute
   '/_authenticated/contratos/': typeof AuthenticatedContratosIndexRoute
   '/api/public/autentique-webhook/$': typeof ApiPublicAutentiqueWebhookSplatRoute
+  '/api/public/sitemap/xml': typeof ApiPublicSitemapXmlRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -197,11 +241,15 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/financeiro'
     | '/nfs'
+    | '/assinaturas'
+    | '/contratos-falha'
     | '/contratos/$contractId'
     | '/contratos/novo'
     | '/api/public/abacate-webhook'
+    | '/api/public/health'
     | '/contratos/'
     | '/api/public/autentique-webhook/$'
+    | '/api/public/sitemap/xml'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -216,11 +264,15 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/financeiro'
     | '/nfs'
+    | '/assinaturas'
+    | '/contratos-falha'
     | '/contratos/$contractId'
     | '/contratos/novo'
     | '/api/public/abacate-webhook'
+    | '/api/public/health'
     | '/contratos'
     | '/api/public/autentique-webhook/$'
+    | '/api/public/sitemap/xml'
   id:
     | '__root__'
     | '/'
@@ -231,16 +283,21 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/termos'
+    | '/_authenticated/_admin'
     | '/_authenticated/assinatura'
     | '/_authenticated/configuracoes'
     | '/_authenticated/dashboard'
     | '/_authenticated/financeiro'
     | '/_authenticated/nfs'
+    | '/_authenticated/_admin/assinaturas'
+    | '/_authenticated/_admin/contratos-falha'
     | '/_authenticated/contratos/$contractId'
     | '/_authenticated/contratos/novo'
     | '/api/public/abacate-webhook'
+    | '/api/public/health'
     | '/_authenticated/contratos/'
     | '/api/public/autentique-webhook/$'
+    | '/api/public/sitemap/xml'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -253,7 +310,9 @@ export interface RootRouteChildren {
   SignupRoute: typeof SignupRoute
   TermosRoute: typeof TermosRoute
   ApiPublicAbacateWebhookRoute: typeof ApiPublicAbacateWebhookRoute
+  ApiPublicHealthRoute: typeof ApiPublicHealthRoute
   ApiPublicAutentiqueWebhookSplatRoute: typeof ApiPublicAutentiqueWebhookSplatRoute
+  ApiPublicSitemapXmlRoute: typeof ApiPublicSitemapXmlRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -349,12 +408,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAssinaturaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/_admin': {
+      id: '/_authenticated/_admin'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedAdminRouteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/contratos/': {
       id: '/_authenticated/contratos/'
       path: '/contratos'
       fullPath: '/contratos/'
       preLoaderRoute: typeof AuthenticatedContratosIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/public/health': {
+      id: '/api/public/health'
+      path: '/api/public/health'
+      fullPath: '/api/public/health'
+      preLoaderRoute: typeof ApiPublicHealthRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/abacate-webhook': {
       id: '/api/public/abacate-webhook'
@@ -377,6 +450,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedContratosContractIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/_admin/contratos-falha': {
+      id: '/_authenticated/_admin/contratos-falha'
+      path: '/contratos-falha'
+      fullPath: '/contratos-falha'
+      preLoaderRoute: typeof AuthenticatedAdminContratosFalhaRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/_admin/assinaturas': {
+      id: '/_authenticated/_admin/assinaturas'
+      path: '/assinaturas'
+      fullPath: '/assinaturas'
+      preLoaderRoute: typeof AuthenticatedAdminAssinaturasRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/api/public/sitemap/xml': {
+      id: '/api/public/sitemap/xml'
+      path: '/api/public/sitemap/xml'
+      fullPath: '/api/public/sitemap/xml'
+      preLoaderRoute: typeof ApiPublicSitemapXmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/autentique-webhook/$': {
       id: '/api/public/autentique-webhook/$'
       path: '/api/public/autentique-webhook/$'
@@ -387,7 +481,25 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedAdminRouteRouteChildren {
+  AuthenticatedAdminAssinaturasRoute: typeof AuthenticatedAdminAssinaturasRoute
+  AuthenticatedAdminContratosFalhaRoute: typeof AuthenticatedAdminContratosFalhaRoute
+}
+
+const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren =
+  {
+    AuthenticatedAdminAssinaturasRoute: AuthenticatedAdminAssinaturasRoute,
+    AuthenticatedAdminContratosFalhaRoute:
+      AuthenticatedAdminContratosFalhaRoute,
+  }
+
+const AuthenticatedAdminRouteRouteWithChildren =
+  AuthenticatedAdminRouteRoute._addFileChildren(
+    AuthenticatedAdminRouteRouteChildren,
+  )
+
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAdminRouteRoute: typeof AuthenticatedAdminRouteRouteWithChildren
   AuthenticatedAssinaturaRoute: typeof AuthenticatedAssinaturaRoute
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
@@ -399,6 +511,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAdminRouteRoute: AuthenticatedAdminRouteRouteWithChildren,
   AuthenticatedAssinaturaRoute: AuthenticatedAssinaturaRoute,
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
@@ -422,7 +535,9 @@ const rootRouteChildren: RootRouteChildren = {
   SignupRoute: SignupRoute,
   TermosRoute: TermosRoute,
   ApiPublicAbacateWebhookRoute: ApiPublicAbacateWebhookRoute,
+  ApiPublicHealthRoute: ApiPublicHealthRoute,
   ApiPublicAutentiqueWebhookSplatRoute: ApiPublicAutentiqueWebhookSplatRoute,
+  ApiPublicSitemapXmlRoute: ApiPublicSitemapXmlRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
