@@ -7,6 +7,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,6 +39,7 @@ export function LoginPage() {
   const navigate = useNavigate();
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const {
     register,
@@ -58,6 +60,21 @@ export function LoginPage() {
     navigate({ to: "/dashboard" });
   }
 
+  async function onGoogle() {
+    setGoogleLoading(true);
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin,
+    });
+    if (result.error) {
+      setGoogleLoading(false);
+      toast.error("Falha ao entrar com Google", { description: result.error.message });
+      return;
+    }
+    if (result.redirected) return;
+    await router.invalidate();
+    navigate({ to: "/dashboard" });
+  }
+
   return (
     <AuthLayout
       title="Entrar na Intermo"
@@ -71,27 +88,44 @@ export function LoginPage() {
         </>
       }
     >
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
-        <div className="space-y-2">
-          <Label htmlFor="email">E-mail</Label>
-          <Input id="email" type="email" autoComplete="email" {...register("email")} />
-          {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
-        </div>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="password">Senha</Label>
-            <Link to="/reset-password" className="text-xs text-muted-foreground hover:text-foreground">
-              Esqueci minha senha
-            </Link>
-          </div>
-          <Input id="password" type="password" autoComplete="current-password" {...register("password")} />
-          {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
-        </div>
-        <Button type="submit" className="w-full" disabled={submitting}>
-          {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-          Entrar
+      <div className="space-y-4">
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full"
+          onClick={onGoogle}
+          disabled={googleLoading || submitting}
+        >
+          {googleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+          Continuar com Google
         </Button>
-      </form>
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <div className="h-px flex-1 bg-border" />
+          ou
+          <div className="h-px flex-1 bg-border" />
+        </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+          <div className="space-y-2">
+            <Label htmlFor="email">E-mail</Label>
+            <Input id="email" type="email" autoComplete="email" {...register("email")} />
+            {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password">Senha</Label>
+              <Link to="/reset-password" className="text-xs text-muted-foreground hover:text-foreground">
+                Esqueci minha senha
+              </Link>
+            </div>
+            <Input id="password" type="password" autoComplete="current-password" {...register("password")} />
+            {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
+          </div>
+          <Button type="submit" className="w-full" disabled={submitting || googleLoading}>
+            {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            Entrar
+          </Button>
+        </form>
+      </div>
     </AuthLayout>
   );
 }
