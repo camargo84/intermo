@@ -1,0 +1,13 @@
+# inTermo
+
+> SaaS brasileiro para vendedores sob encomenda formalizarem vendas com contrato de validade jurídica, assinatura digital e gestão das transações no mesmo lugar.
+
+A inTermo transforma a conversa de venda em contrato assinado em minutos. O assistente guiado coleta os dados (ou o próprio cliente preenche pelo link), gera o contrato com cláusulas testadas em operação real e coleta a assinatura eletrônica com trilha de auditoria, nos termos da MP nº 2.200-2/2001. Plano único de R$ 119/mês com contratos ilimitados.
+
+## Pages
+
+- [Início](/): Visão geral, como funciona, preço e dúvidas frequentes.
+- [Entrar](/login): Acesso à conta de vendedor.
+- [Criar conta](/signup): Cadastro de novo vendedor.
+- [Termos de uso](/termos): Condições do serviço, plano e regras anti-abuso.
+- [Política de privacidade](/privacidade): Tratamento de dados pessoais conforme a LGPD.
