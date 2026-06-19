@@ -55,7 +55,7 @@ export function LoginPage() {
         <>
           Ainda não tem conta?{" "}
           <Link to="/signup" className="font-medium text-accent hover:underline">
-            Criar conta grátis
+            Criar conta
           </Link>
         </>
       }
