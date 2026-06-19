@@ -1,108 +1,64 @@
-## Decisões assumidas (escolhi pelo menor custo de manutenção)
+## Sprints 2 e 3 — Confiança, operação e go-live
 
-| Item | Escolha | Por quê |
-|---|---|---|
-| Pagamento | **AbacatePay** (PIX recorrente + cartão) via API + webhook | Pedido do usuário; provedor BR, sem MOR estrangeiro |
-| Modelo de cobrança | **Cobrar e reembolsar em até 7 dias** se pedido | PIX não suporta "trial gratuito" nativo; reembolso manual é raro e simples |
-| NFS | **Escondido da v1** (rota fica, fora do menu) | Integração fiscal é projeto à parte, gera ticket pesado |
-| Financeiro v1 | Receita do mês e margem; **remove "DAS estimado"** | Cálculo tributário depende de regime; promete suporte que não queremos |
-| Auth | E-mail/senha + Google + **HIBP ligado** + confirmação obrigatória | Padrão Lovable, menos reset de senha vazada |
-| Domínio | Publica em `.lovable.app` primeiro, domínio próprio depois | Destrava go-live sem esperar DNS |
-| E-mails | Lovable Email com subdomínio `notify.<dominio>` (quando o domínio vier) | Menos manutenção que SMTP próprio |
-| Observabilidade | `last_error` já existe + página admin de falhas | Não introduzir Sentry externo agora |
-
-Se algo aí estiver errado, me corrige antes de eu começar.
+Sprint 1 (AbacatePay + assinaturas + guards) já está no ar. Falta destravar suporte, e-mails transacionais, polimento e publicação.
 
 ---
-
-## Plano de produção (3 sprints)
-
-### Sprint 1 — Receita destravada (bloqueador)
-
-**1.1 Tabela `profiles` + trigger**
-- Migração: `public.profiles` (`id` PK→`auth.users.id`, `owner_name`, `company_fantasy_name`, `company_legal_name`, `company_cnpj` UNIQUE, `company_email`, `company_phone`, `accepted_terms_at`, `accepted_terms_version`, timestamps).
-- Trigger `on_auth_user_created` copia `raw_user_meta_data` → `profiles`.
-- RLS: dono lê/edita só o próprio. GRANTs `authenticated` + `service_role`.
-- Migrar `configuracoes` para editar `profiles` (não `user_metadata`).
-- `createContract` passa a popular emissor a partir do `profiles`.
-
-**1.2 AbacatePay — assinatura R$ 119/mês**
-- Pedir secrets via `add_secret`: `ABACATEPAY_API_KEY`, `ABACATEPAY_WEBHOOK_SECRET`.
-- Tabela `public.subscriptions` (`user_id` UNIQUE, `provider='abacatepay'`, `customer_id`, `subscription_id`, `status` ∈ {`pending`,`active`,`past_due`,`canceled`,`refunded`}, `current_period_end`, `last_payment_at`, `cancel_at`, timestamps). RLS: dono SELECT; service_role ALL.
-- Server fn `createAbacateCheckout` (autenticada): cria/recupera customer, cria cobrança mensal R$ 119, devolve URL de pagamento (PIX QR / link).
-- Server route pública `/api/public/abacate-webhook`: verifica assinatura HMAC com `ABACATEPAY_WEBHOOK_SECRET`, atualiza `subscriptions` por evento (`billing.paid`, `billing.failed`, `subscription.canceled`, `refund.created`). Idempotente por `event_id` em tabela `webhook_events`.
-- Server fn `cancelSubscription` e `getMySubscription`.
-
-**1.3 Guard de acesso por assinatura**
-- Helper SQL/`has_active_subscription(uid)` SECURITY DEFINER.
-- Server fn `createContract` e `sendContractToAutentique` rejeitam quando `status` ∉ {`active`}.
-- UI: banner persistente em `_authenticated` quando sem assinatura ativa → CTA "Reativar".
-- Fluxo signup: após criar conta → redireciona para `/_authenticated/assinatura` (página nova) com o checkout PIX embedado.
-
-**1.4 Página `configuracoes` → aba Assinatura**
-- Status, próxima cobrança, última cobrança, botão "Cancelar assinatura", botão "Solicitar reembolso (7 dias)" (abre mailto/ticket — operacional, sem automação).
 
 ### Sprint 2 — Confiança e operação
 
-**2.1 Papéis (admin para suporte)**
-- Enum `app_role` + tabela `user_roles` + função `has_role()` (padrão Lovable).
-- Layout `_authenticated/_admin/route.tsx` com gate `has_role('admin')`.
-- Página `_admin/contratos-falha`: lista `contracts.status='error'` com `last_error`.
-- Página `_admin/assinaturas`: status agregado.
+**2.1 Papéis admin (suporte e observabilidade)**
+- Migração: enum `app_role` já existe; criar layout `src/routes/_authenticated/_admin/route.tsx` com gate `has_role('admin')` (server fn `getMyRoles`).
+- `src/routes/_authenticated/_admin/contratos-falha.tsx`: lista `contracts.status='error'` com `last_error`, botão "reprocessar" (chama `sendContractToAutentique` de novo).
+- `src/routes/_authenticated/_admin/assinaturas.tsx`: tabela agregada de `subscriptions` (status, último pagamento, próxima cobrança).
+- Sem item no menu lateral pra usuário comum; admin vê link extra na Topbar.
 
-**2.2 Quota mensal real**
-- Coluna `monthly_contract_quota` (default 200) em `subscriptions`.
-- RPC `current_month_contract_count()` para o usuário logado.
-- Dashboard troca dados mock por dados reais.
-- `createContract` bloqueia quando `count >= quota`; UI mostra aviso a partir de 80%.
+**2.2 E-mails transacionais (Lovable Email)**
+- Rodar `email_domain--check_email_domain_status`. Se não houver domínio, abrir o setup dialog antes de seguir.
+- `email_domain--scaffold_auth_email_templates` para confirmação de cadastro, reset de senha, magic link.
+- `email_domain--scaffold_transactional_email` para:
+  - "Pagamento falhou" — disparado pelo webhook AbacatePay (`subscription.payment_failed`).
+  - "Contrato enviado para assinatura" — disparado quando `sendContractToAutentique` retorna ok.
+  - "Contrato assinado" — disparado pelo webhook Autentique (`signed`).
+- Aplicar identidade Sandclock terminal nos templates (cores/tipografia do app, body branco).
 
-**2.3 E-mails transacionais (Lovable Email)**
-- Templates: confirmação de cadastro, reset de senha, "contrato enviado", "contrato assinado", "pagamento falhou".
-- Disparo no webhook AbacatePay (falha) e webhook Autentique (enviado/assinado).
-- Domínio de envio fica para quando o cliente trouxer o domínio próprio.
+**2.3 Hardening final**
+- `supabase--configure_social_auth` Google (provider precisa ser ativado pra o botão não dar "Unsupported provider"; HIBP já está on).
+- Auditar `src/routes/api/public/autentique-webhook.$.tsx` pra garantir verificação HMAC timing-safe (mesmo padrão do AbacatePay).
+- Rodar `security--run_security_scan` e tratar críticos.
 
-**2.4 Hardening**
-- `configure_auth`: HIBP on, confirm e-mail obrigatório.
-- `configure_social_auth`: Google.
-- Rate-limit por user_id em `createContract` e `createAbacateCheckout` (tabela `rate_limits` + check no início do handler).
-- Confirmar verificação timing-safe no webhook Autentique (auditar `autentique-webhook.$.tsx`).
-- `security--run_security_scan` + tratar críticos.
+---
 
 ### Sprint 3 — Polimento e go-live
 
-**3.1 Páginas funcionais**
-- **Financeiro**: soma `value_cents` de contratos `signed` no mês corrente + acumulado do ano + margem (configurável em `profiles.default_margin_pct`). Remove card DAS.
-- **NFS**: tirar do menu (manter rota com ComingSoon para reativar depois).
+**3.1 SEO público**
+- `head()` por rota pública (`/`, `/login`, `/signup`, `/termos`, `/privacidade`) com `<title>`, description, `og:title/description/type`, `twitter:card`. Sem `og:image` no `__root` (substituiria leaf).
+- `public/robots.txt` permitindo tudo, sem `Sitemap:` até publicar.
+- Server route `src/routes/api/public/sitemap.xml.ts` gerando sitemap das rotas públicas.
 
-**3.2 SEO / OG**
-- `head()` por rota pública com `og:title`, `og:description`, `og:image`, twitter card.
-- `robots.txt` + `sitemap.xml` via server route `/api/public/sitemap.xml`.
+**3.2 LGPD**
+- Banner de cookies (aceitar/recusar) persistido em `localStorage`; sem analytics até aceite.
+- `accepted_terms_version` já está no `profiles`; criar versão constante `TERMS_VERSION` e, quando `profile.accepted_terms_version < TERMS_VERSION`, bloquear ações sensíveis (criar/enviar contrato) com modal "aceite os novos termos".
 
-**3.3 LGPD + termos**
-- Banner cookies (aceitar/recusar analytics).
-- `accepted_terms_version` em `profiles`; bloquear ação se versão atual > aceita.
-
-**3.4 Operação e go-live**
-- Server route `/api/public/health` (200 + commit).
-- Smoke test ponta a ponta: signup → checkout PIX → webhook → criar contrato → enviar Autentique → webhook assinatura → financeiro atualiza.
-- `preview_ui--publish` para `intermo.lovable.app`.
-- Configurar domínio próprio depois (instruções DNS).
+**3.3 Operação**
+- Server route `src/routes/api/public/health.ts` retornando `{ ok: true, commit }`.
+- Smoke test manual com Playwright headless: signup → checkout PIX (modo sandbox) → simular webhook → criar contrato → enviar Autentique → simular webhook assinatura → financeiro atualiza.
+- `preview_ui--publish` pra `intermo.lovable.app` (depois de `security--get_scan_results` limpo + revisão de OG tags).
 
 ---
 
-## Resumo dos riscos que ficam para o cliente
+### Itens explicitamente fora do escopo
 
-1. **AbacatePay não tem cobrança recorrente automática em todos os planos** — se a API for one-shot, vamos precisar agendar geração de fatura mensal via `pg_cron` (incluído no Sprint 1 se necessário; verifico na implementação).
-2. **Reembolso é manual** — operação responde por e-mail e estorna no painel AbacatePay; nada de UI para isso na v1.
-3. **NFS off** — comunicar nos Termos que NFS é responsabilidade do cliente nesta versão.
-4. **DAS removido do dashboard** — evitar promessa de cálculo fiscal.
+- NFS continua fora do menu (rota com ComingSoon).
+- Reembolso continua manual (mailto/painel AbacatePay).
+- Domínio próprio: instruções DNS depois, sem bloquear go-live.
+- Sentry/observabilidade externa: ficamos com `last_error` + página admin.
 
 ---
 
-## O que vou precisar de você quando o plano for aprovado
+### O que vou precisar de você
 
-- Conta AbacatePay criada e a **API key** + **webhook secret** (pedirei via `add_secret`, não cola aqui no chat).
-- Confirmar o nome do produto que aparece na fatura ("Intermo — Assinatura mensal").
-- Domínio próprio (opcional na v1).
+- Confirmar nome do remetente/subdomínio de e-mail (ex.: `notify.intermo.com.br`) ou aceitar publicar primeiro em `.lovable.app` e configurar o domínio depois.
+- Provider Google: confirma que quer login social com Google já no v1 (sem isso o botão fica off).
+- Versão dos Termos atual (string tipo `2026-06-01`) — uso pra `TERMS_VERSION` e revalidar aceite.
 
-Aprova esse plano que eu começo pelo Sprint 1.
+Aprovando, começo pelo 2.1 (admin) e 2.2 (e-mails), que são os bloqueadores de suporte e comunicação.

@@ -13,7 +13,18 @@ import { Label } from "@/components/ui/label";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 
 export const Route = createFileRoute("/login")({
-  head: () => ({ meta: [{ title: "Entrar — Intermo" }] }),
+  head: () => ({
+    meta: [
+      { title: "Entrar — Intermo" },
+      { name: "description", content: "Entre na sua conta Intermo pra gerenciar contratos e clientes." },
+      { property: "og:title", content: "Entrar — Intermo" },
+      { property: "og:description", content: "Acesse o painel da Intermo." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+      { name: "robots", content: "noindex,follow" },
+    ],
+    links: [{ rel: "canonical", href: "/login" }],
+  }),
   component: LoginPage,
 });
 

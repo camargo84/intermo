@@ -1,6 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
-import { LogOut, User } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { LogOut, Shield, User } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -15,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
+import { getMyRoles } from "@/lib/roles.functions";
 import { useEffect, useState } from "react";
 
 type Profile = { companyName: string; ownerName: string; ownerEmail: string };
@@ -31,6 +33,13 @@ function initialsOf(name: string) {
 export function Topbar() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const fetchRoles = useServerFn(getMyRoles);
+  const { data: rolesData } = useQuery({
+    queryKey: ["my-roles"],
+    queryFn: () => fetchRoles(),
+    staleTime: 5 * 60_000,
+  });
+  const isAdmin = rolesData?.isAdmin ?? false;
   const [profile, setProfile] = useState<Profile>({
     companyName: "Sua empresa",
     ownerName: "Você",
@@ -86,6 +95,14 @@ export function Topbar() {
               <User className="mr-2 h-4 w-4" />
               Minha conta
             </DropdownMenuItem>
+            {isAdmin && (
+              <DropdownMenuItem
+                onSelect={() => navigate({ to: "/_admin/contratos-falha" })}
+              >
+                <Shield className="mr-2 h-4 w-4" />
+                Admin
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onSelect={handleLogout} className="text-destructive focus:text-destructive">
               <LogOut className="mr-2 h-4 w-4" />
               Sair
