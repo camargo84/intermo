@@ -44,13 +44,6 @@ export type Database = {
             foreignKeyName: "chat_threads_contract_id_fkey"
             columns: ["contract_id"]
             isOneToOne: true
-            referencedRelation: "contracts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "chat_threads_contract_id_fkey"
-            columns: ["contract_id"]
-            isOneToOne: true
             referencedRelation: "transactions"
             referencedColumns: ["id"]
           },
@@ -157,13 +150,6 @@ export type Database = {
           status?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "contract_events_contract_id_fkey"
-            columns: ["contract_id"]
-            isOneToOne: false
-            referencedRelation: "contracts"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "contract_events_contract_id_fkey"
             columns: ["contract_id"]
@@ -325,13 +311,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "signature_tokens_transaction_id_fkey"
-            columns: ["transaction_id"]
-            isOneToOne: false
-            referencedRelation: "contracts"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "signature_tokens_transaction_id_fkey"
             columns: ["transaction_id"]
@@ -576,95 +555,7 @@ export type Database = {
       }
     }
     Views: {
-      contracts: {
-        Row: {
-          autentique_document_id: string | null
-          autentique_signers: Json | null
-          client_doc: string | null
-          client_email: string | null
-          client_id: string | null
-          client_name: string | null
-          content: string | null
-          created_at: string | null
-          entrada_cents: number | null
-          forma_pagamento: string | null
-          id: string | null
-          last_error: string | null
-          pdf_path: string | null
-          produtos: Json | null
-          sent_at: string | null
-          signed_at: string | null
-          signed_pdf_downloaded_at: string | null
-          signed_pdf_path: string | null
-          status: string | null
-          tenant_snapshot: Json | null
-          title: string | null
-          updated_at: string | null
-          user_id: string | null
-          value_cents: number | null
-        }
-        Insert: {
-          autentique_document_id?: string | null
-          autentique_signers?: Json | null
-          client_doc?: string | null
-          client_email?: string | null
-          client_id?: string | null
-          client_name?: string | null
-          content?: string | null
-          created_at?: string | null
-          entrada_cents?: number | null
-          forma_pagamento?: string | null
-          id?: string | null
-          last_error?: string | null
-          pdf_path?: string | null
-          produtos?: Json | null
-          sent_at?: string | null
-          signed_at?: string | null
-          signed_pdf_downloaded_at?: string | null
-          signed_pdf_path?: string | null
-          status?: string | null
-          tenant_snapshot?: Json | null
-          title?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-          value_cents?: number | null
-        }
-        Update: {
-          autentique_document_id?: string | null
-          autentique_signers?: Json | null
-          client_doc?: string | null
-          client_email?: string | null
-          client_id?: string | null
-          client_name?: string | null
-          content?: string | null
-          created_at?: string | null
-          entrada_cents?: number | null
-          forma_pagamento?: string | null
-          id?: string | null
-          last_error?: string | null
-          pdf_path?: string | null
-          produtos?: Json | null
-          sent_at?: string | null
-          signed_at?: string | null
-          signed_pdf_downloaded_at?: string | null
-          signed_pdf_path?: string | null
-          status?: string | null
-          tenant_snapshot?: Json | null
-          title?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-          value_cents?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "contracts_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+      [_ in never]: never
     }
     Functions: {
       current_month_transaction_count: { Args: never; Returns: number }
