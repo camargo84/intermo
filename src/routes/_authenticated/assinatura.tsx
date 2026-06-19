@@ -127,7 +127,7 @@ function AssinaturaPage() {
           <ul className="space-y-3 text-sm">
             <li className="flex items-start gap-2">
               <CheckCircle2 className="mt-0.5 h-4 w-4 text-accent" />
-              Até 200 contratos enviados por mês via Autentique
+              Contratos e assinaturas digitais ilimitados via Autentique
             </li>
             <li className="flex items-start gap-2">
               <CheckCircle2 className="mt-0.5 h-4 w-4 text-accent" />
