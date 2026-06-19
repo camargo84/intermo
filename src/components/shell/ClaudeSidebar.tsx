@@ -80,18 +80,18 @@ export function ClaudeSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="gap-1">
-        {/* Nova conversa */}
+        {/* Novo contrato */}
         <SidebarGroup className="pb-0">
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={handleNewChat}
-                  tooltip="Nova conversa"
+                  tooltip="Novo contrato"
                   className="bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary"
                 >
                   <Plus className="h-4 w-4" />
-                  <span className="font-medium">Nova conversa</span>
+                  <span className="font-medium">Novo contrato</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
