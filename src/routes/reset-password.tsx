@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 
 export const Route = createFileRoute("/reset-password")({
-  head: () => ({ meta: [{ title: "Recuperar senha — Intermo" }] }),
+  head: () => ({ meta: [{ title: "Recuperar senha — inTermo" }] }),
   component: ResetPasswordPage,
 });
 

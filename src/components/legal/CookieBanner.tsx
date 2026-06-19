@@ -31,7 +31,7 @@ export function CookieBanner() {
       className="fixed inset-x-3 bottom-3 z-50 mx-auto max-w-2xl rounded-lg border border-border bg-background/95 p-4 shadow-lg backdrop-blur"
     >
       <p className="text-sm text-foreground">
-        Usamos cookies essenciais pra você usar a Intermo com segurança. Você pode aceitar
+        Usamos cookies essenciais pra você usar a inTermo com segurança. Você pode aceitar
         cookies opcionais (analytics) pra nos ajudar a melhorar. Veja a{" "}
         <Link to="/privacidade" className="underline">
           política de privacidade

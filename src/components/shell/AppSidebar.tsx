@@ -20,7 +20,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Logo } from "@/components/brand/Logo";
-import { IntermoMark } from "@/components/brand/IntermoMark";
+import { inTermoMark } from "@/components/brand/inTermoMark";
 
 export const NAV_ITEMS = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -40,11 +40,11 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="h-16 px-3 py-3">
         {collapsed ? (
-          <Link to="/dashboard" aria-label="Intermo" className="flex h-full items-center justify-center">
-            <IntermoMark variant="tile" className="h-8 w-8" />
+          <Link to="/dashboard" aria-label="inTermo" className="flex h-full items-center justify-center">
+            <inTermoMark variant="tile" className="h-8 w-8" />
           </Link>
         ) : (
-          <Link to="/dashboard" aria-label="Intermo" className="flex h-full items-center px-1">
+          <Link to="/dashboard" aria-label="inTermo" className="flex h-full items-center px-1">
             <Logo />
           </Link>
         )}

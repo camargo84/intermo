@@ -4,10 +4,10 @@ import { Logo } from "@/components/brand/Logo";
 export const Route = createFileRoute("/privacidade")({
   head: () => ({
     meta: [
-      { title: "Política de privacidade — Intermo" },
-      { name: "description", content: "Política de privacidade da plataforma Intermo." },
-      { property: "og:title", content: "Política de privacidade — Intermo" },
-      { property: "og:description", content: "Como tratamos seus dados na Intermo." },
+      { title: "Política de privacidade — inTermo" },
+      { name: "description", content: "Política de privacidade da plataforma inTermo." },
+      { property: "og:title", content: "Política de privacidade — inTermo" },
+      { property: "og:description", content: "Como tratamos seus dados na inTermo." },
       { property: "og:type", content: "article" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -30,7 +30,7 @@ function PrivacyPage() {
         <p className="mt-2 text-sm text-muted-foreground">Última atualização: {new Date().toLocaleDateString("pt-BR")}</p>
         <div className="prose prose-sm dark:prose-invert mt-8 max-w-none space-y-4 text-foreground/90">
           <p>
-            Sua privacidade é prioridade na Intermo. Este documento descreve, em linhas gerais,
+            Sua privacidade é prioridade na inTermo. Este documento descreve, em linhas gerais,
             quais dados coletamos e como são tratados, em conformidade com a LGPD.
           </p>
           <h2 className="text-lg font-semibold">Dados coletados</h2>

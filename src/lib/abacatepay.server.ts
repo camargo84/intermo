@@ -8,7 +8,7 @@ export const ABACATEPAY_PUBLIC_HMAC_KEY =
   "t9dXRhHHo3yDEj5pVDYz0frf7q6bMKyMRmxxCPIPp3RCplBfXRxqlC6ZpiWmOqj4L63qEaeUOtrCI8P0VMUgo6iIga2ri9ogaHFs0WIIywSMg0q7RmBfybe1E5XJcfC4IW3alNqym0tXoAKkzvfEjZxV6bE0oG2zJrNNYmUCKZyV0KZ3JS8Votf9EAWWYdiDkMkpbMdPggfh1EqHlVkMiTady6jOR3hyzGEHrIz2Ret0xHKMbiqkr9HS1JhNHDX9";
 
 export const ABACATEPAY_PRODUCT_EXTERNAL_ID = "intermo-mensal-v1";
-export const ABACATEPAY_PRODUCT_NAME = "Intermo — Assinatura mensal";
+export const ABACATEPAY_PRODUCT_NAME = "inTermo — Assinatura mensal";
 export const ABACATEPAY_PRODUCT_PRICE_CENTS = 11900;
 
 type AbacateResponse<T> = { data: T | null; success?: boolean; error?: string | null };
@@ -95,7 +95,7 @@ export async function ensureSubscriptionProduct(): Promise<AbacateProduct> {
       price: ABACATEPAY_PRODUCT_PRICE_CENTS,
       currency: "BRL",
       cycle: "MONTHLY",
-      description: "Acesso completo à plataforma Intermo (renovação mensal).",
+      description: "Acesso completo à plataforma inTermo (renovação mensal).",
     },
   });
 }

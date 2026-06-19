@@ -19,7 +19,7 @@ import { getMyProfile, updateMyProfile } from "@/lib/profiles.functions";
 import { getMySubscription } from "@/lib/subscriptions.functions";
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({
-  head: () => ({ meta: [{ title: "Configurações — Intermo" }] }),
+  head: () => ({ meta: [{ title: "Configurações — inTermo" }] }),
   component: ConfiguracoesPage,
 });
 

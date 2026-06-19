@@ -22,13 +22,13 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Intermo — Da conversa ao contrato assinado em minutos." },
+      { title: "inTermo — Da conversa ao contrato assinado em minutos." },
       {
         name: "description",
         content:
-          "A Intermo formaliza vendas sob encomenda: contrato pronto, assinatura com validade jurídica e gestão das transações no mesmo lugar.",
+          "A inTermo formaliza vendas sob encomenda: contrato pronto, assinatura com validade jurídica e gestão das transações no mesmo lugar.",
       },
-      { property: "og:title", content: "Intermo — Da conversa ao contrato assinado em minutos." },
+      { property: "og:title", content: "inTermo — Da conversa ao contrato assinado em minutos." },
       {
         property: "og:description",
         content:
@@ -112,11 +112,11 @@ const faq = [
   },
   {
     q: "Funciona pelo celular?",
-    a: "Sim. A Intermo foi desenhada primeiro para o celular — você opera tudo de onde estiver.",
+    a: "Sim. A inTermo foi desenhada primeiro para o celular — você opera tudo de onde estiver.",
   },
   {
     q: "Tem limite de contratos?",
-    a: "Não. No plano Intermo os contratos e assinaturas são ilimitados.",
+    a: "Não. No plano inTermo os contratos e assinaturas são ilimitados.",
   },
 ];
 
@@ -199,7 +199,7 @@ function Landing() {
             </div>
             <div className="flex flex-col justify-end md:col-span-5">
               <p className="text-[16px] leading-[1.6] text-[color:var(--color-ash)]">
-                A Intermo formaliza vendas sob encomenda: contrato pronto, assinatura com validade jurídica e gestão das transações no mesmo lugar. Sem improviso, sem esperar a venda esfriar.
+                A inTermo formaliza vendas sob encomenda: contrato pronto, assinatura com validade jurídica e gestão das transações no mesmo lugar. Sem improviso, sem esperar a venda esfriar.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Button asChild>
@@ -242,7 +242,7 @@ function Landing() {
           <div className="mx-auto max-w-[1200px] px-6 py-24">
             <div className="max-w-2xl">
               <span className="eyebrow">Como funciona</span>
-              <h2 className="mt-4 text-[36px] leading-[1.1] font-medium">Quatro passos. Você fecha; a Intermo formaliza.</h2>
+              <h2 className="mt-4 text-[36px] leading-[1.1] font-medium">Quatro passos. Você fecha; a inTermo formaliza.</h2>
             </div>
             <div className="mt-12 grid grid-cols-1 gap-4 md:grid-cols-2">
               {steps.map((s) => (
@@ -263,7 +263,7 @@ function Landing() {
         <section className="border-b border-[color:var(--color-graphite)]">
           <div className="mx-auto max-w-[1200px] px-6 py-24">
             <div className="max-w-2xl">
-              <span className="eyebrow">Por que Intermo</span>
+              <span className="eyebrow">Por que inTermo</span>
               <h2 className="mt-4 text-[36px] leading-[1.1] font-medium">Contrato certo, margem calculada, transações no lugar.</h2>
             </div>
             <div className="mt-12 grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -282,7 +282,7 @@ function Landing() {
         <section id="preco" className="border-b border-[color:var(--color-graphite)] scroll-mt-20">
           <div className="mx-auto max-w-[720px] px-6 py-24">
             <div className="text-center">
-              <span className="eyebrow">Plano Intermo</span>
+              <span className="eyebrow">Plano inTermo</span>
               <h2 className="mt-4 text-[36px] leading-[1.1] font-medium">Plano mensal. Cancele quando quiser.</h2>
               <p className="mt-3 text-[14px] text-[color:var(--color-ash)]">
                 Tudo o que você precisa para formalizar vendas sob encomenda.
@@ -334,7 +334,7 @@ function Landing() {
         <div className="mx-auto flex max-w-[1200px] flex-col items-center justify-between gap-6 px-6 py-10 sm:flex-row">
           <div className="flex items-center gap-3 text-[14px] text-[color:var(--color-ash)]">
             <Wordmark className="text-[16px]" />
-            <span>© {new Date().getFullYear()} Intermo</span>
+            <span>© {new Date().getFullYear()} inTermo</span>
           </div>
           <nav className="flex items-center gap-6 text-[14px] text-[color:var(--color-ash)]" aria-label="Rodapé">
             <Link to="/termos" className="transition-colors hover:text-[color:var(--color-chalk)]">Termos</Link>
