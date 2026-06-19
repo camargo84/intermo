@@ -22,6 +22,17 @@ export const createContract = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => createContractSchema.parse(input))
   .handler(async ({ data, context }) => {
+    // 0) Termos vigentes aceitos
+    const { TERMS_VERSION } = await import("@/lib/terms");
+    const { data: profile } = await context.supabase
+      .from("profiles")
+      .select("accepted_terms_version")
+      .eq("id", context.userId)
+      .maybeSingle();
+    if (profile?.accepted_terms_version !== TERMS_VERSION) {
+      throw new Error("Aceite os novos termos pra continuar.");
+    }
+
     // 1) Guard de assinatura
     const { data: hasSub, error: subErr } = await context.supabase
       .rpc("has_active_subscription", { _user_id: context.userId });
