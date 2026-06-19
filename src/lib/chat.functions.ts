@@ -35,7 +35,7 @@ export const getChatThread = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     // garantir ownership
     const { data: contract } = await context.supabase
-      .from("contracts").select("id,pdf_path,status").eq("id", data.contractId).maybeSingle();
+      .from("contracts").select("id,pdf_path,signed_pdf_path,status,title").eq("id", data.contractId).maybeSingle();
     if (!contract) throw new Error("Contrato não encontrado.");
 
     const { data: thread } = await context.supabase
@@ -46,6 +46,7 @@ export const getChatThread = createServerFn({ method: "POST" })
       contract,
     };
   });
+
 
 export const saveChatThread = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

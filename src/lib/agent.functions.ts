@@ -187,3 +187,18 @@ export const getContractPdfSignedUrl = createServerFn({ method: "POST" })
     const { data: s } = await supabaseAdmin.storage.from("contract-pdfs").createSignedUrl(c.pdf_path, 600);
     return { url: s?.signedUrl ?? null };
   });
+
+// ============ helper para o front baixar PDF assinado (Autentique) ============
+export const getSignedContractPdfUrl = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) => z.object({ contract_id: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { data: c } = await context.supabase
+      .from("contracts").select("signed_pdf_path,user_id").eq("id", data.contract_id).maybeSingle();
+    if (!c?.signed_pdf_path) return { url: null as string | null };
+    if (c.user_id !== context.userId) return { url: null };
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: s } = await supabaseAdmin.storage.from("contract-pdfs").createSignedUrl(c.signed_pdf_path, 600);
+    return { url: s?.signedUrl ?? null };
+  });
+

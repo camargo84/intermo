@@ -177,6 +177,8 @@ export type Database = {
           produtos: Json
           sent_at: string | null
           signed_at: string | null
+          signed_pdf_downloaded_at: string | null
+          signed_pdf_path: string | null
           status: string
           tenant_snapshot: Json | null
           title: string
@@ -201,6 +203,8 @@ export type Database = {
           produtos?: Json
           sent_at?: string | null
           signed_at?: string | null
+          signed_pdf_downloaded_at?: string | null
+          signed_pdf_path?: string | null
           status?: string
           tenant_snapshot?: Json | null
           title: string
@@ -225,6 +229,8 @@ export type Database = {
           produtos?: Json
           sent_at?: string | null
           signed_at?: string | null
+          signed_pdf_downloaded_at?: string | null
+          signed_pdf_path?: string | null
           status?: string
           tenant_snapshot?: Json | null
           title?: string
