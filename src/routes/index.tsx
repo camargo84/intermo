@@ -108,7 +108,7 @@ const steps = [
     icon: FileSignature,
     n: "01",
     title: "Crie o contrato em minutos",
-    desc: "Assistente guiado coleta os dados — ou o próprio cliente preenche pelo link — e monta o contrato pra você.",
+    desc: "Assistente guiado coleta os dados e monta o contrato pra você.",
   },
   {
     icon: ShieldCheck,
