@@ -122,11 +122,8 @@ export const Route = createFileRoute("/api/public/autentique-webhook/$")({
 
 const AUTENTIQUE_ENDPOINT = "https://api.autentique.com.br/v2/graphql";
 
-type AdminClient = Awaited<
-  ReturnType<typeof import("@/integrations/supabase/client.server").supabaseAdmin.from>
->["constructor"] extends never
-  ? never
-  : Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"];
+type AdminClient = typeof import("@/integrations/supabase/client.server")["supabaseAdmin"];
+
 
 async function fetchAndStoreSignedPdf({
   supabaseAdmin,
