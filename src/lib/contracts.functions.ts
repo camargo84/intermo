@@ -7,7 +7,7 @@ import type { Database } from "@/integrations/supabase/types";
 const AUTENTIQUE_ENDPOINT = "https://api.autentique.com.br/v2/graphql";
 
 type Supa = SupabaseClient<Database>;
-type ContractRow = Database["public"]["Tables"]["contracts"]["Row"];
+type ContractRow = Database["public"]["Tables"]["transactions"]["Row"];
 
 const createContractSchema = z.object({
   title: z.string().min(2).max(200),
@@ -52,7 +52,7 @@ export const createContract = createServerFn({ method: "POST" })
     if (!rl.ok) throw new Error("Muitos contratos em sequência. Aguarde 1 minuto.");
 
     // 3) Anti-abuso interno (teto alto, não-comercial)
-    const { data: count } = await context.supabase.rpc("current_month_contract_count");
+    const { data: count } = await context.supabase.rpc("current_month_transaction_count");
     const { data: sub } = await context.supabase
       .from("subscriptions")
       .select("monthly_contract_quota")
@@ -65,7 +65,7 @@ export const createContract = createServerFn({ method: "POST" })
 
 
     const { data: row, error } = await context.supabase
-      .from("contracts")
+      .from("transactions")
       .insert({
         user_id: context.userId,
         title: data.title,
@@ -85,7 +85,7 @@ export const listContracts = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
-      .from("contracts")
+      .from("transactions")
       .select(
         "id,title,client_name,client_email,status,autentique_signers,sent_at,signed_at,last_error,created_at",
       )
@@ -102,7 +102,7 @@ export const getContract = createServerFn({ method: "GET" })
   )
   .handler(async ({ data, context }) => {
     const { data: contract, error } = await context.supabase
-      .from("contracts")
+      .from("transactions")
       .select("*")
       .eq("id", data.contractId)
       .maybeSingle();
@@ -131,7 +131,7 @@ export const sendContractToAutentique = createServerFn({ method: "POST" })
     if (!hasSub) throw new Error("Sua assinatura não está ativa.");
 
     const { data: contract, error } = await context.supabase
-      .from("contracts")
+      .from("transactions")
       .select("*")
       .eq("id", data.contractId)
       .single();
@@ -149,7 +149,7 @@ export const resendContract = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { data: contract, error } = await context.supabase
-      .from("contracts")
+      .from("transactions")
       .select("*")
       .eq("id", data.contractId)
       .single();
@@ -160,7 +160,7 @@ export const resendContract = createServerFn({ method: "POST" })
 
     // Reseta o contrato para draft e limpa dados do envio anterior
     const { error: resetErr } = await context.supabase
-      .from("contracts")
+      .from("transactions")
       .update({
         status: "draft",
         autentique_document_id: null,
@@ -244,7 +244,7 @@ async function dispatchToAutentique(contract: ContractRow, supabase: Supa) {
 
   const recordError = async (message: string) => {
     await supabase
-      .from("contracts")
+      .from("transactions")
       .update({ status: "error", last_error: message.slice(0, 1000) })
       .eq("id", contract.id);
     await supabase.from("contract_events").insert({
@@ -306,7 +306,7 @@ async function dispatchToAutentique(contract: ContractRow, supabase: Supa) {
   }));
 
   await supabase
-    .from("contracts")
+    .from("transactions")
     .update({
       status: "sent",
       autentique_document_id: doc.id,

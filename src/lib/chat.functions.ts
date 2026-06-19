@@ -8,7 +8,7 @@ export const createDraftContractForChat = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { data: c, error } = await context.supabase
-      .from("contracts")
+      .from("transactions")
       .insert({
         user_id: context.userId,
         title: "Novo contrato (rascunho)",
@@ -35,7 +35,7 @@ export const getChatThread = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     // garantir ownership
     const { data: contract } = await context.supabase
-      .from("contracts").select("id,pdf_path,signed_pdf_path,status,title").eq("id", data.contractId).maybeSingle();
+      .from("transactions").select("id,pdf_path,signed_pdf_path,status,title").eq("id", data.contractId).maybeSingle();
     if (!contract) throw new Error("Contrato não encontrado.");
 
     const { data: thread } = await context.supabase
@@ -81,7 +81,7 @@ export const listMyChatThreads = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("chat_threads")
-      .select("contract_id,updated_at,contracts!inner(id,title,client_name,status)")
+      .select("contract_id,updated_at,transactions!inner(id,title,client_name,status)")
       .order("updated_at", { ascending: false })
       .limit(50);
     if (error) throw new Error(error.message);

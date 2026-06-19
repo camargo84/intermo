@@ -44,7 +44,7 @@ export type Database = {
             foreignKeyName: "chat_threads_contract_id_fkey"
             columns: ["contract_id"]
             isOneToOne: true
-            referencedRelation: "contracts"
+            referencedRelation: "transactions"
             referencedColumns: ["id"]
           },
         ]
@@ -154,96 +154,7 @@ export type Database = {
             foreignKeyName: "contract_events_contract_id_fkey"
             columns: ["contract_id"]
             isOneToOne: false
-            referencedRelation: "contracts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      contracts: {
-        Row: {
-          autentique_document_id: string | null
-          autentique_signers: Json | null
-          client_doc: string | null
-          client_email: string
-          client_id: string | null
-          client_name: string
-          content: string
-          created_at: string
-          entrada_cents: number
-          forma_pagamento: string | null
-          id: string
-          last_error: string | null
-          pdf_path: string | null
-          produtos: Json
-          sent_at: string | null
-          signed_at: string | null
-          signed_pdf_downloaded_at: string | null
-          signed_pdf_path: string | null
-          status: string
-          tenant_snapshot: Json | null
-          title: string
-          updated_at: string
-          user_id: string
-          value_cents: number | null
-        }
-        Insert: {
-          autentique_document_id?: string | null
-          autentique_signers?: Json | null
-          client_doc?: string | null
-          client_email: string
-          client_id?: string | null
-          client_name: string
-          content: string
-          created_at?: string
-          entrada_cents?: number
-          forma_pagamento?: string | null
-          id?: string
-          last_error?: string | null
-          pdf_path?: string | null
-          produtos?: Json
-          sent_at?: string | null
-          signed_at?: string | null
-          signed_pdf_downloaded_at?: string | null
-          signed_pdf_path?: string | null
-          status?: string
-          tenant_snapshot?: Json | null
-          title: string
-          updated_at?: string
-          user_id: string
-          value_cents?: number | null
-        }
-        Update: {
-          autentique_document_id?: string | null
-          autentique_signers?: Json | null
-          client_doc?: string | null
-          client_email?: string
-          client_id?: string | null
-          client_name?: string
-          content?: string
-          created_at?: string
-          entrada_cents?: number
-          forma_pagamento?: string | null
-          id?: string
-          last_error?: string | null
-          pdf_path?: string | null
-          produtos?: Json
-          sent_at?: string | null
-          signed_at?: string | null
-          signed_pdf_downloaded_at?: string | null
-          signed_pdf_path?: string | null
-          status?: string
-          tenant_snapshot?: Json | null
-          title?: string
-          updated_at?: string
-          user_id?: string
-          value_cents?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "contracts_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
+            referencedRelation: "transactions"
             referencedColumns: ["id"]
           },
         ]
@@ -252,6 +163,7 @@ export type Database = {
         Row: {
           accepted_terms_at: string | null
           accepted_terms_version: string | null
+          autentique_folder_id: string | null
           comarca: string | null
           company_address: string | null
           company_cep: string | null
@@ -275,6 +187,7 @@ export type Database = {
         Insert: {
           accepted_terms_at?: string | null
           accepted_terms_version?: string | null
+          autentique_folder_id?: string | null
           comarca?: string | null
           company_address?: string | null
           company_cep?: string | null
@@ -298,6 +211,7 @@ export type Database = {
         Update: {
           accepted_terms_at?: string | null
           accepted_terms_version?: string | null
+          autentique_folder_id?: string | null
           comarca?: string | null
           company_address?: string | null
           company_cep?: string | null
@@ -340,6 +254,71 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      signature_tokens: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          pdf_hash: string | null
+          revoked_at: string | null
+          signature_image_path: string | null
+          signed_at: string | null
+          signed_ip: string | null
+          signed_user_agent: string | null
+          signer_doc: string | null
+          signer_email: string | null
+          signer_name: string | null
+          signer_role: string
+          token: string
+          transaction_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          pdf_hash?: string | null
+          revoked_at?: string | null
+          signature_image_path?: string | null
+          signed_at?: string | null
+          signed_ip?: string | null
+          signed_user_agent?: string | null
+          signer_doc?: string | null
+          signer_email?: string | null
+          signer_name?: string | null
+          signer_role: string
+          token: string
+          transaction_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          pdf_hash?: string | null
+          revoked_at?: string | null
+          signature_image_path?: string | null
+          signed_at?: string | null
+          signed_ip?: string | null
+          signed_user_agent?: string | null
+          signer_doc?: string | null
+          signer_email?: string | null
+          signer_name?: string | null
+          signer_role?: string
+          token?: string
+          transaction_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "signature_tokens_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subscriptions: {
         Row: {
@@ -395,6 +374,137 @@ export type Database = {
         }
         Relationships: []
       }
+      transactions: {
+        Row: {
+          autentique_document_id: string | null
+          autentique_signers: Json | null
+          client_doc: string | null
+          client_email: string
+          client_id: string | null
+          client_name: string
+          client_paid_amount_cents: number | null
+          client_paid_at: string | null
+          client_payment_method: string | null
+          consolidated: boolean
+          consolidated_at: string | null
+          content: string
+          created_at: string
+          entrada_cents: number
+          forma_pagamento: string | null
+          freight_carrier: string | null
+          freight_paid_amount_cents: number | null
+          freight_paid_at: string | null
+          id: string
+          last_error: string | null
+          margin_cents: number | null
+          pdf_path: string | null
+          produtos: Json
+          sent_at: string | null
+          signed_at: string | null
+          signed_pdf_downloaded_at: string | null
+          signed_pdf_path: string | null
+          status: string
+          supplier_doc: string | null
+          supplier_name: string | null
+          supplier_paid_amount_cents: number | null
+          supplier_paid_at: string | null
+          tax_estimated_cents: number | null
+          tenant_snapshot: Json | null
+          title: string
+          updated_at: string
+          user_id: string
+          value_cents: number | null
+        }
+        Insert: {
+          autentique_document_id?: string | null
+          autentique_signers?: Json | null
+          client_doc?: string | null
+          client_email: string
+          client_id?: string | null
+          client_name: string
+          client_paid_amount_cents?: number | null
+          client_paid_at?: string | null
+          client_payment_method?: string | null
+          consolidated?: boolean
+          consolidated_at?: string | null
+          content: string
+          created_at?: string
+          entrada_cents?: number
+          forma_pagamento?: string | null
+          freight_carrier?: string | null
+          freight_paid_amount_cents?: number | null
+          freight_paid_at?: string | null
+          id?: string
+          last_error?: string | null
+          margin_cents?: number | null
+          pdf_path?: string | null
+          produtos?: Json
+          sent_at?: string | null
+          signed_at?: string | null
+          signed_pdf_downloaded_at?: string | null
+          signed_pdf_path?: string | null
+          status?: string
+          supplier_doc?: string | null
+          supplier_name?: string | null
+          supplier_paid_amount_cents?: number | null
+          supplier_paid_at?: string | null
+          tax_estimated_cents?: number | null
+          tenant_snapshot?: Json | null
+          title: string
+          updated_at?: string
+          user_id: string
+          value_cents?: number | null
+        }
+        Update: {
+          autentique_document_id?: string | null
+          autentique_signers?: Json | null
+          client_doc?: string | null
+          client_email?: string
+          client_id?: string | null
+          client_name?: string
+          client_paid_amount_cents?: number | null
+          client_paid_at?: string | null
+          client_payment_method?: string | null
+          consolidated?: boolean
+          consolidated_at?: string | null
+          content?: string
+          created_at?: string
+          entrada_cents?: number
+          forma_pagamento?: string | null
+          freight_carrier?: string | null
+          freight_paid_amount_cents?: number | null
+          freight_paid_at?: string | null
+          id?: string
+          last_error?: string | null
+          margin_cents?: number | null
+          pdf_path?: string | null
+          produtos?: Json
+          sent_at?: string | null
+          signed_at?: string | null
+          signed_pdf_downloaded_at?: string | null
+          signed_pdf_path?: string | null
+          status?: string
+          supplier_doc?: string | null
+          supplier_name?: string | null
+          supplier_paid_amount_cents?: number | null
+          supplier_paid_at?: string | null
+          tax_estimated_cents?: number | null
+          tenant_snapshot?: Json | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+          value_cents?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contracts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -448,7 +558,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      current_month_contract_count: { Args: never; Returns: number }
+      current_month_transaction_count: { Args: never; Returns: number }
       has_active_subscription: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
         Args: {
