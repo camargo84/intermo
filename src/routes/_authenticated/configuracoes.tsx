@@ -174,7 +174,7 @@ function ConfiguracoesPage() {
           <div className="flex items-center gap-4">
             <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-md border bg-muted">
               {logoData?.url ? (
-                <img src={logoData.url} alt="logo" className="h-full w-full object-contain" />
+                <img src={logoData.url} alt="Logo da empresa" className="h-full w-full object-contain" />
               ) : (
                 <span className="text-xs text-muted-foreground">sem logo</span>
               )}

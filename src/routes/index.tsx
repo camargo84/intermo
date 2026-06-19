@@ -34,9 +34,44 @@ export const Route = createFileRoute("/")({
         content:
           "Contrato pronto, assinatura com validade jurídica e gestão das transações no mesmo lugar.",
       },
-      { property: "og:url", content: "/" },
+      { property: "og:url", content: "https://intermo.com.br/" },
     ],
-    links: [{ rel: "canonical", href: "/" }],
+    links: [{ rel: "canonical", href: "https://intermo.com.br/" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: [
+            {
+              "@type": "Question",
+              name: "Como funciona a garantia?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "Você assina e usa por 7 dias. Se não gostar, devolvemos 100% do valor. Cancele quando quiser.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "Funciona pelo celular?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "Sim. A inTermo foi desenhada primeiro para o celular — você opera tudo de onde estiver.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "Tem limite de contratos?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "Não. No plano inTermo os contratos e assinaturas são ilimitados.",
+              },
+            },
+          ],
+        }),
+      },
+    ],
   }),
   component: Landing,
 });

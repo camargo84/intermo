@@ -13,7 +13,16 @@ import { Label } from "@/components/ui/label";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 
 export const Route = createFileRoute("/reset-password")({
-  head: () => ({ meta: [{ title: "Recuperar senha — inTermo" }] }),
+  head: () => ({
+    meta: [
+      { title: "Recuperar senha — inTermo" },
+      { name: "description", content: "Recupere o acesso à sua conta inTermo: enviamos um link seguro para você criar uma nova senha." },
+      { property: "og:title", content: "Recuperar senha — inTermo" },
+      { property: "og:description", content: "Recupere o acesso à sua conta inTermo: enviamos um link seguro para você criar uma nova senha." },
+      { name: "robots", content: "noindex,follow" },
+    ],
+    links: [{ rel: "canonical", href: "https://intermo.com.br/reset-password" }],
+  }),
   component: ResetPasswordPage,
 });
 

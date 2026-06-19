@@ -5,13 +5,13 @@ export const Route = createFileRoute("/privacidade")({
   head: () => ({
     meta: [
       { title: "Política de privacidade — inTermo" },
-      { name: "description", content: "Política de privacidade da plataforma inTermo." },
+      { name: "description", content: "Como a inTermo coleta, usa e protege seus dados pessoais conforme a Lei Geral de Proteção de Dados (LGPD)." },
       { property: "og:title", content: "Política de privacidade — inTermo" },
-      { property: "og:description", content: "Como tratamos seus dados na inTermo." },
+      { property: "og:description", content: "Como a inTermo coleta, usa e protege seus dados pessoais conforme a Lei Geral de Proteção de Dados (LGPD)." },
       { property: "og:type", content: "article" },
       { name: "twitter:card", content: "summary" },
     ],
-    links: [{ rel: "canonical", href: "/privacidade" }],
+    links: [{ rel: "canonical", href: "https://intermo.com.br/privacidade" }],
   }),
   component: PrivacyPage,
 });

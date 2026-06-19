@@ -19,7 +19,7 @@ export const Route = createFileRoute("/login")({
       { title: "Entrar — inTermo" },
       { name: "description", content: "Entre na sua conta inTermo pra gerenciar contratos e clientes." },
       { property: "og:title", content: "Entrar — inTermo" },
-      { property: "og:description", content: "Acesse o painel da inTermo." },
+      { property: "og:description", content: "Acesse o painel da inTermo para gerenciar contratos, clientes e assinaturas digitais com validade jurídica." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex,follow" },

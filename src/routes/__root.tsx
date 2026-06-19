@@ -101,14 +101,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:title", content: "InTermo— Intermediar ficou simples." },
       {
         property: "og:description",
-        content: "Da conversa ao contrato assinado em minutos, com validade jurídica.",
+        content:
+          "Da conversa ao contrato assinado em minutos, com validade jurídica. Plataforma para vendedores sob encomenda formalizarem vendas.",
       },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
+      { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "InTermo— Intermediar ficou simples." },
-      { name: "description", content: "Intermo is a B2B SaaS platform for custom Apple electronics procurement." },
-      { property: "og:description", content: "Intermo is a B2B SaaS platform for custom Apple electronics procurement." },
-      { name: "twitter:description", content: "Intermo is a B2B SaaS platform for custom Apple electronics procurement." },
+      {
+        name: "twitter:description",
+        content:
+          "Da conversa ao contrato assinado em minutos, com validade jurídica. Plataforma para vendedores sob encomenda formalizarem vendas.",
+      },
       { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/KNPH43GP7sV2ZtmWYKP7gdw5qMt2/social-images/social-1781870208646-inTermo.webp" },
       { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/KNPH43GP7sV2ZtmWYKP7gdw5qMt2/social-images/social-1781870208646-inTermo.webp" },
     ],
@@ -140,7 +143,30 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           ),
       },
     ],
-    scripts: [{ children: themeBootstrap }],
+    scripts: [
+      { children: themeBootstrap },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "Organization",
+              name: "inTermo",
+              url: "https://intermo.com.br",
+              logo: "https://intermo.com.br/favicon.ico",
+              description:
+                "Plataforma para vendedores sob encomenda formalizarem vendas com contrato de validade jurídica.",
+            },
+            {
+              "@type": "WebSite",
+              name: "inTermo",
+              url: "https://intermo.com.br",
+            },
+          ],
+        }),
+      },
+    ],
   }),
   shellComponent: RootShell,
   component: RootComponent,

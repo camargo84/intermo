@@ -6,3 +6,5 @@ Disallow: /contratos
 Disallow: /financeiro
 Disallow: /configuracoes
 Disallow: /assinatura
+
+Sitemap: https://intermo.com.br/sitemap.xml
