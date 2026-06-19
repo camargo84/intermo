@@ -105,6 +105,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
+      { name: "twitter:title", content: "Intermo — Intermediar ficou simples." },
+      { name: "description", content: "Intermo is a B2B SaaS platform for custom Apple electronics procurement." },
+      { property: "og:description", content: "Intermo is a B2B SaaS platform for custom Apple electronics procurement." },
+      { name: "twitter:description", content: "Intermo is a B2B SaaS platform for custom Apple electronics procurement." },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/KNPH43GP7sV2ZtmWYKP7gdw5qMt2/social-images/social-1781870208646-inTermo.webp" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/KNPH43GP7sV2ZtmWYKP7gdw5qMt2/social-images/social-1781870208646-inTermo.webp" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
