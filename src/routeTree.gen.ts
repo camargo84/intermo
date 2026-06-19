@@ -17,6 +17,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AuthenticatedNfsRouteImport } from './routes/_authenticated/nfs'
 import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authenticated/financeiro'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
@@ -24,11 +25,13 @@ import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authen
 import { Route as AuthenticatedAssinaturaRouteImport } from './routes/_authenticated/assinatura'
 import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/_admin/route'
 import { Route as AuthenticatedContratosIndexRouteImport } from './routes/_authenticated/contratos.index'
+import { Route as AuthenticatedChatIndexRouteImport } from './routes/_authenticated/chat.index'
 import { Route as ApiPublicSitemapDotxmlRouteImport } from './routes/api/public/sitemap[.]xml'
 import { Route as ApiPublicHealthRouteImport } from './routes/api/public/health'
 import { Route as ApiPublicAbacateWebhookRouteImport } from './routes/api/public/abacate-webhook'
 import { Route as AuthenticatedContratosNovoRouteImport } from './routes/_authenticated/contratos.novo'
 import { Route as AuthenticatedContratosContractIdRouteImport } from './routes/_authenticated/contratos.$contractId'
+import { Route as AuthenticatedChatContractIdRouteImport } from './routes/_authenticated/chat.$contractId'
 import { Route as AuthenticatedAdminContratosFalhaRouteImport } from './routes/_authenticated/_admin/contratos-falha'
 import { Route as AuthenticatedAdminAssinaturasRouteImport } from './routes/_authenticated/_admin/assinaturas'
 import { Route as ApiPublicAutentiqueWebhookSplatRouteImport } from './routes/api/public/autentique-webhook.$'
@@ -72,6 +75,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiChatRoute = ApiChatRouteImport.update({
+  id: '/api/chat',
+  path: '/api/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedNfsRoute = AuthenticatedNfsRouteImport.update({
   id: '/nfs',
   path: '/nfs',
@@ -108,6 +116,11 @@ const AuthenticatedContratosIndexRoute =
     path: '/contratos/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedChatIndexRoute = AuthenticatedChatIndexRouteImport.update({
+  id: '/chat/',
+  path: '/chat/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const ApiPublicSitemapDotxmlRoute = ApiPublicSitemapDotxmlRouteImport.update({
   id: '/api/public/sitemap.xml',
   path: '/api/public/sitemap.xml',
@@ -133,6 +146,12 @@ const AuthenticatedContratosContractIdRoute =
   AuthenticatedContratosContractIdRouteImport.update({
     id: '/contratos/$contractId',
     path: '/contratos/$contractId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedChatContractIdRoute =
+  AuthenticatedChatContractIdRouteImport.update({
+    id: '/chat/$contractId',
+    path: '/chat/$contractId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedAdminContratosFalhaRoute =
@@ -167,13 +186,16 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/nfs': typeof AuthenticatedNfsRoute
+  '/api/chat': typeof ApiChatRoute
   '/assinaturas': typeof AuthenticatedAdminAssinaturasRoute
   '/contratos-falha': typeof AuthenticatedAdminContratosFalhaRoute
+  '/chat/$contractId': typeof AuthenticatedChatContractIdRoute
   '/contratos/$contractId': typeof AuthenticatedContratosContractIdRoute
   '/contratos/novo': typeof AuthenticatedContratosNovoRoute
   '/api/public/abacate-webhook': typeof ApiPublicAbacateWebhookRoute
   '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/sitemap.xml': typeof ApiPublicSitemapDotxmlRoute
+  '/chat/': typeof AuthenticatedChatIndexRoute
   '/contratos/': typeof AuthenticatedContratosIndexRoute
   '/api/public/autentique-webhook/$': typeof ApiPublicAutentiqueWebhookSplatRoute
 }
@@ -190,13 +212,16 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/nfs': typeof AuthenticatedNfsRoute
+  '/api/chat': typeof ApiChatRoute
   '/assinaturas': typeof AuthenticatedAdminAssinaturasRoute
   '/contratos-falha': typeof AuthenticatedAdminContratosFalhaRoute
+  '/chat/$contractId': typeof AuthenticatedChatContractIdRoute
   '/contratos/$contractId': typeof AuthenticatedContratosContractIdRoute
   '/contratos/novo': typeof AuthenticatedContratosNovoRoute
   '/api/public/abacate-webhook': typeof ApiPublicAbacateWebhookRoute
   '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/sitemap.xml': typeof ApiPublicSitemapDotxmlRoute
+  '/chat': typeof AuthenticatedChatIndexRoute
   '/contratos': typeof AuthenticatedContratosIndexRoute
   '/api/public/autentique-webhook/$': typeof ApiPublicAutentiqueWebhookSplatRoute
 }
@@ -216,13 +241,16 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/financeiro': typeof AuthenticatedFinanceiroRoute
   '/_authenticated/nfs': typeof AuthenticatedNfsRoute
+  '/api/chat': typeof ApiChatRoute
   '/_authenticated/_admin/assinaturas': typeof AuthenticatedAdminAssinaturasRoute
   '/_authenticated/_admin/contratos-falha': typeof AuthenticatedAdminContratosFalhaRoute
+  '/_authenticated/chat/$contractId': typeof AuthenticatedChatContractIdRoute
   '/_authenticated/contratos/$contractId': typeof AuthenticatedContratosContractIdRoute
   '/_authenticated/contratos/novo': typeof AuthenticatedContratosNovoRoute
   '/api/public/abacate-webhook': typeof ApiPublicAbacateWebhookRoute
   '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/sitemap.xml': typeof ApiPublicSitemapDotxmlRoute
+  '/_authenticated/chat/': typeof AuthenticatedChatIndexRoute
   '/_authenticated/contratos/': typeof AuthenticatedContratosIndexRoute
   '/api/public/autentique-webhook/$': typeof ApiPublicAutentiqueWebhookSplatRoute
 }
@@ -241,13 +269,16 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/financeiro'
     | '/nfs'
+    | '/api/chat'
     | '/assinaturas'
     | '/contratos-falha'
+    | '/chat/$contractId'
     | '/contratos/$contractId'
     | '/contratos/novo'
     | '/api/public/abacate-webhook'
     | '/api/public/health'
     | '/api/public/sitemap.xml'
+    | '/chat/'
     | '/contratos/'
     | '/api/public/autentique-webhook/$'
   fileRoutesByTo: FileRoutesByTo
@@ -264,13 +295,16 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/financeiro'
     | '/nfs'
+    | '/api/chat'
     | '/assinaturas'
     | '/contratos-falha'
+    | '/chat/$contractId'
     | '/contratos/$contractId'
     | '/contratos/novo'
     | '/api/public/abacate-webhook'
     | '/api/public/health'
     | '/api/public/sitemap.xml'
+    | '/chat'
     | '/contratos'
     | '/api/public/autentique-webhook/$'
   id:
@@ -289,13 +323,16 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/financeiro'
     | '/_authenticated/nfs'
+    | '/api/chat'
     | '/_authenticated/_admin/assinaturas'
     | '/_authenticated/_admin/contratos-falha'
+    | '/_authenticated/chat/$contractId'
     | '/_authenticated/contratos/$contractId'
     | '/_authenticated/contratos/novo'
     | '/api/public/abacate-webhook'
     | '/api/public/health'
     | '/api/public/sitemap.xml'
+    | '/_authenticated/chat/'
     | '/_authenticated/contratos/'
     | '/api/public/autentique-webhook/$'
   fileRoutesById: FileRoutesById
@@ -309,6 +346,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
   TermosRoute: typeof TermosRoute
+  ApiChatRoute: typeof ApiChatRoute
   ApiPublicAbacateWebhookRoute: typeof ApiPublicAbacateWebhookRoute
   ApiPublicHealthRoute: typeof ApiPublicHealthRoute
   ApiPublicSitemapDotxmlRoute: typeof ApiPublicSitemapDotxmlRoute
@@ -373,6 +411,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/chat': {
+      id: '/api/chat'
+      path: '/api/chat'
+      fullPath: '/api/chat'
+      preLoaderRoute: typeof ApiChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/nfs': {
       id: '/_authenticated/nfs'
       path: '/nfs'
@@ -422,6 +467,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedContratosIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/chat/': {
+      id: '/_authenticated/chat/'
+      path: '/chat'
+      fullPath: '/chat/'
+      preLoaderRoute: typeof AuthenticatedChatIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/public/sitemap.xml': {
       id: '/api/public/sitemap.xml'
       path: '/api/public/sitemap.xml'
@@ -455,6 +507,13 @@ declare module '@tanstack/react-router' {
       path: '/contratos/$contractId'
       fullPath: '/contratos/$contractId'
       preLoaderRoute: typeof AuthenticatedContratosContractIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/chat/$contractId': {
+      id: '/_authenticated/chat/$contractId'
+      path: '/chat/$contractId'
+      fullPath: '/chat/$contractId'
+      preLoaderRoute: typeof AuthenticatedChatContractIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/_admin/contratos-falha': {
@@ -505,8 +564,10 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedFinanceiroRoute: typeof AuthenticatedFinanceiroRoute
   AuthenticatedNfsRoute: typeof AuthenticatedNfsRoute
+  AuthenticatedChatContractIdRoute: typeof AuthenticatedChatContractIdRoute
   AuthenticatedContratosContractIdRoute: typeof AuthenticatedContratosContractIdRoute
   AuthenticatedContratosNovoRoute: typeof AuthenticatedContratosNovoRoute
+  AuthenticatedChatIndexRoute: typeof AuthenticatedChatIndexRoute
   AuthenticatedContratosIndexRoute: typeof AuthenticatedContratosIndexRoute
 }
 
@@ -517,8 +578,10 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedFinanceiroRoute: AuthenticatedFinanceiroRoute,
   AuthenticatedNfsRoute: AuthenticatedNfsRoute,
+  AuthenticatedChatContractIdRoute: AuthenticatedChatContractIdRoute,
   AuthenticatedContratosContractIdRoute: AuthenticatedContratosContractIdRoute,
   AuthenticatedContratosNovoRoute: AuthenticatedContratosNovoRoute,
+  AuthenticatedChatIndexRoute: AuthenticatedChatIndexRoute,
   AuthenticatedContratosIndexRoute: AuthenticatedContratosIndexRoute,
 }
 
@@ -534,6 +597,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,
   TermosRoute: TermosRoute,
+  ApiChatRoute: ApiChatRoute,
   ApiPublicAbacateWebhookRoute: ApiPublicAbacateWebhookRoute,
   ApiPublicHealthRoute: ApiPublicHealthRoute,
   ApiPublicSitemapDotxmlRoute: ApiPublicSitemapDotxmlRoute,
@@ -542,13 +606,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

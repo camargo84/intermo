@@ -45,8 +45,7 @@ function DashboardPage() {
   );
 
   const quotaUsed = quotaData?.used ?? monthContracts.length;
-  const quotaLimit = quotaData?.limit ?? 200;
-  const quotaPct = Math.min(100, Math.round((quotaUsed / quotaLimit) * 100));
+
 
   const stats = [
     { icon: FileText, label: "Contratos no mês", value: String(monthContracts.length), hint: "Inclui rascunhos", tone: "text-foreground" as const },
@@ -79,38 +78,25 @@ function DashboardPage() {
         ))}
       </section>
 
-      <section aria-label="Cota mensal">
+      <section aria-label="Resumo do mês">
         <Card className="shadow-card">
           <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
             <div>
               <CardTitle className="flex items-center gap-2 text-base">
                 <PieChart className="h-4 w-4 text-accent" />
-                Cota mensal de contratos
+                Contratos no mês
               </CardTitle>
               <p className="mt-1 text-sm text-muted-foreground">
-                {quotaUsed} de {quotaLimit} contratos usados neste mês.
+                {quotaUsed} {quotaUsed === 1 ? "contrato emitido" : "contratos emitidos"} neste mês.
               </p>
             </div>
             <Badge variant="secondary" className="tabular-nums">
-              {quotaPct}%
+              {quotaUsed}
             </Badge>
           </CardHeader>
-          <CardContent>
-            <div
-              className="h-3 w-full overflow-hidden rounded-full bg-muted"
-              role="progressbar"
-              aria-valuenow={quotaPct}
-              aria-valuemin={0}
-              aria-valuemax={100}
-            >
-              <div
-                className="h-full rounded-full bg-brand transition-[width] duration-700 ease-out"
-                style={{ width: `${quotaPct}%` }}
-              />
-            </div>
-          </CardContent>
         </Card>
       </section>
+
 
       <section aria-label="Próximos passos" className="grid gap-4 lg:grid-cols-2">
         <Card className="shadow-card">

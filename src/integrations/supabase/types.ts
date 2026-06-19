@@ -14,6 +14,110 @@ export type Database = {
   }
   public: {
     Tables: {
+      chat_threads: {
+        Row: {
+          contract_id: string
+          created_at: string
+          id: string
+          messages: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          contract_id: string
+          created_at?: string
+          id?: string
+          messages?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          contract_id?: string
+          created_at?: string
+          id?: string
+          messages?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_threads_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: true
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clients: {
+        Row: {
+          bairro: string | null
+          cep: string | null
+          cidade: string | null
+          cnpj: string | null
+          complemento: string | null
+          cpf: string | null
+          created_at: string
+          data_nascimento: string | null
+          email: string | null
+          endereco: string | null
+          estado_civil: string | null
+          id: string
+          is_pj: boolean
+          nacionalidade: string | null
+          name: string
+          phone: string | null
+          rg: string | null
+          uf: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
+          cnpj?: string | null
+          complemento?: string | null
+          cpf?: string | null
+          created_at?: string
+          data_nascimento?: string | null
+          email?: string | null
+          endereco?: string | null
+          estado_civil?: string | null
+          id?: string
+          is_pj?: boolean
+          nacionalidade?: string | null
+          name: string
+          phone?: string | null
+          rg?: string | null
+          uf?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
+          cnpj?: string | null
+          complemento?: string | null
+          cpf?: string | null
+          created_at?: string
+          data_nascimento?: string | null
+          email?: string | null
+          endereco?: string | null
+          estado_civil?: string | null
+          id?: string
+          is_pj?: boolean
+          nacionalidade?: string | null
+          name?: string
+          phone?: string | null
+          rg?: string | null
+          uf?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       contract_events: {
         Row: {
           contract_id: string
@@ -61,14 +165,20 @@ export type Database = {
           autentique_signers: Json | null
           client_doc: string | null
           client_email: string
+          client_id: string | null
           client_name: string
           content: string
           created_at: string
+          entrada_cents: number
+          forma_pagamento: string | null
           id: string
           last_error: string | null
+          pdf_path: string | null
+          produtos: Json
           sent_at: string | null
           signed_at: string | null
           status: string
+          tenant_snapshot: Json | null
           title: string
           updated_at: string
           user_id: string
@@ -79,14 +189,20 @@ export type Database = {
           autentique_signers?: Json | null
           client_doc?: string | null
           client_email: string
+          client_id?: string | null
           client_name: string
           content: string
           created_at?: string
+          entrada_cents?: number
+          forma_pagamento?: string | null
           id?: string
           last_error?: string | null
+          pdf_path?: string | null
+          produtos?: Json
           sent_at?: string | null
           signed_at?: string | null
           status?: string
+          tenant_snapshot?: Json | null
           title: string
           updated_at?: string
           user_id: string
@@ -97,62 +213,103 @@ export type Database = {
           autentique_signers?: Json | null
           client_doc?: string | null
           client_email?: string
+          client_id?: string | null
           client_name?: string
           content?: string
           created_at?: string
+          entrada_cents?: number
+          forma_pagamento?: string | null
           id?: string
           last_error?: string | null
+          pdf_path?: string | null
+          produtos?: Json
           sent_at?: string | null
           signed_at?: string | null
           status?: string
+          tenant_snapshot?: Json | null
           title?: string
           updated_at?: string
           user_id?: string
           value_cents?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "contracts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
           accepted_terms_at: string | null
           accepted_terms_version: string | null
+          comarca: string | null
+          company_address: string | null
+          company_cep: string | null
+          company_city: string | null
           company_cnpj: string | null
           company_email: string | null
           company_fantasy_name: string | null
           company_legal_name: string | null
           company_phone: string | null
+          company_uf: string | null
           created_at: string
           default_margin_pct: number
           id: string
+          logo_path: string | null
           owner_name: string | null
+          representative_cpf: string | null
+          representative_name: string | null
+          representative_qualification: string | null
           updated_at: string
         }
         Insert: {
           accepted_terms_at?: string | null
           accepted_terms_version?: string | null
+          comarca?: string | null
+          company_address?: string | null
+          company_cep?: string | null
+          company_city?: string | null
           company_cnpj?: string | null
           company_email?: string | null
           company_fantasy_name?: string | null
           company_legal_name?: string | null
           company_phone?: string | null
+          company_uf?: string | null
           created_at?: string
           default_margin_pct?: number
           id: string
+          logo_path?: string | null
           owner_name?: string | null
+          representative_cpf?: string | null
+          representative_name?: string | null
+          representative_qualification?: string | null
           updated_at?: string
         }
         Update: {
           accepted_terms_at?: string | null
           accepted_terms_version?: string | null
+          comarca?: string | null
+          company_address?: string | null
+          company_cep?: string | null
+          company_city?: string | null
           company_cnpj?: string | null
           company_email?: string | null
           company_fantasy_name?: string | null
           company_legal_name?: string | null
           company_phone?: string | null
+          company_uf?: string | null
           created_at?: string
           default_margin_pct?: number
           id?: string
+          logo_path?: string | null
           owner_name?: string | null
+          representative_cpf?: string | null
+          representative_name?: string | null
+          representative_qualification?: string | null
           updated_at?: string
         }
         Relationships: []

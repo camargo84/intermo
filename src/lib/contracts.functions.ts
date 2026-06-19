@@ -51,17 +51,18 @@ export const createContract = createServerFn({ method: "POST" })
     });
     if (!rl.ok) throw new Error("Muitos contratos em sequência. Aguarde 1 minuto.");
 
-    // 3) Quota mensal
+    // 3) Anti-abuso interno (teto alto, não-comercial)
     const { data: count } = await context.supabase.rpc("current_month_contract_count");
     const { data: sub } = await context.supabase
       .from("subscriptions")
       .select("monthly_contract_quota")
       .eq("user_id", context.userId)
       .maybeSingle();
-    const limit = sub?.monthly_contract_quota ?? 200;
-    if ((count ?? 0) >= limit) {
-      throw new Error(`Você atingiu o limite mensal de ${limit} contratos.`);
+    const ceil = sub?.monthly_contract_quota ?? 2000;
+    if ((count ?? 0) >= ceil) {
+      throw new Error("Uso anormal detectado. Tente novamente mais tarde.");
     }
+
 
     const { data: row, error } = await context.supabase
       .from("contracts")
@@ -187,15 +188,15 @@ async function dispatchToAutentique(contract: ContractRow, supabase: Supa) {
   const token = process.env.AUTENTIQUE_API_TOKEN;
   if (!token) throw new Error("AUTENTIQUE_API_TOKEN não configurado.");
 
-  const { renderContractPdf } = await import("./contracts.pdf.server");
-  const pdfBytes = await renderContractPdf({
-    title: contract.title,
-    content: contract.content,
-    clientName: contract.client_name,
-    clientEmail: contract.client_email,
-    clientDoc: contract.client_doc,
-    valueCents: contract.value_cents,
-  });
+  // PDF deve ter sido gerado previamente pelo chat-agente (gerarPdfContrato)
+  if (!contract.pdf_path) {
+    throw new Error("Gere o PDF do contrato antes de enviar para assinatura.");
+  }
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: blob, error: dlErr } = await supabaseAdmin
+    .storage.from("contract-pdfs").download(contract.pdf_path);
+  if (dlErr || !blob) throw new Error("Não foi possível carregar o PDF do contrato.");
+  const pdfBytes = new Uint8Array(await blob.arrayBuffer());
 
   const mutation = `
     mutation CreateDocumentMutation(
