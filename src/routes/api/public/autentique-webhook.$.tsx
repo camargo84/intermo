@@ -51,7 +51,7 @@ export const Route = createFileRoute("/api/public/autentique-webhook/$")({
           );
           const { data: contract, error: fetchErr } = await supabaseAdmin
             .from("contracts")
-            .select("id,status,autentique_signers")
+            .select("id,user_id,status,autentique_signers,signed_pdf_path")
             .eq("autentique_document_id", documentId)
             .maybeSingle();
           if (fetchErr) throw fetchErr;
@@ -82,6 +82,31 @@ export const Route = createFileRoute("/api/public/autentique-webhook/$")({
             payload: JSON.parse(JSON.stringify(body)),
           });
 
+          // Quando todos assinaram, baixar PDF assinado da Autentique e armazenar.
+          // Idempotente: pula se signed_pdf_path já existe.
+          if (patch.status === "signed" && !contract.signed_pdf_path) {
+            try {
+              await fetchAndStoreSignedPdf({
+                supabaseAdmin,
+                contractId: contract.id,
+                userId: contract.user_id as string,
+                documentId,
+              });
+            } catch (pdfErr) {
+              const msg = pdfErr instanceof Error ? pdfErr.message : String(pdfErr);
+              console.error("[autentique-webhook] signed-pdf fetch failed", msg);
+              await supabaseAdmin.from("contract_events").insert({
+                contract_id: contract.id,
+                event_type: "signed_pdf_fetch_failed",
+                status: null,
+                signer_email: null,
+                message: msg,
+                payload: null,
+              });
+              // não retorna 500 — webhook já foi processado
+            }
+          }
+
           return json({ ok: true });
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
@@ -92,6 +117,92 @@ export const Route = createFileRoute("/api/public/autentique-webhook/$")({
     },
   },
 });
+
+// ----- baixar e armazenar PDF assinado da Autentique -----
+
+const AUTENTIQUE_ENDPOINT = "https://api.autentique.com.br/v2/graphql";
+
+type AdminClient = Awaited<
+  ReturnType<typeof import("@/integrations/supabase/client.server").supabaseAdmin.from>
+>["constructor"] extends never
+  ? never
+  : Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"];
+
+async function fetchAndStoreSignedPdf({
+  supabaseAdmin,
+  contractId,
+  userId,
+  documentId,
+}: {
+  supabaseAdmin: AdminClient;
+  contractId: string;
+  userId: string;
+  documentId: string;
+}) {
+  const token = process.env.AUTENTIQUE_API_TOKEN;
+  if (!token) throw new Error("AUTENTIQUE_API_TOKEN ausente");
+
+  // 1) Buscar URL temporária do PDF assinado
+  const query = `query($id: UUID!) { document(id: $id) { id files { signed } } }`;
+  const gqlRes = await fetch(AUTENTIQUE_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ query, variables: { id: documentId } }),
+  });
+  if (!gqlRes.ok) {
+    throw new Error(`Autentique GraphQL HTTP ${gqlRes.status}`);
+  }
+  const gqlJson = (await gqlRes.json()) as {
+    data?: { document?: { files?: { signed?: string | null } | null } | null };
+    errors?: Array<{ message?: string }>;
+  };
+  if (gqlJson.errors?.length) {
+    throw new Error(gqlJson.errors.map((e) => e.message).join("; "));
+  }
+  const signedUrl = gqlJson.data?.document?.files?.signed ?? null;
+  if (!signedUrl) throw new Error("Autentique não retornou URL do PDF assinado");
+
+  // 2) Baixar o PDF
+  const pdfRes = await fetch(signedUrl);
+  if (!pdfRes.ok) {
+    throw new Error(`Download do PDF assinado falhou: HTTP ${pdfRes.status}`);
+  }
+  const pdfBytes = new Uint8Array(await pdfRes.arrayBuffer());
+
+  // 3) Armazenar no bucket privado
+  const path = `${userId}/${contractId}-signed.pdf`;
+  const { error: upErr } = await supabaseAdmin.storage
+    .from("contract-pdfs")
+    .upload(path, pdfBytes, {
+      upsert: true,
+      contentType: "application/pdf",
+    });
+  if (upErr) throw new Error(upErr.message);
+
+  // 4) Marcar no contrato
+  const { error: updErr } = await supabaseAdmin
+    .from("contracts")
+    .update({
+      signed_pdf_path: path,
+      signed_pdf_downloaded_at: new Date().toISOString(),
+    } as never)
+    .eq("id", contractId);
+  if (updErr) throw new Error(updErr.message);
+
+  // 5) Log
+  await supabaseAdmin.from("contract_events").insert({
+    contract_id: contractId,
+    event_type: "signed_pdf_stored",
+    status: "signed",
+    signer_email: null,
+    message: "PDF assinado baixado da Autentique e armazenado.",
+    payload: null,
+  });
+}
+
 
 // ----- helpers -----
 
