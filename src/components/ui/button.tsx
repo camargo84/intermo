@@ -5,27 +5,29 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-0 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap text-[15px] font-medium transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-signal-mint)]/60 focus-visible:ring-offset-0 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_1px_0_rgba(0,0,0,0.2),0_8px_24px_-12px_hsl(207_53%_50%/0.45)] hover:brightness-110 hover:-translate-y-px active:translate-y-0 active:brightness-100",
+          "rounded-2xl bg-[color:var(--color-signal-mint)] text-[color:var(--color-abyss)] shadow-subtle hover:-translate-y-px hover:brightness-110 active:translate-y-0 active:brightness-100",
         destructive:
-          "bg-destructive text-destructive-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] hover:brightness-110",
+          "rounded-2xl bg-destructive text-destructive-foreground hover:brightness-110",
         outline:
-          "border border-[color:var(--border-hairline)] bg-transparent text-foreground hover:bg-foreground/[0.04]",
+          "rounded-2xl border border-[color:var(--color-graphite)] bg-transparent text-[color:var(--color-chalk)] hover:bg-white/[0.04]",
         secondary:
-          "bg-[color:var(--color-surface-2)] text-foreground border border-[color:var(--border-hairline)] hover:bg-[color:var(--color-surface-3)]",
+          "rounded-2xl bg-[color:var(--color-carbon)] text-[color:var(--color-chalk)] border border-[color:var(--color-graphite)] hover:bg-white/[0.04]",
         ghost:
-          "text-foreground hover:bg-foreground/[0.05]",
-        link: "text-primary underline-offset-4 hover:underline",
+          "rounded-2xl text-[color:var(--color-chalk)] hover:bg-white/[0.05]",
+        link: "text-[color:var(--color-signal-mint)] underline-offset-4 hover:underline",
+        pill:
+          "rounded-full bg-[color:var(--color-chalk)] text-[color:var(--color-abyss)] hover:brightness-95",
       },
       size: {
-        default: "h-9 px-4 py-2",
-        sm: "h-8 rounded-md px-3 text-xs",
-        lg: "h-10 rounded-md px-6",
-        icon: "h-9 w-9",
+        default: "h-11 px-6 py-2.5",
+        sm: "h-9 px-4 text-[13px]",
+        lg: "h-12 px-7 text-base",
+        icon: "h-10 w-10 rounded-2xl",
       },
     },
     defaultVariants: {
