@@ -7,6 +7,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -56,6 +57,22 @@ function SignupPage() {
   const navigate = useNavigate();
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  async function onGoogle() {
+    setGoogleLoading(true);
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin,
+    });
+    if (result.error) {
+      setGoogleLoading(false);
+      toast.error("Falha ao entrar com Google", { description: result.error.message });
+      return;
+    }
+    if (result.redirected) return;
+    await router.invalidate();
+    navigate({ to: "/assinatura" });
+  }
 
   const {
     register,
@@ -112,6 +129,23 @@ function SignupPage() {
         </>
       }
     >
+      <div className="space-y-4 mb-6">
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full"
+          onClick={onGoogle}
+          disabled={googleLoading || submitting}
+        >
+          {googleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+          Continuar com Google
+        </Button>
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <div className="h-px flex-1 bg-border" />
+          ou preencha os dados da empresa
+          <div className="h-px flex-1 bg-border" />
+        </div>
+      </div>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
         <fieldset className="space-y-4">
           <legend className="text-sm font-semibold text-foreground">Sua empresa</legend>
