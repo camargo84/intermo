@@ -1,34 +1,52 @@
-## Corrigir: SECURITY DEFINER executável por usuários não autenticados
 
-O scanner detectou funções `SECURITY DEFINER` no schema `public` que podem ser chamadas sem login. Essas funções rodam com privilégios elevados, então expô-las a `anon` é risco de escalada.
+## Execução aprovada — ordem fixa
 
-### Funções afetadas
-Todas as funções SECURITY DEFINER do projeto:
-- `public.has_role(uuid, app_role)` — usada em policies RLS, chamada com `auth.uid()` (precisa de usuário autenticado)
-- `public.current_month_contract_count()` — usa `auth.uid()`, sem sentido para anônimo
-- `public.has_active_subscription(uuid)` — checagem de assinatura, sem sentido para anônimo
-- `public.handle_new_user()` — trigger de `auth.users`, nunca deve ser chamada via API
+### Passo 1 — Migração A–E (uma migration só)
 
-### Correção (migration SQL)
+**A. `profiles`** — adicionar colunas:
+- `logo_path text`, `company_address text`, `company_city text`, `company_uf text`, `company_cep text`
+- `representative_name text`, `representative_cpf text`, `representative_qualification text`, `comarca text`
 
-Revogar `EXECUTE` de `PUBLIC` e `anon` em todas elas; manter acesso para `authenticated` e `service_role` (onde aplicável). `handle_new_user` é trigger — revoga de tudo exceto `postgres`/`service_role`.
+**B. `clients`** (nova) — `id`, `user_id` (FK auth.users), `name`, `cpf`, `rg`, `nacionalidade`, `estado_civil`, `data_nascimento`, `cep`, `endereco`, `complemento`, `bairro`, `cidade`, `uf`, `email`, `phone`, `is_pj`, `cnpj`, `created_at`, `updated_at`. Constraint `clients_doc_present` (cpf OR cnpj). Índice único `(user_id, cpf)` parcial e `(user_id, cnpj)` parcial. GRANTs (`authenticated`, `service_role`), RLS `auth.uid() = user_id`, trigger `update_updated_at_column`.
 
-```sql
-REVOKE EXECUTE ON FUNCTION public.has_role(uuid, app_role) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.has_role(uuid, app_role) TO authenticated, service_role;
+**C. `contracts`** — adicionar `client_id uuid REFERENCES public.clients(id) ON DELETE SET NULL`, `produtos jsonb DEFAULT '[]'::jsonb`, `forma_pagamento text CHECK IN ('avista','parcelado','misto')`, `entrada_cents integer DEFAULT 0 CHECK (entrada_cents >= 0)`, `pdf_path text`, `tenant_snapshot jsonb`. Constraint `contracts_misto_coerente`: `forma_pagamento <> 'misto' OR (entrada_cents > 0 AND entrada_cents < value_cents)`. **Reutiliza `value_cents` existente — sem coluna nova.**
 
-REVOKE EXECUTE ON FUNCTION public.current_month_contract_count() FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.current_month_contract_count() TO authenticated, service_role;
+**D. `chat_threads`** (nova) — `id`, `contract_id` (FK contracts ON DELETE CASCADE, UNIQUE), `user_id`, `messages jsonb DEFAULT '[]'::jsonb`, `created_at`, `updated_at`. GRANTs, RLS `auth.uid() = user_id`, trigger updated_at.
 
-REVOKE EXECUTE ON FUNCTION public.has_active_subscription(uuid) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.has_active_subscription(uuid) TO authenticated, service_role;
+**E. Anti-abuso quota** — `UPDATE subscriptions SET monthly_contract_quota = 2000 WHERE monthly_contract_quota = 200; ALTER TABLE subscriptions ALTER COLUMN monthly_contract_quota SET DEFAULT 2000;`
 
-REVOKE EXECUTE ON FUNCTION public.handle_new_user() FROM PUBLIC, anon, authenticated;
-```
+### Passo 2 — Criar buckets privados (tool, não-SQL)
 
-### Validação
-- Rodar `supabase--linter` depois da migration
-- Marcar finding como resolvido em `security--manage_security_finding`
-- Nenhum código frontend muda — essas funções só são chamadas server-side ou dentro de policies/triggers
+- `supabase--storage_create_bucket(name='tenant-logos', public=false)`
+- `supabase--storage_create_bucket(name='contract-pdfs', public=false)`
 
-Sem impacto em fluxos existentes (login, contratos, assinatura): usuários autenticados continuam com acesso normal.
+### Passo 3 — Migração F.2 (policies storage.objects)
+
+Conforme já mostrado: `tenant_logos_owner_select/insert/update/delete` (prefixo `{user_id}/`) e `contract_pdfs_owner_select` apenas (sem INSERT/UPDATE/DELETE para authenticated — escrita só via service_role).
+
+### Passo 4 — Implementação de código
+
+- `src/lib/validators.ts` — `validateCNPJ`, `numeroPorExtenso(cents)`, `lookupCEP(cep)` (server fn ViaCEP)
+- `src/lib/agent.functions.ts` — `buscarCliente`, `upsertCliente`, `criarContrato` (valida `misto`, monta `tenant_snapshot` sem CPF de cliente, retorna erro genérico se quota excedida), `gerarPdfContrato`
+- `src/lib/contract-pdf.server.ts` — substitui gerador atual: A4, header com logo (download do bucket privado via `supabaseAdmin`), 9 cláusulas do molde, rodapé "Página X de Y", cita MP nº 2.200-2/2001
+- `src/lib/profile.functions.ts` — `uploadLogo`, `getTenantLogoSignedUrl` (10 min), update dos novos campos do tenant
+- `src/lib/chat.functions.ts` — `getChatThread`, `saveChatThread`, `getOrCreateThreadForContract`
+- `src/routes/api/chat.ts` — `streamText` Gemini 3 Flash, system prompt injeta tenant, 4 tools, `stopWhen: stepCountIs(50)`, persiste em `chat_threads`
+- `src/routes/_authenticated/chat.index.tsx` — cria contrato draft + thread, navega
+- `src/routes/_authenticated/chat.$contractId.tsx` — UI do chat com AI Elements, botão "Baixar PDF" quando contrato pronto
+- `src/components/shell/AppSidebar.tsx` — item "Chat com IA"
+- `src/routes/_authenticated/configuracoes.tsx` — upload de logo + campos de endereço + representante + comarca (sem exibir limite mensal)
+- `src/routes/termos.tsx` — R$119/mês ilimitado + cláusula anti-abuso (bots, compartilhamento de acesso, sessões simultâneas, rate-limit); bump `TERMS_VERSION` em `src/lib/terms.ts`
+
+### Passo 5 — Entrega ao usuário
+
+Mensagem final listando o que ficou pronto + roteiro de teste ponta a ponta:
+1. Ir em `/configuracoes` → preencher endereço, representante, comarca, comarca, fazer upload do logo.
+2. Abrir `/chat` → digitar "Quero vender um iPhone 15 Pro 256GB para Fulano, CPF 123…, por R$ 9.000 à vista".
+3. Agente pergunta dados faltantes (RG, endereço via CEP, e-mail).
+4. Agente chama `upsertCliente` → cria cliente.
+5. Agente chama `criarContrato` → preenche contrato + monta `tenant_snapshot`.
+6. Agente chama `gerarPdfContrato` → devolve signed URL.
+7. Clicar "Baixar PDF" → abrir e conferir: logo no topo direito, 9 cláusulas, paginação no rodapé direito, valor por extenso, comarca correta.
+8. Reload da página `/chat/{id}` → conversa persiste.
+9. Voltar em `/contratos` → contrato aparece na lista.

@@ -187,15 +187,15 @@ async function dispatchToAutentique(contract: ContractRow, supabase: Supa) {
   const token = process.env.AUTENTIQUE_API_TOKEN;
   if (!token) throw new Error("AUTENTIQUE_API_TOKEN não configurado.");
 
-  const { renderContractPdf } = await import("./contracts.pdf.server");
-  const pdfBytes = await renderContractPdf({
-    title: contract.title,
-    content: contract.content,
-    clientName: contract.client_name,
-    clientEmail: contract.client_email,
-    clientDoc: contract.client_doc,
-    valueCents: contract.value_cents,
-  });
+  // PDF deve ter sido gerado previamente pelo chat-agente (gerarPdfContrato)
+  if (!contract.pdf_path) {
+    throw new Error("Gere o PDF do contrato antes de enviar para assinatura.");
+  }
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: blob, error: dlErr } = await supabaseAdmin
+    .storage.from("contract-pdfs").download(contract.pdf_path);
+  if (dlErr || !blob) throw new Error("Não foi possível carregar o PDF do contrato.");
+  const pdfBytes = new Uint8Array(await blob.arrayBuffer());
 
   const mutation = `
     mutation CreateDocumentMutation(
