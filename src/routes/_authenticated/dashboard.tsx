@@ -1,32 +1,60 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 import {
   FileText,
   AlertCircle,
   TrendingUp,
   PieChart,
-  Receipt,
+  CreditCard,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { brl } from "@/lib/format";
+import { listContracts } from "@/lib/contracts.functions";
+import { getMyMonthlyQuota } from "@/lib/quota.functions";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — Intermo" }] }),
   component: DashboardPage,
 });
 
-const stats = [
-  { icon: FileText, label: "Contratos no mês", value: "12", hint: "+3 esta semana", tone: "text-foreground" as const },
-  { icon: AlertCircle, label: "Aguardando assinatura", value: "3", hint: "Acompanhe no chat", tone: "text-warning" as const },
-  { icon: TrendingUp, label: "Margem acumulada", value: brl(8430.5), hint: "Mês atual", tone: "text-success" as const },
-  { icon: Receipt, label: "DAS estimado", value: brl(412.18), hint: "Vence dia 20", tone: "text-info" as const },
-];
-
-const quotaUsed = 12;
-const quotaLimit = 200;
-const quotaPct = Math.min(100, Math.round((quotaUsed / quotaLimit) * 100));
-
 function DashboardPage() {
+  const fetchContracts = useServerFn(listContracts);
+  const fetchQuota = useServerFn(getMyMonthlyQuota);
+
+  const { data: contractsData } = useQuery({
+    queryKey: ["dashboard-contracts"],
+    queryFn: () => fetchContracts(),
+  });
+  const { data: quotaData } = useQuery({
+    queryKey: ["my-quota"],
+    queryFn: () => fetchQuota(),
+  });
+
+  const contracts = contractsData?.contracts ?? [];
+  const now = new Date();
+  const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const monthContracts = contracts.filter((c) => new Date(c.created_at) >= firstOfMonth);
+  const awaiting = contracts.filter((c) => c.status === "sent").length;
+  const signedThisMonth = monthContracts.filter((c) => c.status === "signed");
+  const revenueCents = signedThisMonth.reduce(
+    (acc, c) => acc + (typeof (c as { value_cents?: number }).value_cents === "number" ? ((c as { value_cents?: number }).value_cents ?? 0) : 0),
+    0,
+  );
+
+  const quotaUsed = quotaData?.used ?? monthContracts.length;
+  const quotaLimit = quotaData?.limit ?? 200;
+  const quotaPct = Math.min(100, Math.round((quotaUsed / quotaLimit) * 100));
+
+  const stats = [
+    { icon: FileText, label: "Contratos no mês", value: String(monthContracts.length), hint: "Inclui rascunhos", tone: "text-foreground" as const },
+    { icon: AlertCircle, label: "Aguardando assinatura", value: String(awaiting), hint: "Acompanhe em Contratos", tone: "text-warning" as const },
+    { icon: TrendingUp, label: "Receita do mês", value: brl(revenueCents / 100), hint: "Contratos assinados", tone: "text-success" as const },
+    { icon: CreditCard, label: "Plano", value: quotaData?.hasActiveSubscription ? "Ativo" : "Inativo", hint: "R$ 119/mês", tone: "text-info" as const },
+  ];
+
   return (
     <div className="mx-auto w-full max-w-6xl space-y-8">
       <header>
@@ -60,7 +88,7 @@ function DashboardPage() {
                 Cota mensal de contratos
               </CardTitle>
               <p className="mt-1 text-sm text-muted-foreground">
-                {quotaUsed} de {quotaLimit} contratos usados neste ciclo.
+                {quotaUsed} de {quotaLimit} contratos usados neste mês.
               </p>
             </div>
             <Badge variant="secondary" className="tabular-nums">
@@ -80,9 +108,6 @@ function DashboardPage() {
                 style={{ width: `${quotaPct}%` }}
               />
             </div>
-            <p className="mt-3 text-xs text-muted-foreground">
-              Contratos excedentes custam {brl(1)} cada — sem surpresa no boleto.
-            </p>
           </CardContent>
         </Card>
       </section>
@@ -93,7 +118,10 @@ function DashboardPage() {
             <CardTitle className="text-base">Comece um novo contrato</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-muted-foreground">
-            <p>Nenhum contrato ainda. Comece uma conversa e crie o primeiro em minutos.</p>
+            <p>Crie e envie em minutos pra assinatura via Autentique.</p>
+            <Link to="/contratos/novo" className="text-accent hover:underline">
+              Criar contrato →
+            </Link>
           </CardContent>
         </Card>
         <Card className="shadow-card">
@@ -101,9 +129,19 @@ function DashboardPage() {
             <CardTitle className="text-base">Resumo financeiro</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <div className="flex justify-between"><span className="text-muted-foreground">Receita do mês</span><span className="font-medium tabular-nums">{brl(34200)}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Margem</span><span className="font-medium tabular-nums text-success">{brl(8430.5)}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">A receber</span><span className="font-medium tabular-nums">{brl(5120)}</span></div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Receita do mês</span>
+              <span className="font-medium tabular-nums">{brl(revenueCents / 100)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Contratos assinados</span>
+              <span className="font-medium tabular-nums text-success">{signedThisMonth.length}</span>
+            </div>
+            <div className="pt-2">
+              <Link to="/financeiro" className="text-accent hover:underline">
+                Ver detalhes →
+              </Link>
+            </div>
           </CardContent>
         </Card>
       </section>
