@@ -23,7 +23,7 @@ export const Route = createFileRoute("/api/public/autentique-webhook/$")({
           return json({ error: "invalid json" }, 400);
         }
 
-        const eventType = extractEventType(body);
+        const eventType = extractEventType(body) || "unknown";
         const documentId =
           body.document?.id ??
           body.partner?.document_id ??
@@ -47,23 +47,28 @@ export const Route = createFileRoute("/api/public/autentique-webhook/$")({
             return json({ ok: true, ignored: "unknown document" });
           }
 
-          const patch = buildPatch({
-            eventType,
-            body,
-            currentSigners: Array.isArray(contract.autentique_signers)
-              ? (contract.autentique_signers as SignerRecord[])
-              : [],
-          });
+          const currentSigners = Array.isArray(contract.autentique_signers)
+            ? (contract.autentique_signers as SignerRecord[])
+            : [];
+          const patch = buildPatch({ eventType, body, currentSigners });
 
-          if (Object.keys(patch).length === 0) {
-            return json({ ok: true, noop: true });
+          if (Object.keys(patch).length > 0) {
+            const { error: updateErr } = await supabaseAdmin
+              .from("contracts")
+              .update(patch as never)
+              .eq("id", contract.id);
+            if (updateErr) throw updateErr;
           }
 
-          const { error: updateErr } = await supabaseAdmin
-            .from("contracts")
-            .update(patch as never)
-            .eq("id", contract.id);
-          if (updateErr) throw updateErr;
+          // Registra o evento no histórico, sempre
+          await supabaseAdmin.from("contract_events").insert({
+            contract_id: contract.id,
+            event_type: eventType,
+            status: patch.status ?? null,
+            signer_email: body.signature?.email ?? null,
+            message: typeof body === "object" ? null : null,
+            payload: body as unknown as Record<string, unknown>,
+          });
 
           return json({ ok: true });
         } catch (err) {
@@ -103,6 +108,7 @@ interface RawSignature {
 }
 
 interface SignerRecord {
+  public_id?: string | null;
   name?: string | null;
   email?: string | null;
   link?: string | null;
@@ -120,10 +126,9 @@ function extractEventType(body: AutentiquePayload): string {
 
 function normalizeSigner(raw: RawSignature): SignerRecord {
   const link =
-    typeof raw.link === "string"
-      ? raw.link
-      : (raw.link?.short_link ?? null);
+    typeof raw.link === "string" ? raw.link : (raw.link?.short_link ?? null);
   return {
+    public_id: raw.public_id ?? null,
     name: raw.name ?? null,
     email: raw.email ?? null,
     link,
@@ -138,20 +143,28 @@ function mergeSigners(
 ): SignerRecord[] | null {
   // Snapshot completo do documento, se vier
   if (body.document?.signatures?.length) {
-    return body.document.signatures.map(normalizeSigner);
+    const incoming = body.document.signatures.map(normalizeSigner);
+    // Se já temos signers conhecidos, preservar campos não vindos no snapshot
+    if (!current.length) return incoming;
+    return incoming.map((inc) => {
+      const prev = current.find(
+        (s) =>
+          (inc.public_id && s.public_id === inc.public_id) ||
+          (inc.email && s.email === inc.email),
+      );
+      return prev ? { ...prev, ...inc } : inc;
+    });
   }
   // Patch de um único signatário
   if (body.signature) {
     const incoming = normalizeSigner(body.signature);
-    const key = body.signature.public_id ?? incoming.email;
+    const key = incoming.public_id ?? incoming.email;
     if (!key) return null;
     const next = current.length ? [...current] : [];
     const idx = next.findIndex(
       (s) =>
-        (s.email && s.email === incoming.email) ||
-        (body.signature?.public_id &&
-          // @ts-expect-error tolerante a snapshot antigo com public_id
-          s.public_id === body.signature.public_id),
+        (incoming.public_id && s.public_id === incoming.public_id) ||
+        (incoming.email && s.email === incoming.email),
     );
     if (idx >= 0) {
       next[idx] = { ...next[idx], ...incoming };
@@ -180,23 +193,34 @@ function buildPatch({
   currentSigners: SignerRecord[];
 }): ContractPatch {
   const patch: ContractPatch = {};
-  const signers = mergeSigners(currentSigners, body);
-  if (signers) patch.autentique_signers = signers;
+  const merged = mergeSigners(currentSigners, body);
+  const effective = merged ?? currentSigners;
+  if (merged) patch.autentique_signers = merged;
 
   const ev = eventType.toLowerCase();
 
-  if (ev.includes("signed") && !ev.includes("rejected")) {
-    patch.status = "signed";
-    patch.signed_at =
-      body.signature?.signed_at ?? new Date().toISOString();
-    patch.last_error = null;
-  } else if (ev.includes("rejected")) {
+  if (ev.includes("rejected")) {
     patch.status = "rejected";
   } else if (ev.includes("expired")) {
     patch.status = "expired";
   } else if (ev.includes("deleted")) {
     patch.status = "error";
     patch.last_error = "Documento removido na Autentique";
+  } else if (ev.includes("signed")) {
+    // Só marca contrato como assinado quando TODOS os signatários assinaram
+    const everyone =
+      effective.length > 0 && effective.every((s) => !!s.signed_at);
+    if (everyone) {
+      patch.status = "signed";
+      // Maior signed_at = último a assinar
+      const last = effective
+        .map((s) => s.signed_at)
+        .filter((x): x is string => !!x)
+        .sort()
+        .pop();
+      patch.signed_at = last ?? new Date().toISOString();
+      patch.last_error = null;
+    }
   }
 
   return patch;
