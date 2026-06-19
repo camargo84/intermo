@@ -95,9 +95,12 @@ function ContratosPage() {
             onChange={(e) => {
               const value = e.target.value;
               navigate({
-                search: (prev) => ({ ...prev, q: value }),
+                search: (prev: z.infer<typeof searchSchema>) => ({
+                  ...prev,
+                  q: value,
+                }),
                 replace: true,
-              } as never);
+              });
             }}
             placeholder="Buscar por título, cliente ou e-mail…"
             className="pl-9"
@@ -107,7 +110,7 @@ function ContratosPage() {
           value={status}
           onValueChange={(value) =>
             navigate({
-              search: (prev) => ({
+              search: (prev: z.infer<typeof searchSchema>) => ({
                 ...prev,
                 status: value as (typeof statusValues)[number],
               }),
