@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      contract_events: {
+        Row: {
+          contract_id: string
+          created_at: string
+          event_type: string
+          id: string
+          message: string | null
+          payload: Json | null
+          signer_email: string | null
+          status: string | null
+        }
+        Insert: {
+          contract_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          message?: string | null
+          payload?: Json | null
+          signer_email?: string | null
+          status?: string | null
+        }
+        Update: {
+          contract_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          message?: string | null
+          payload?: Json | null
+          signer_email?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_events_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contracts: {
         Row: {
           autentique_document_id: string | null
