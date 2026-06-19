@@ -23,6 +23,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
 import { Route as AuthenticatedContratosIndexRouteImport } from './routes/_authenticated/contratos.index'
 import { Route as AuthenticatedContratosNovoRouteImport } from './routes/_authenticated/contratos.novo'
+import { Route as ApiPublicAutentiqueWebhookSplatRouteImport } from './routes/api/public/autentique-webhook.$'
 
 const TermosRoute = TermosRouteImport.update({
   id: '/termos',
@@ -96,6 +97,12 @@ const AuthenticatedContratosNovoRoute =
     path: '/contratos/novo',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicAutentiqueWebhookSplatRoute =
+  ApiPublicAutentiqueWebhookSplatRouteImport.update({
+    id: '/api/public/autentique-webhook/$',
+    path: '/api/public/autentique-webhook/$',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -111,6 +118,7 @@ export interface FileRoutesByFullPath {
   '/nfs': typeof AuthenticatedNfsRoute
   '/contratos/novo': typeof AuthenticatedContratosNovoRoute
   '/contratos/': typeof AuthenticatedContratosIndexRoute
+  '/api/public/autentique-webhook/$': typeof ApiPublicAutentiqueWebhookSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -126,6 +134,7 @@ export interface FileRoutesByTo {
   '/nfs': typeof AuthenticatedNfsRoute
   '/contratos/novo': typeof AuthenticatedContratosNovoRoute
   '/contratos': typeof AuthenticatedContratosIndexRoute
+  '/api/public/autentique-webhook/$': typeof ApiPublicAutentiqueWebhookSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -143,6 +152,7 @@ export interface FileRoutesById {
   '/_authenticated/nfs': typeof AuthenticatedNfsRoute
   '/_authenticated/contratos/novo': typeof AuthenticatedContratosNovoRoute
   '/_authenticated/contratos/': typeof AuthenticatedContratosIndexRoute
+  '/api/public/autentique-webhook/$': typeof ApiPublicAutentiqueWebhookSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -160,6 +170,7 @@ export interface FileRouteTypes {
     | '/nfs'
     | '/contratos/novo'
     | '/contratos/'
+    | '/api/public/autentique-webhook/$'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -175,6 +186,7 @@ export interface FileRouteTypes {
     | '/nfs'
     | '/contratos/novo'
     | '/contratos'
+    | '/api/public/autentique-webhook/$'
   id:
     | '__root__'
     | '/'
@@ -191,6 +203,7 @@ export interface FileRouteTypes {
     | '/_authenticated/nfs'
     | '/_authenticated/contratos/novo'
     | '/_authenticated/contratos/'
+    | '/api/public/autentique-webhook/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -202,6 +215,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
   TermosRoute: typeof TermosRoute
+  ApiPublicAutentiqueWebhookSplatRoute: typeof ApiPublicAutentiqueWebhookSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -304,6 +318,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedContratosNovoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/autentique-webhook/$': {
+      id: '/api/public/autentique-webhook/$'
+      path: '/api/public/autentique-webhook/$'
+      fullPath: '/api/public/autentique-webhook/$'
+      preLoaderRoute: typeof ApiPublicAutentiqueWebhookSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -337,6 +358,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,
   TermosRoute: TermosRoute,
+  ApiPublicAutentiqueWebhookSplatRoute: ApiPublicAutentiqueWebhookSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
