@@ -86,7 +86,7 @@ function SignupPage() {
   return (
     <AuthLayout
       title="Criar sua conta Intermo"
-      subtitle="14 dias grátis. Sem cartão de crédito."
+      subtitle="7 dias de garantia. Devolvemos 100% se não gostar."
       footer={
         <>
           Já tem conta?{" "}
