@@ -122,7 +122,7 @@ export function ClaudeSidebar() {
                   const label =
                     (contract?.client_name && contract.client_name !== "—" ? contract.client_name : null) ??
                     contract?.title ??
-                    "Nova conversa";
+                    "Novo contrato";
                   const active = pathname === `/chat/${id}`;
                   return (
                     <SidebarMenuItem key={id}>
