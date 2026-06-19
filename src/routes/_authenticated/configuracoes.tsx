@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2 } from "lucide-react";
+import { Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 
@@ -15,7 +15,12 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatCNPJ, formatPhoneBR } from "@/lib/format";
-import { getMyProfile, updateMyProfile } from "@/lib/profiles.functions";
+import {
+  getMyProfile,
+  updateMyProfile,
+  uploadMyLogo,
+  getMyLogoSignedUrl,
+} from "@/lib/profiles.functions";
 import { getMySubscription } from "@/lib/subscriptions.functions";
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({
@@ -30,6 +35,14 @@ const schema = z.object({
   companyEmail: z.string().email("E-mail inválido."),
   companyPhone: z.string().min(8, "Telefone inválido."),
   defaultMarginPct: z.number().min(0).max(99),
+  companyAddress: z.string().optional(),
+  companyCity: z.string().optional(),
+  companyUf: z.string().optional(),
+  companyCep: z.string().optional(),
+  representativeName: z.string().optional(),
+  representativeCpf: z.string().optional(),
+  representativeQualification: z.string().optional(),
+  comarca: z.string().optional(),
 });
 type FormData = z.infer<typeof schema>;
 
@@ -38,7 +51,10 @@ function ConfiguracoesPage() {
   const fetchProfile = useServerFn(getMyProfile);
   const fetchSub = useServerFn(getMySubscription);
   const updateProfile = useServerFn(updateMyProfile);
+  const uploadLogo = useServerFn(uploadMyLogo);
+  const fetchLogoUrl = useServerFn(getMyLogoSignedUrl);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const { data: profileData, isLoading } = useQuery({
     queryKey: ["my-profile"],
@@ -48,22 +64,18 @@ function ConfiguracoesPage() {
     queryKey: ["my-subscription"],
     queryFn: () => fetchSub(),
   });
+  const { data: logoData, refetch: refetchLogo } = useQuery({
+    queryKey: ["my-logo-url"],
+    queryFn: () => fetchLogoUrl(),
+  });
 
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    reset,
-    formState: { errors },
-  } = useForm<FormData>({
+  const { register, handleSubmit, setValue, reset, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      ownerName: "",
-      companyFantasyName: "",
-      companyLegalName: "",
-      companyEmail: "",
-      companyPhone: "",
-      defaultMarginPct: 30,
+      ownerName: "", companyFantasyName: "", companyLegalName: "",
+      companyEmail: "", companyPhone: "", defaultMarginPct: 30,
+      companyAddress: "", companyCity: "", companyUf: "", companyCep: "",
+      representativeName: "", representativeCpf: "", representativeQualification: "", comarca: "",
     },
   });
 
@@ -77,6 +89,14 @@ function ConfiguracoesPage() {
       companyEmail: p.company_email ?? "",
       companyPhone: p.company_phone ? formatPhoneBR(p.company_phone) : "",
       defaultMarginPct: Number(p.default_margin_pct ?? 30),
+      companyAddress: p.company_address ?? "",
+      companyCity: p.company_city ?? "",
+      companyUf: p.company_uf ?? "",
+      companyCep: p.company_cep ?? "",
+      representativeName: p.representative_name ?? "",
+      representativeCpf: p.representative_cpf ?? "",
+      representativeQualification: p.representative_qualification ?? "",
+      comarca: p.comarca ?? "",
     });
   }, [profileData, reset]);
 
@@ -95,12 +115,37 @@ function ConfiguracoesPage() {
     }
   }
 
+  async function handleLogoFile(file: File) {
+    if (!["image/png", "image/jpeg"].includes(file.type)) {
+      toast.error("Use PNG ou JPG.");
+      return;
+    }
+    if (file.size > 2_000_000) {
+      toast.error("Arquivo acima de 2MB.");
+      return;
+    }
+    setUploading(true);
+    try {
+      const buf = new Uint8Array(await file.arrayBuffer());
+      let bin = "";
+      for (let i = 0; i < buf.byteLength; i++) bin += String.fromCharCode(buf[i]);
+      const base64 = btoa(bin);
+      await uploadLogo({ data: { base64, mime: file.type as "image/png" | "image/jpeg" } });
+      await refetchLogo();
+      toast.success("Logo atualizado.");
+    } catch (err) {
+      toast.error("Falha ao enviar logo", { description: err instanceof Error ? err.message : "" });
+    } finally {
+      setUploading(false);
+    }
+  }
+
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
       <header>
         <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Configurações</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Dados da empresa, margem padrão pra cálculos financeiros e situação da assinatura.
+          Dados da empresa, representante legal, comarca de foro e logo — usados no contrato.
         </p>
       </header>
 
@@ -108,7 +153,7 @@ function ConfiguracoesPage() {
         <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
           <div>
             <CardTitle className="text-base">Assinatura</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">R$ 119/mês via AbacatePay.</p>
+            <p className="mt-1 text-sm text-muted-foreground">R$ 119/mês — uso ilimitado.</p>
           </div>
           <Badge variant={subData?.subscription?.status === "active" ? "default" : "outline"}>
             {subData?.subscription?.status ?? "sem assinatura"}
@@ -118,6 +163,38 @@ function ConfiguracoesPage() {
           <Button asChild variant="outline">
             <Link to="/assinatura">Gerenciar assinatura</Link>
           </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Logo da empresa</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4">
+            <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-md border bg-muted">
+              {logoData?.url ? (
+                <img src={logoData.url} alt="logo" className="h-full w-full object-contain" />
+              ) : (
+                <span className="text-xs text-muted-foreground">sem logo</span>
+              )}
+            </div>
+            <Label className="cursor-pointer">
+              <input
+                type="file"
+                accept="image/png,image/jpeg"
+                className="hidden"
+                onChange={(e) => e.target.files?.[0] && handleLogoFile(e.target.files[0])}
+              />
+              <span className="inline-flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-sm hover:bg-accent">
+                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                Enviar logo (PNG/JPG, até 2MB)
+              </span>
+            </Label>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Aparece no canto superior direito de cada página do contrato.
+          </p>
         </CardContent>
       </Card>
 
@@ -142,12 +219,10 @@ function ConfiguracoesPage() {
                 <div className="space-y-2">
                   <Label htmlFor="companyFantasyName">Nome fantasia</Label>
                   <Input id="companyFantasyName" {...register("companyFantasyName")} />
-                  {errors.companyFantasyName && <p className="text-xs text-destructive">{errors.companyFantasyName.message}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="companyLegalName">Razão social</Label>
                   <Input id="companyLegalName" {...register("companyLegalName")} />
-                  {errors.companyLegalName && <p className="text-xs text-destructive">{errors.companyLegalName.message}</p>}
                 </div>
               </div>
 
@@ -161,7 +236,6 @@ function ConfiguracoesPage() {
                 <div className="space-y-2">
                   <Label htmlFor="companyEmail">E-mail da empresa</Label>
                   <Input id="companyEmail" type="email" {...register("companyEmail")} />
-                  {errors.companyEmail && <p className="text-xs text-destructive">{errors.companyEmail.message}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="companyPhone">Telefone</Label>
@@ -172,8 +246,48 @@ function ConfiguracoesPage() {
                       onChange: (e) => setValue("companyPhone", formatPhoneBR(e.target.value), { shouldValidate: false }),
                     })}
                   />
-                  {errors.companyPhone && <p className="text-xs text-destructive">{errors.companyPhone.message}</p>}
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="companyAddress">Endereço (rua, número)</Label>
+                <Input id="companyAddress" {...register("companyAddress")} />
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="space-y-2">
+                  <Label htmlFor="companyCity">Cidade</Label>
+                  <Input id="companyCity" {...register("companyCity")} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="companyUf">UF</Label>
+                  <Input id="companyUf" maxLength={2} {...register("companyUf")} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="companyCep">CEP</Label>
+                  <Input id="companyCep" {...register("companyCep")} />
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="representativeName">Representante legal</Label>
+                  <Input id="representativeName" {...register("representativeName")} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="representativeCpf">CPF do representante</Label>
+                  <Input id="representativeCpf" {...register("representativeCpf")} />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="representativeQualification">Qualificação do representante (cargo, nacionalidade…)</Label>
+                <Input id="representativeQualification" placeholder="Ex.: brasileiro, casado, administrador, RG 1234567 SSP/SP" {...register("representativeQualification")} />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="comarca">Comarca de foro</Label>
+                <Input id="comarca" placeholder="Ex.: São Paulo/SP" {...register("comarca")} />
               </div>
 
               <div className="space-y-2">
@@ -181,14 +295,9 @@ function ConfiguracoesPage() {
                 <Input
                   id="defaultMarginPct"
                   type="number"
-                  min={0}
-                  max={99}
-                  step="1"
+                  min={0} max={99} step="1"
                   {...register("defaultMarginPct", { valueAsNumber: true })}
                 />
-                <p className="text-xs text-muted-foreground">
-                  Usada nos cards de Financeiro pra estimar lucro sobre a receita.
-                </p>
               </div>
 
               <div className="flex justify-end">
