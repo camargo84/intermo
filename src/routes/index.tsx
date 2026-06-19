@@ -90,7 +90,7 @@ const reasons = [
 ];
 
 const trustSeals = [
-  { icon: Scale, label: "Validade jurídica" },
+  { icon: Scale, label: "Validade jurídica\n(MP nº 2.200-2/01)\n" },
   { icon: Fingerprint, label: "Assinatura digital" },
   { icon: Lock, label: "Dados criptografados" },
   { icon: ShieldCheck, label: "LGPD" },
