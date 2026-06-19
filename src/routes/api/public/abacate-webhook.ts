@@ -46,7 +46,7 @@ export const Route = createFileRoute("/api/public/abacate-webhook")({
             provider: "abacatepay",
             event_id: event.id,
             event_type: event.event,
-            payload: event as unknown as Record<string, unknown>,
+            payload: rawBody as unknown as never,
           });
         if (dupErr && dupErr.code === "23505") {
           return new Response("ok (duplicate)", { status: 200 });

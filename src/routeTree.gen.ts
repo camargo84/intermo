@@ -21,7 +21,9 @@ import { Route as AuthenticatedNfsRouteImport } from './routes/_authenticated/nf
 import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authenticated/financeiro'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
+import { Route as AuthenticatedAssinaturaRouteImport } from './routes/_authenticated/assinatura'
 import { Route as AuthenticatedContratosIndexRouteImport } from './routes/_authenticated/contratos.index'
+import { Route as ApiPublicAbacateWebhookRouteImport } from './routes/api/public/abacate-webhook'
 import { Route as AuthenticatedContratosNovoRouteImport } from './routes/_authenticated/contratos.novo'
 import { Route as AuthenticatedContratosContractIdRouteImport } from './routes/_authenticated/contratos.$contractId'
 import { Route as ApiPublicAutentiqueWebhookSplatRouteImport } from './routes/api/public/autentique-webhook.$'
@@ -86,12 +88,22 @@ const AuthenticatedConfiguracoesRoute =
     path: '/configuracoes',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAssinaturaRoute = AuthenticatedAssinaturaRouteImport.update({
+  id: '/assinatura',
+  path: '/assinatura',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedContratosIndexRoute =
   AuthenticatedContratosIndexRouteImport.update({
     id: '/contratos/',
     path: '/contratos/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicAbacateWebhookRoute = ApiPublicAbacateWebhookRouteImport.update({
+  id: '/api/public/abacate-webhook',
+  path: '/api/public/abacate-webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedContratosNovoRoute =
   AuthenticatedContratosNovoRouteImport.update({
     id: '/contratos/novo',
@@ -119,12 +131,14 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/termos': typeof TermosRoute
+  '/assinatura': typeof AuthenticatedAssinaturaRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/nfs': typeof AuthenticatedNfsRoute
   '/contratos/$contractId': typeof AuthenticatedContratosContractIdRoute
   '/contratos/novo': typeof AuthenticatedContratosNovoRoute
+  '/api/public/abacate-webhook': typeof ApiPublicAbacateWebhookRoute
   '/contratos/': typeof AuthenticatedContratosIndexRoute
   '/api/public/autentique-webhook/$': typeof ApiPublicAutentiqueWebhookSplatRoute
 }
@@ -136,12 +150,14 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/termos': typeof TermosRoute
+  '/assinatura': typeof AuthenticatedAssinaturaRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/nfs': typeof AuthenticatedNfsRoute
   '/contratos/$contractId': typeof AuthenticatedContratosContractIdRoute
   '/contratos/novo': typeof AuthenticatedContratosNovoRoute
+  '/api/public/abacate-webhook': typeof ApiPublicAbacateWebhookRoute
   '/contratos': typeof AuthenticatedContratosIndexRoute
   '/api/public/autentique-webhook/$': typeof ApiPublicAutentiqueWebhookSplatRoute
 }
@@ -155,12 +171,14 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/termos': typeof TermosRoute
+  '/_authenticated/assinatura': typeof AuthenticatedAssinaturaRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/financeiro': typeof AuthenticatedFinanceiroRoute
   '/_authenticated/nfs': typeof AuthenticatedNfsRoute
   '/_authenticated/contratos/$contractId': typeof AuthenticatedContratosContractIdRoute
   '/_authenticated/contratos/novo': typeof AuthenticatedContratosNovoRoute
+  '/api/public/abacate-webhook': typeof ApiPublicAbacateWebhookRoute
   '/_authenticated/contratos/': typeof AuthenticatedContratosIndexRoute
   '/api/public/autentique-webhook/$': typeof ApiPublicAutentiqueWebhookSplatRoute
 }
@@ -174,12 +192,14 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/termos'
+    | '/assinatura'
     | '/configuracoes'
     | '/dashboard'
     | '/financeiro'
     | '/nfs'
     | '/contratos/$contractId'
     | '/contratos/novo'
+    | '/api/public/abacate-webhook'
     | '/contratos/'
     | '/api/public/autentique-webhook/$'
   fileRoutesByTo: FileRoutesByTo
@@ -191,12 +211,14 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/termos'
+    | '/assinatura'
     | '/configuracoes'
     | '/dashboard'
     | '/financeiro'
     | '/nfs'
     | '/contratos/$contractId'
     | '/contratos/novo'
+    | '/api/public/abacate-webhook'
     | '/contratos'
     | '/api/public/autentique-webhook/$'
   id:
@@ -209,12 +231,14 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/termos'
+    | '/_authenticated/assinatura'
     | '/_authenticated/configuracoes'
     | '/_authenticated/dashboard'
     | '/_authenticated/financeiro'
     | '/_authenticated/nfs'
     | '/_authenticated/contratos/$contractId'
     | '/_authenticated/contratos/novo'
+    | '/api/public/abacate-webhook'
     | '/_authenticated/contratos/'
     | '/api/public/autentique-webhook/$'
   fileRoutesById: FileRoutesById
@@ -228,6 +252,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
   TermosRoute: typeof TermosRoute
+  ApiPublicAbacateWebhookRoute: typeof ApiPublicAbacateWebhookRoute
   ApiPublicAutentiqueWebhookSplatRoute: typeof ApiPublicAutentiqueWebhookSplatRoute
 }
 
@@ -317,12 +342,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedConfiguracoesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/assinatura': {
+      id: '/_authenticated/assinatura'
+      path: '/assinatura'
+      fullPath: '/assinatura'
+      preLoaderRoute: typeof AuthenticatedAssinaturaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/contratos/': {
       id: '/_authenticated/contratos/'
       path: '/contratos'
       fullPath: '/contratos/'
       preLoaderRoute: typeof AuthenticatedContratosIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/public/abacate-webhook': {
+      id: '/api/public/abacate-webhook'
+      path: '/api/public/abacate-webhook'
+      fullPath: '/api/public/abacate-webhook'
+      preLoaderRoute: typeof ApiPublicAbacateWebhookRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/contratos/novo': {
       id: '/_authenticated/contratos/novo'
@@ -349,6 +388,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAssinaturaRoute: typeof AuthenticatedAssinaturaRoute
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedFinanceiroRoute: typeof AuthenticatedFinanceiroRoute
@@ -359,6 +399,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAssinaturaRoute: AuthenticatedAssinaturaRoute,
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedFinanceiroRoute: AuthenticatedFinanceiroRoute,
@@ -380,6 +421,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,
   TermosRoute: TermosRoute,
+  ApiPublicAbacateWebhookRoute: ApiPublicAbacateWebhookRoute,
   ApiPublicAutentiqueWebhookSplatRoute: ApiPublicAutentiqueWebhookSplatRoute,
 }
 export const routeTree = rootRouteImport
