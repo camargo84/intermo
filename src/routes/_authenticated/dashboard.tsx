@@ -45,8 +45,7 @@ function DashboardPage() {
   );
 
   const quotaUsed = quotaData?.used ?? monthContracts.length;
-  const quotaLimit = quotaData?.limit ?? 200;
-  const quotaPct = Math.min(100, Math.round((quotaUsed / quotaLimit) * 100));
+
 
   const stats = [
     { icon: FileText, label: "Contratos no mês", value: String(monthContracts.length), hint: "Inclui rascunhos", tone: "text-foreground" as const },
