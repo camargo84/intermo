@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { FileText, Plus } from "lucide-react";
+import { FileText, Plus, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { listContracts } from "@/lib/contracts.functions";
@@ -70,16 +70,36 @@ function ContratosPage() {
             ? (c.autentique_signers as Array<{ link?: string | null }>)
             : [];
           const link = signers[0]?.link ?? null;
+          const signedAt = c.signed_at
+            ? new Date(c.signed_at).toLocaleDateString("pt-BR", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+            : null;
           return (
             <li
               key={c.id}
-              className="flex items-center justify-between gap-4 p-4"
+              className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between"
             >
               <div className="min-w-0">
                 <p className="truncate font-medium">{c.title}</p>
                 <p className="truncate text-sm text-muted-foreground">
                   {c.client_name} • {c.client_email}
                 </p>
+                {signedAt && (
+                  <p className="text-xs text-green-600">
+                    Assinado em {signedAt}
+                  </p>
+                )}
+                {c.last_error && (
+                  <p className="flex items-center gap-1 text-xs text-destructive">
+                    <AlertCircle className="h-3 w-3" />
+                    {c.last_error}
+                  </p>
+                )}
               </div>
               <div className="flex items-center gap-3">
                 <Badge variant="secondary">
