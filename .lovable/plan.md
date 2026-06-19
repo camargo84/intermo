@@ -1,41 +1,86 @@
-## Enriquecer a seção "Dúvidas" com público-alvo e processo
 
-Aproveitar o conteúdo da proposta antiga (público-alvo, CNAE de intermediação, vantagem fiscal, processo) sem reintroduzir nada do modelo manual via WhatsApp — a plataforma agora é autônoma.
+# Fase 1 — Redesign Claude + Chat como hub
 
-### Onde mexer
-Apenas `src/routes/index.tsx`:
-- `faq` (array que alimenta a seção visual em `#faq`)
-- JSON-LD `FAQPage` no `head()` (manter espelhado com o array)
+Escopo desta rodada conforme aprovado: **só visual, login, sidebar de threads e enxugar o menu**. O fluxo do link público para o cliente, exclusão de contrato com financeiro e notificações ficam para a Fase 2.
 
-Sem mudanças em componentes, rotas, backend ou em outras páginas.
+## 1. Sistema visual (tokens + tipografia)
 
-### Novas entradas de FAQ (adicionadas no topo, antes da garantia)
+Adotar a linguagem do Claude **mantendo o dark como padrão** e a família verde atual como acento.
 
-1. **Pra quem é a inTermo?**
-   Para lojistas que vendem sob encomenda — especialmente revenda de eletrônicos Apple (iPhone, Mac, iPad, Apple Watch) — que operam como intermediadores de negócios (CNAE 7490-1/04). Também serve pra quem mantém algum estoque mas precisa encomendar modelos específicos para vendas pontuais.
+- Tipografia editorial:
+  - Display/headings: **Instrument Serif** (proxy livre do Copernicus/Tiempos) via `@fontsource/instrument-serif`.
+  - UI/body: **Inter** (proxy do StyreneB) — já disponível, garantir peso 400/500.
+  - Carregar via `<link>` no `__root.tsx` (não `@import` em CSS, conforme Tailwind v4).
+- Paleta em `src/styles.css` (mantém verde, adiciona warmth do Claude):
+  - `--background`: dark base (mantém oklch atual, levemente mais quente).
+  - `--primary`: verde atual (mantém identidade).
+  - `--accent-coral`: `oklch(0.68 0.13 40)` (~#cc785c) para CTAs secundários/destaques editoriais.
+  - `--surface-soft`, `--surface-card`, `--hairline` no padrão dark-elevated do Claude.
+  - Ajustar `--muted-foreground` para tom mais quente.
+- Componentes shadcn relevantes (`Button`, `Card`, `Input`, `Sidebar`) ganham variantes mais "calmas": menos sombra, mais hairline, raio 12–14px.
 
-2. **Por que vender por encomenda como intermediação?**
-   Operar no modelo de intermediação pode reduzir a carga tributária: os impostos incidem sobre a sua margem (o valor do serviço de intermediação), não sobre o preço cheio do produto. Pra isso valer, cada venda precisa de um contrato de prestação de serviço formalizado com o cliente.
+## 2. Menu / Navegação
 
-3. **Como funciona na prática?**
-   Você cria o contrato pelo app em poucos minutos (pelo celular, inclusive), envia o link de assinatura digital pro cliente, e acompanha tudo num painel só. Cada transação fica registrada, organizada e pronta pra repassar ao seu contador no fim do mês — sem planilha paralela, sem WhatsApp, sem depender de equipe externa.
+Sidebar shadcn nova com estrutura inspirada no Claude:
 
-4. *(mantidas)* Como funciona a garantia? · Funciona pelo celular? · Tem limite de contratos?
+```text
+[Logo inTermo]            [collapse]
++ Nova conversa
+💬 Conversas        ← lista de threads (chat_threads)
+   • thread 1
+   • thread 2
+   ...
+─────────
+📊 Dashboard
+💰 Financeiro
+📄 Contratos        ← (vira leitura/histórico, sem botão "novo")
+─────────
+💳 Assinatura
+⚙️  Configurações
+[avatar + empresa] ← rodapé
+```
 
-### Detalhes de execução
+Removidos do menu: **"Novo contrato"** e o card de criação manual. Tudo passa a ser disparado pelo chat. A rota `/contratos/novo` é mantida apenas como destino interno (caso o chat queira abrir o form), mas sai da navegação.
 
-- Reordenar o array `faq` para: Pra quem é → Por que intermediação → Como funciona na prática → Garantia → Celular → Limite.
-- Atualizar o JSON-LD `FAQPage` em `head()` (linhas ~30-75) para incluir as 3 novas perguntas com os mesmos textos, na mesma ordem. Isso preserva o ganho de SEO já existente.
-- Linguagem: 2ª pessoa ("você"), tom direto, sem jargão fiscal pesado. CNAE só citado uma vez, com a referência completa `7490-1/04` pra quem procura.
-- Sem alterar o componente visual da seção (já renderiza qualquer item do array). Sem novas dependências.
+## 3. Tela de login (`/auth`)
 
-### Validação
+Refazer no estilo split-screen do Claude:
 
-- Aba anônima em `/` → rolar até "Dúvidas" → ver as 3 novas perguntas primeiro, com a resposta correta.
-- Conferir `view-source` da home pra ver o JSON-LD atualizado com as 6 perguntas (bom pra rich results no Google).
+- Esquerda: canvas com headline serif grande ("Contratos de intermediação, sem fricção." ou similar), subheadline curta, botão Google + e-mail.
+- Direita: card escuro mostrando preview de uma conversa real do chat criando um contrato (mock estático, igual o Claude mostra o Cowork).
+- Mantém Google OAuth + magic link já existentes — só refaz a casca visual.
 
-### Fora do escopo (não vou tocar agora)
+## 4. Chat como hub central
 
-- Não vou criar uma seção "Pra quem é" separada no topo (eyebrow do hero já diz "Para quem vende sob encomenda"; mais que isso vira redundância).
-- Não vou trazer preço/operação por encomenda da proposta antiga — esses dados já estão desatualizados pela mudança pro modelo de plataforma autônoma.
-- Não vou mexer em `/termos`, `/privacidade` nem na página de assinatura.
+- Rota `/chat` (`chat.index.tsx`) vira a **home autenticada padrão** (redirect do `/` autenticado para `/chat` quando não há thread ativa, ou pra última thread).
+- `chat.$contractId.tsx` continua sendo o conversation viewer, mas a sidebar de threads (chat_threads) entra como navegação primária.
+- Cada item da sidebar = uma thread; clicar abre a rota da thread. Botão **"+ Nova conversa"** chama `createDraftContractForChat` e navega.
+- Empty state grande no centro com prompt suggestions (estilo Claude): "Criar contrato de iPhone", "Conferir últimos contratos", etc — todos enviam mensagem inicial pro chat.
+- Composer com AI Elements (`PromptInput`, `PromptInputTextarea`, `PromptInputFooter` + submit) — segue o `chat-ui-composition`.
+- Mensagens do assistente sem bubble (texto direto no canvas), mensagens do usuário em bubble `primary`.
+
+## 5. Detalhes técnicos
+
+- Novo `src/components/shell/ClaudeSidebar.tsx` (substitui `AppSidebar` para usuários autenticados; o `AppSidebar` atual é arquivado).
+- `chat.index.tsx` carrega `listMyChatThreads` no loader (via `useServerFn` + `useQuery`, não em loader de rota pública — segue regra do `auth-protected-server-functions`).
+- Renomear thread: já temos `chat_threads.title` — adicionar pequena ação inline (lápis) na sidebar, salva via novo `renameChatThread` server function (curto, ~10 linhas).
+- Login: `src/routes/auth.tsx` + `src/components/auth/AuthLayout.tsx` repaginados.
+- Tokens em `src/styles.css`; tipografia via `@fontsource/instrument-serif` (`bun add`).
+- **Nada de tocar** em: AbacatePay, Autentique, webhooks, contratos pdf, RLS, migrations.
+
+## Validação ao final
+
+1. `/auth` em aba anônima: split-screen, serifa grande, Google + e-mail funcionando.
+2. Após login: cai em `/chat` com sidebar nova; menu sem "Novo contrato".
+3. Criar uma conversa, voltar, ver thread persistida na sidebar.
+4. Dashboard/Financeiro/Contratos/Assinatura/Configurações ainda acessíveis pelo menu e funcionando.
+5. Dark mode preservado; toggle de tema funciona.
+
+## Fora de escopo (Fase 2, registrado)
+
+- Link público assinado para o cliente preencher dados (sem signup).
+- Wa.me com mensagem pronta.
+- Notificação no chat quando o cliente retorna o formulário.
+- Exclusão de contrato com confirmação para apagar lançamentos financeiros.
+- Refatorar fluxo da IA para perguntar **produto antes das partes**.
+- Banir "venda" do copy em todos os lugares (chat, contrato, UI).
