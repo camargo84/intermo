@@ -46,6 +46,30 @@ export const Route = createFileRoute("/")({
           mainEntity: [
             {
               "@type": "Question",
+              name: "Pra quem é a inTermo?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "Para lojistas que vendem sob encomenda — especialmente revenda de eletrônicos Apple (iPhone, Mac, iPad, Apple Watch) — que operam como intermediadores de negócios (CNAE 7490-1/04). Também serve pra quem mantém algum estoque mas precisa encomendar modelos específicos para vendas pontuais.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "Por que vender por encomenda como intermediação?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "Operar no modelo de intermediação pode reduzir a carga tributária: os impostos incidem sobre a sua margem (o valor do serviço de intermediação), não sobre o preço cheio do produto. Pra isso valer, cada venda precisa de um contrato de prestação de serviço formalizado com o cliente.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "Como funciona na prática?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "Você cria o contrato pelo app em poucos minutos (pelo celular, inclusive), envia o link de assinatura digital pro cliente e acompanha tudo num painel só. Cada transação fica registrada e pronta pra repassar ao seu contador no fim do mês — sem planilha paralela, sem WhatsApp, sem depender de equipe externa.",
+              },
+            },
+            {
+              "@type": "Question",
               name: "Como funciona a garantia?",
               acceptedAnswer: {
                 "@type": "Answer",
@@ -141,6 +165,18 @@ const planFeatures = [
 ];
 
 const faq = [
+  {
+    q: "Pra quem é a inTermo?",
+    a: "Para lojistas que vendem sob encomenda — especialmente revenda de eletrônicos Apple (iPhone, Mac, iPad, Apple Watch) — que operam como intermediadores de negócios (CNAE 7490-1/04). Também serve pra quem mantém algum estoque mas precisa encomendar modelos específicos para vendas pontuais.",
+  },
+  {
+    q: "Por que vender por encomenda como intermediação?",
+    a: "Operar no modelo de intermediação pode reduzir a carga tributária: os impostos incidem sobre a sua margem (o valor do serviço de intermediação), não sobre o preço cheio do produto. Pra isso valer, cada venda precisa de um contrato de prestação de serviço formalizado com o cliente.",
+  },
+  {
+    q: "Como funciona na prática?",
+    a: "Você cria o contrato pelo app em poucos minutos (pelo celular, inclusive), envia o link de assinatura digital pro cliente e acompanha tudo num painel só. Cada transação fica registrada e pronta pra repassar ao seu contador no fim do mês — sem planilha paralela, sem WhatsApp, sem depender de equipe externa.",
+  },
   {
     q: "Como funciona a garantia?",
     a: "Você assina e usa por 7 dias. Se não gostar, devolvemos 100% do valor. Cancele quando quiser.",
