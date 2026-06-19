@@ -246,8 +246,8 @@ function Landing() {
             <div className="mt-10 grid gap-4">
               {[
                 {
-                  q: "Preciso de cartão para começar?",
-                  a: "Não. Você experimenta por 7 dias (até 3 contratos) sem pagar nada.",
+                  q: "Como funciona a garantia?",
+                  a: "Você assina e usa por 7 dias. Se não gostar, devolvemos 100% do valor. Cancele quando quiser.",
                 },
                 {
                   q: "Funciona pelo celular?",
