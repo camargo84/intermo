@@ -5,7 +5,7 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { Loader2, ArrowUp, Download } from "lucide-react";
+import { Loader2, ArrowUp, FileText, FileSignature } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -13,17 +13,29 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { getChatThread } from "@/lib/chat.functions";
-import { getContractPdfSignedUrl } from "@/lib/agent.functions";
+import {
+  getContractPdfSignedUrl,
+  getSignedContractPdfUrl,
+} from "@/lib/agent.functions";
 
 export const Route = createFileRoute("/_authenticated/chat/$contractId")({
   head: () => ({ meta: [{ title: "Conversa — inTermo" }] }),
   component: ChatThreadPage,
 });
 
+type ContractSummary = {
+  id: string;
+  pdf_path: string | null;
+  signed_pdf_path: string | null;
+  status: string | null;
+  title: string | null;
+};
+
 function ChatThreadPage() {
   const { contractId } = useParams({ from: "/_authenticated/chat/$contractId" });
   const fetchThread = useServerFn(getChatThread);
   const getPdfUrl = useServerFn(getContractPdfSignedUrl);
+  const getSignedPdfUrl = useServerFn(getSignedContractPdfUrl);
 
   const { data, isLoading } = useQuery({
     queryKey: ["chat-thread", contractId],
@@ -34,6 +46,8 @@ function ChatThreadPage() {
     try { return JSON.parse(data?.messagesJson ?? "[]"); } catch { return []; }
   }, [data?.messagesJson]);
 
+  const contract = (data?.contract ?? null) as ContractSummary | null;
+
   return isLoading ? (
     <div className="flex h-[60vh] items-center justify-center text-muted-foreground">
       <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Carregando conversa…
@@ -43,11 +57,16 @@ function ChatThreadPage() {
       key={contractId}
       contractId={contractId}
       initialMessages={initialMessages}
-      pdfReady={Boolean(data?.contract?.pdf_path)}
-      onGetPdf={async () => {
+      contract={contract}
+      onOpenPdf={async () => {
         const r = await getPdfUrl({ data: { contract_id: contractId } });
         if (r.url) window.open(r.url, "_blank");
         else toast.info("PDF ainda não foi gerado.");
+      }}
+      onOpenSignedPdf={async () => {
+        const r = await getSignedPdfUrl({ data: { contract_id: contractId } });
+        if (r.url) window.open(r.url, "_blank");
+        else toast.info("PDF assinado ainda não está disponível.");
       }}
     />
   );
@@ -56,13 +75,15 @@ function ChatThreadPage() {
 function ChatWindow({
   contractId,
   initialMessages,
-  pdfReady,
-  onGetPdf,
+  contract,
+  onOpenPdf,
+  onOpenSignedPdf,
 }: {
   contractId: string;
   initialMessages: UIMessage[];
-  pdfReady: boolean;
-  onGetPdf: () => Promise<void>;
+  contract: ContractSummary | null;
+  onOpenPdf: () => Promise<void>;
+  onOpenSignedPdf: () => Promise<void>;
 }) {
   const [input, setInput] = useState("");
   const [token, setToken] = useState<string | null>(null);
@@ -96,12 +117,13 @@ function ChatWindow({
     onError: (e) => toast.error("Erro no chat", { description: e.message }),
     onFinish: () => {
       queryClient.invalidateQueries({ queryKey: ["my-chat-threads"] });
+      queryClient.invalidateQueries({ queryKey: ["chat-thread", contractId] });
     },
   });
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages]);
+  }, [messages, contract?.pdf_path, contract?.signed_pdf_path]);
 
   useEffect(() => {
     if (status !== "streaming" && status !== "submitted") textareaRef.current?.focus();
@@ -131,20 +153,19 @@ function ChatWindow({
     await sendMessage({ text });
   }
 
+  const fileBase = useMemo(() => {
+    const raw = contract?.title?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const slug = raw?.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") ?? "contrato";
+    return slug.slice(0, 60) || "contrato";
+  }, [contract?.title]);
+
   return (
     <div className="mx-auto flex h-[calc(100vh-9rem)] w-full max-w-3xl flex-col">
-      <header className="flex items-center justify-between border-b border-border/60 pb-4">
-        <div>
-          <h1 className="font-serif-display text-2xl text-foreground">Conversa</h1>
-          <p className="text-xs text-muted-foreground">
-            Descreva a venda em linguagem natural. O assistente cuida do resto.
-          </p>
-        </div>
-        {pdfReady && (
-          <Button variant="outline" size="sm" onClick={onGetPdf}>
-            <Download className="mr-2 h-4 w-4" /> Baixar PDF
-          </Button>
-        )}
+      <header className="border-b border-border/60 pb-4">
+        <h1 className="font-serif-display text-2xl text-foreground">Conversa</h1>
+        <p className="text-xs text-muted-foreground">
+          Descreva a venda em linguagem natural. O assistente cuida do resto.
+        </p>
       </header>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto py-6">
@@ -155,13 +176,41 @@ function ChatWindow({
           </p>
         )}
         <div className="space-y-6">
-          {messages.map((m) => (
-            <MessageBlock key={m.id} message={m} />
+          {messages.map((m, idx) => (
+            <MessageBlock
+              key={m.id}
+              message={m}
+              isFirstAssistant={
+                m.role === "assistant" &&
+                idx === messages.findIndex((x) => x.role === "assistant")
+              }
+            />
           ))}
           {busy && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
               Pensando…
+            </div>
+          )}
+          {/* Cards inline do contrato — aparecem fora de bolha, como na ilustração */}
+          {(contract?.pdf_path || contract?.signed_pdf_path) && !busy && (
+            <div className="space-y-2">
+              {contract?.pdf_path && (
+                <ContractFileCard
+                  label="Contrato gerado"
+                  filename={`${fileBase}.pdf`}
+                  variant="generated"
+                  onOpen={onOpenPdf}
+                />
+              )}
+              {contract?.signed_pdf_path && (
+                <ContractFileCard
+                  label="Contrato assinado"
+                  filename={`${fileBase}-assinado.pdf`}
+                  variant="signed"
+                  onOpen={onOpenSignedPdf}
+                />
+              )}
             </div>
           )}
         </div>
@@ -197,12 +246,30 @@ function ChatWindow({
   );
 }
 
-function MessageBlock({ message }: { message: UIMessage }) {
+/**
+ * Quebra um texto da IA em (abertura curta serif-itálico-coral) + (resto).
+ * Aplica somente quando a primeira frase tem até ~24 chars e termina com .,!,?
+ * Ex.: "Boa tarde. Posso te ajudar..." → "Boa tarde." + " Posso te ajudar..."
+ */
+function splitOpener(text: string): { opener: string | null; rest: string } {
+  const trimmed = text.trimStart();
+  const match = trimmed.match(/^([^.!?\n]{1,24}[.!?])(\s+|$)/);
+  if (!match) return { opener: null, rest: text };
+  return { opener: match[1], rest: trimmed.slice(match[0].length) };
+}
+
+function MessageBlock({
+  message,
+  isFirstAssistant,
+}: {
+  message: UIMessage;
+  isFirstAssistant: boolean;
+}) {
   const isUser = message.role === "user";
   if (isUser) {
     return (
       <div className="flex justify-end">
-        <div className="max-w-[85%] rounded-2xl bg-primary px-4 py-2 text-sm text-primary-foreground">
+        <div className="max-w-[80%] rounded-2xl bg-[color:var(--color-signal-mint)] px-4 py-2 text-sm text-[color:var(--color-abyss)]">
           {message.parts.map((part, idx) =>
             part.type === "text" ? <div key={idx}>{part.text}</div> : null,
           )}
@@ -214,8 +281,38 @@ function MessageBlock({ message }: { message: UIMessage }) {
     <div className="max-w-[95%] text-[15px] leading-relaxed text-foreground">
       {message.parts.map((part, idx) => {
         if (part.type === "text") {
+          const isFirstTextPart =
+            isFirstAssistant && idx === message.parts.findIndex((p) => p.type === "text");
+          if (isFirstTextPart) {
+            const { opener, rest } = splitOpener(part.text);
+            if (opener) {
+              return (
+                <div
+                  key={idx}
+                  className="prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-headings:font-serif-display"
+                >
+                  <p>
+                    <span className="font-serif-display italic text-[color:var(--color-coral)]">
+                      {opener}
+                    </span>
+                    {rest ? " " : ""}
+                    <ReactMarkdown
+                      components={{
+                        p: ({ children }) => <>{children}</>,
+                      }}
+                    >
+                      {rest}
+                    </ReactMarkdown>
+                  </p>
+                </div>
+              );
+            }
+          }
           return (
-            <div key={idx} className="prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-headings:font-serif-display">
+            <div
+              key={idx}
+              className="prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-headings:font-serif-display"
+            >
               <ReactMarkdown>{part.text}</ReactMarkdown>
             </div>
           );
@@ -231,5 +328,40 @@ function MessageBlock({ message }: { message: UIMessage }) {
         return null;
       })}
     </div>
+  );
+}
+
+function ContractFileCard({
+  label,
+  filename,
+  variant,
+  onOpen,
+}: {
+  label: string;
+  filename: string;
+  variant: "generated" | "signed";
+  onOpen: () => Promise<void>;
+}) {
+  const Icon = variant === "signed" ? FileSignature : FileText;
+  return (
+    <button
+      type="button"
+      onClick={() => void onOpen()}
+      className="group flex w-full max-w-md items-center gap-3 rounded-xl border border-border/80 bg-card/50 px-4 py-3 text-left transition hover:border-primary/40 hover:bg-card/80"
+    >
+      <Icon
+        className={
+          variant === "signed"
+            ? "h-5 w-5 shrink-0 text-[color:var(--color-signal-mint)]"
+            : "h-5 w-5 shrink-0 text-[color:var(--color-coral)]"
+        }
+      />
+      <div className="min-w-0 flex-1">
+        <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+          {label}
+        </div>
+        <div className="truncate text-sm text-foreground group-hover:underline">{filename}</div>
+      </div>
+    </button>
   );
 }
