@@ -335,7 +335,7 @@ function Landing() {
           <div className="mx-auto max-w-[1200px] px-6 py-24">
             <div className="max-w-2xl">
               <span className="eyebrow">Por que inTermo</span>
-              <h2 className="mt-4 text-[36px] leading-[1.1] font-medium">Contrato certo, margem calculada, transações no lugar.</h2>
+              <h2 className="mt-4 text-[36px] leading-[1.1] font-medium">Contrato certo, margem calculada, transações registradas.</h2>
             </div>
             <div className="mt-12 grid grid-cols-1 gap-4 md:grid-cols-3">
               {reasons.map((r) => (
