@@ -14,7 +14,6 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AmbientBackground } from "@/components/ambient-background";
 
 function NotFoundComponent() {
   return (
@@ -96,7 +95,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content:
           "Intermo: transforme a conversa em contrato assinado em minutos, com validade jurídica. Para empresários que vendem sob encomenda.",
       },
-      { name: "theme-color", content: "#0A0A0B" },
+      { name: "theme-color", content: "#0a0a0a" },
       { property: "og:site_name", content: "Intermo" },
       { property: "og:title", content: "Intermo — Intermediar ficou simples." },
       {
@@ -110,9 +109,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "stylesheet", href: appCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+      { rel: "preconnect", href: "https://api.fontshare.com" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap",
+      },
+      {
+        rel: "stylesheet",
+        href: "https://api.fontshare.com/v2/css?f[]=satoshi@400&display=swap",
       },
       {
         rel: "icon",
@@ -121,10 +125,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "data:image/svg+xml;utf8," +
           encodeURIComponent(
             `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'>
-  <rect width='24' height='24' rx='6' fill='#1f3a7a'/>
-  <path d='M7 12 C 9 7, 15 7, 17 12' fill='none' stroke='#14ade5' stroke-width='2' stroke-linecap='round'/>
-  <circle cx='5' cy='14' r='2.25' fill='#14ade5'/>
-  <circle cx='19' cy='14' r='2.25' fill='#14ade5'/>
+  <rect width='24' height='24' rx='6' fill='#0a0a0a'/>
+  <path d='M7 12 C 9 7, 15 7, 17 12' fill='none' stroke='#3fe280' stroke-width='2' stroke-linecap='round'/>
+  <circle cx='5' cy='14' r='2.25' fill='#3fe280'/>
+  <circle cx='19' cy='14' r='2.25' fill='#3fe280'/>
 </svg>`,
           ),
       },
@@ -167,7 +171,6 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider delayDuration={200}>
-        <AmbientBackground />
         {/* Required: nested routes render here. */}
         <Outlet />
         <Toaster richColors position="top-right" />

@@ -5,21 +5,17 @@ type WordmarkProps = {
   variant?: "default" | "mono";
 };
 
-/**
- * Wordmark "intermo".
- * default: "inter" em foreground, "mo" em accent (ciano da paleta).
- * mono: tudo em currentColor (usar em logo p&b ou sobre gradiente de marca).
- */
+/** Wordmark "intermo" — "inter" em Chalk, "mo" em Signal Mint. */
 export function Wordmark({ className, variant = "default" }: WordmarkProps) {
   return (
     <span
       className={cn(
-        "inline-flex select-none items-baseline font-semibold tracking-tight leading-none",
+        "inline-flex select-none items-baseline font-medium tracking-tight leading-none",
         className,
       )}
     >
-      <span className={variant === "mono" ? "text-current" : "text-foreground"}>inter</span>
-      <span className={variant === "mono" ? "text-current" : "text-accent"}>mo</span>
+      <span className={variant === "mono" ? "text-current" : "text-[color:var(--color-chalk)]"}>inter</span>
+      <span className={variant === "mono" ? "text-current" : "text-[color:var(--color-signal-mint)]"}>mo</span>
     </span>
   );
 }

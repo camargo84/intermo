@@ -1,35 +1,38 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import {
   ArrowRight,
-  BadgeCheck,
-  CheckCircle2,
+  Check,
   FileSignature,
   FileSpreadsheet,
+  Fingerprint,
+  Lock,
   PenLine,
+  Scale,
   ShieldCheck,
-  Sparkles,
+  ShieldHalf,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Logo } from "@/components/brand/Logo";
 import { Wordmark } from "@/components/brand/Wordmark";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { LivePanel } from "@/components/landing/LivePanel";
 import { brl } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Intermo — Cliente empolgado não espera burocracia." },
+      { title: "Intermo — Da conversa ao contrato assinado em minutos." },
       {
         name: "description",
         content:
-          "Transforme a conversa em contrato assinado em minutos, com validade jurídica. Feche antes da venda esfriar — sem improviso.",
+          "A Intermo formaliza vendas sob encomenda: contrato pronto, assinatura com validade jurídica e gestão das transações no mesmo lugar.",
       },
-      { property: "og:title", content: "Intermo — Cliente empolgado não espera burocracia." },
+      { property: "og:title", content: "Intermo — Da conversa ao contrato assinado em minutos." },
       {
         property: "og:description",
         content:
-          "Contrato pronto, assinatura com validade jurídica e margem calculada. A Intermo formaliza suas vendas sob encomenda em minutos.",
+          "Contrato pronto, assinatura com validade jurídica e gestão das transações no mesmo lugar.",
       },
       { property: "og:url", content: "/" },
     ],
@@ -38,27 +41,59 @@ export const Route = createFileRoute("/")({
   component: Landing,
 });
 
+const sectionIds = ["como-funciona", "preco", "faq"] as const;
+type SectionId = (typeof sectionIds)[number];
+
 const steps = [
   {
     icon: FileSignature,
+    n: "01",
     title: "Crie o contrato em minutos",
     desc: "Assistente guiado coleta os dados — ou o próprio cliente preenche pelo link — e monta o contrato pra você.",
   },
   {
     icon: ShieldCheck,
+    n: "02",
     title: "Contrato pronto e seguro",
-    desc: "Modelo testado no mercado, atualizado com a legislação, com cláusulas de prazo, reembolso, multa e garantia.",
+    desc: "Modelo testado em operação real, com cláusulas de prazo, reembolso, multa e garantia.",
   },
   {
     icon: PenLine,
+    n: "03",
     title: "Assinatura com validade jurídica",
-    desc: "O cliente assina pelo link com validade jurídica garantida pela Lei 14.063/2020.",
+    desc: "O cliente assina pelo link. Trilha de auditoria, IP e horário registrados.",
   },
   {
     icon: FileSpreadsheet,
-    title: "Tudo pronto pro seu contador",
-    desc: "As informações de cada transação ficam organizadas e prontas pra você enviar ao seu contador. Sem planilha, sem garimpo.",
+    n: "04",
+    title: "Tudo pronto pro contador",
+    desc: "Transações organizadas e exportáveis. Sem planilha, sem garimpo no fim do mês.",
   },
+];
+
+const reasons = [
+  {
+    icon: ShieldHalf,
+    title: "Validade jurídica de verdade",
+    desc: "Assinatura digital com trilha de auditoria. O cliente assina pelo link e o contrato vale em juízo.",
+  },
+  {
+    icon: Scale,
+    title: "Contrato testado em operação",
+    desc: "Modelo revisado e atualizado conforme a legislação — você não improvisa cláusula sob pressão.",
+  },
+  {
+    icon: FileSpreadsheet,
+    title: "Mais que assinatura",
+    desc: "Cálculo de margem automático e transações organizadas pro contador — tudo no mesmo lugar.",
+  },
+];
+
+const trustSeals = [
+  { icon: Scale, label: "Validade jurídica" },
+  { icon: Fingerprint, label: "Assinatura digital" },
+  { icon: Lock, label: "Dados criptografados" },
+  { icon: ShieldCheck, label: "LGPD" },
 ];
 
 const planFeatures = [
@@ -70,23 +105,82 @@ const planFeatures = [
   "Sem fidelidade",
 ];
 
-function Landing() {
+const faq = [
+  {
+    q: "Como funciona a garantia?",
+    a: "Você assina e usa por 7 dias. Se não gostar, devolvemos 100% do valor. Cancele quando quiser.",
+  },
+  {
+    q: "Funciona pelo celular?",
+    a: "Sim. A Intermo foi desenhada primeiro para o celular — você opera tudo de onde estiver.",
+  },
+  {
+    q: "Tem limite de contratos?",
+    a: "Não. No plano Intermo os contratos e assinaturas são ilimitados.",
+  },
+];
+
+function useScrollSpy(): SectionId | null {
+  const [active, setActive] = useState<SectionId | null>(null);
+  useEffect(() => {
+    const obs = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (visible) setActive(visible.target.id as SectionId);
+      },
+      { rootMargin: "-40% 0px -50% 0px", threshold: [0, 0.25, 0.5, 1] },
+    );
+    sectionIds.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) obs.observe(el);
+    });
+    return () => obs.disconnect();
+  }, []);
+  return active;
+}
+
+function NavLink({ id, label, active }: { id: SectionId; label: string; active: boolean }) {
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-40 border-b border-[color:var(--border-hairline)] bg-background/60 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-          <Logo />
-          <nav className="hidden items-center gap-8 text-sm font-medium text-foreground/80 md:flex">
-            <a href="#como-funciona" className="transition-colors hover:text-foreground">Como funciona</a>
-            <a href="#preco" className="transition-colors hover:text-foreground">Preço</a>
-            <a href="#faq" className="transition-colors hover:text-foreground">Dúvidas</a>
+    <a
+      href={`#${id}`}
+      className={cn(
+        "relative inline-flex h-10 items-center text-[15px] transition-colors",
+        active ? "text-[color:var(--color-chalk)]" : "text-[color:var(--color-ash)] hover:text-[color:var(--color-chalk)]",
+      )}
+    >
+      {label}
+      <span
+        aria-hidden
+        className={cn(
+          "pointer-events-none absolute -bottom-px left-0 right-0 h-[3px] bg-[color:var(--color-signal-mint)] transition-opacity",
+          active ? "opacity-100" : "opacity-0",
+        )}
+      />
+    </a>
+  );
+}
+
+function Landing() {
+  const active = useScrollSpy();
+
+  return (
+    <div className="min-h-dvh bg-[color:var(--color-abyss)] text-[color:var(--color-chalk)]">
+      {/* TOP BAR */}
+      <header className="sticky top-0 z-40 border-b border-[color:var(--color-graphite)] bg-[color:var(--color-abyss)]/85 backdrop-blur">
+        <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between px-6">
+          <Wordmark className="text-[18px]" />
+          <nav className="hidden items-center gap-8 md:flex" aria-label="Principal">
+            <NavLink id="como-funciona" label="Como funciona" active={active === "como-funciona"} />
+            <NavLink id="preco" label="Preço" active={active === "preco"} />
+            <NavLink id="faq" label="Dúvidas" active={active === "faq"} />
           </nav>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <Button variant="ghost" asChild className="hidden sm:inline-flex">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="sm" asChild className="hidden sm:inline-flex">
               <Link to="/login">Entrar</Link>
             </Button>
-            <Button asChild>
+            <Button variant="pill" size="sm" asChild>
               <Link to="/signup">Assinar agora</Link>
             </Button>
           </div>
@@ -95,172 +189,140 @@ function Landing() {
 
       <main>
         {/* HERO */}
-        <section className="relative overflow-hidden">
-          <div className="mx-auto grid max-w-6xl grid-cols-1 gap-12 px-4 py-20 sm:px-6 sm:py-28 md:grid-cols-12">
+        <section className="border-b border-[color:var(--color-graphite)]">
+          <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-12 px-6 py-24 md:grid-cols-12 md:py-32">
             <div className="md:col-span-7">
-              <span className="inline-flex items-center rounded-full border border-[color:var(--border-hairline)] bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
-                Para quem vende sob encomenda
-              </span>
-              <h1 className="mt-6 text-balance text-left text-4xl font-bold tracking-tight text-foreground sm:text-6xl">
-                Cliente empolgado não espera burocracia.
+              <span className="eyebrow">Para quem vende sob encomenda</span>
+              <h1 className="font-display mt-6 text-[44px] leading-[1.02] text-[color:var(--color-chalk)] sm:text-[64px] md:text-[72px]">
+                Do "fechado" ao contrato assinado em minutos.
               </h1>
-              <p className="mt-6 max-w-[640px] text-balance text-left text-lg text-muted-foreground sm:text-xl">
-                O <strong className="text-foreground">"fechado!"</strong> tem prazo de validade. A Intermo transforma a conversa em
-                contrato assinado em minutos, com validade jurídica e a segurança que o seu negócio merece.
-                Sem esfriar a venda, sem improviso.
+            </div>
+            <div className="flex flex-col justify-end md:col-span-5">
+              <p className="text-[16px] leading-[1.6] text-[color:var(--color-ash)]">
+                A Intermo formaliza vendas sob encomenda: contrato pronto, assinatura com validade jurídica e gestão das transações no mesmo lugar. Sem improviso, sem esperar a venda esfriar.
               </p>
-              <div className="mt-10 flex flex-col items-start justify-start gap-3 sm:flex-row">
-                <Button size="lg" asChild>
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <Button asChild>
                   <Link to="/signup">
-                    Fechar antes de esfriar
-                    <ArrowRight className="ml-2 h-4 w-4" />
+                    Assinar agora <ArrowRight className="ml-1 h-4 w-4" />
                   </Link>
                 </Button>
-                <Button size="lg" variant="ghost" asChild>
+                <Button variant="outline" asChild>
                   <a href="#como-funciona">Ver como funciona</a>
                 </Button>
               </div>
-              <p className="mt-4 text-left text-xs text-muted-foreground">7 dias de garantia. Não gostou? Devolvemos 100%. Cancele quando quiser.</p>
+              <p className="mt-5 text-[14px] text-[color:var(--color-ash)]">
+                7 dias de garantia. Não gostou? Devolvemos 100%.
+              </p>
             </div>
-            <div className="hidden md:col-span-5 md:block" aria-hidden />
+          </div>
+        </section>
+
+        {/* STRIP DE CONFIANÇA */}
+        <section aria-label="Confiança" className="border-b border-[color:var(--color-graphite)]">
+          <div className="mx-auto grid max-w-[1200px] grid-cols-2 gap-x-6 gap-y-6 px-6 py-10 sm:grid-cols-4">
+            {trustSeals.map((s) => (
+              <div key={s.label} className="flex items-center gap-3 text-[color:var(--color-chalk)]">
+                <s.icon className="h-4 w-4 stroke-[1.5]" />
+                <span className="text-[14px]">{s.label}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* PAINEL DE STATS */}
+        <section className="border-b border-[color:var(--color-graphite)]">
+          <div className="mx-auto max-w-[1200px] px-6 py-20">
+            <LivePanel />
           </div>
         </section>
 
         {/* COMO FUNCIONA */}
-        <section id="como-funciona" className="border-t border-border/60 bg-card/40">
-          <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
-            <div className="mx-auto max-w-2xl text-center">
-              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Como funciona</h2>
-              <p className="mt-4 text-muted-foreground">
-                Quatro passos. Você fecha a venda, a Intermo formaliza.
-              </p>
+        <section id="como-funciona" className="border-b border-[color:var(--color-graphite)] scroll-mt-20">
+          <div className="mx-auto max-w-[1200px] px-6 py-24">
+            <div className="max-w-2xl">
+              <span className="eyebrow">Como funciona</span>
+              <h2 className="mt-4 text-[36px] leading-[1.1] font-medium">Quatro passos. Você fecha; a Intermo formaliza.</h2>
             </div>
-            <ol className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-              {steps.map((s, i) => (
-                <li key={s.title} className="relative">
-                  <Card className="h-full p-6 shadow-card transition-shadow hover:shadow-elevated">
-                    <div className="flex items-center gap-3">
-                      <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10 text-accent">
-                        <s.icon className="h-5 w-5" />
-                      </span>
-                      <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        Passo {i + 1}
-                      </span>
-                    </div>
-                    <h3 className="mt-4 text-lg font-semibold">{s.title}</h3>
-                    <p className="mt-2 text-sm text-muted-foreground">{s.desc}</p>
-                  </Card>
-                </li>
+            <div className="mt-12 grid grid-cols-1 gap-4 md:grid-cols-2">
+              {steps.map((s) => (
+                <Card key={s.title} className="p-6">
+                  <div className="flex items-start justify-between">
+                    <s.icon className="h-5 w-5 stroke-[1.5] text-[color:var(--color-chalk)]" />
+                    <span className="text-[12px] tracking-[0.12em] text-[color:var(--color-ash)]">§{s.n}</span>
+                  </div>
+                  <h3 className="mt-6 text-[20px] font-medium leading-tight">{s.title}</h3>
+                  <p className="mt-2 text-[14px] leading-[1.55] text-[color:var(--color-ash)]">{s.desc}</p>
+                </Card>
               ))}
-            </ol>
+            </div>
           </div>
         </section>
 
-        {/* DIFERENCIAIS */}
-        <section className="border-t border-border/60">
-          <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
-            <div className="mx-auto max-w-2xl text-center">
-              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Por que Intermo</h2>
-              <p className="mt-4 text-muted-foreground">
-                Assinar um PDF qualquer um faz. A Intermo entrega o contrato certo, calcula sua margem e organiza as transações — não só a assinatura.
-              </p>
+        {/* POR QUE INTERMO */}
+        <section className="border-b border-[color:var(--color-graphite)]">
+          <div className="mx-auto max-w-[1200px] px-6 py-24">
+            <div className="max-w-2xl">
+              <span className="eyebrow">Por que Intermo</span>
+              <h2 className="mt-4 text-[36px] leading-[1.1] font-medium">Contrato certo, margem calculada, transações no lugar.</h2>
             </div>
-            <div className="mt-12 grid gap-6 md:grid-cols-3">
-              <Card className="p-6 shadow-card">
-                <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10 text-accent">
-                  <ShieldCheck className="h-5 w-5" />
-                </span>
-                <h3 className="mt-4 text-lg font-semibold">Validade jurídica de verdade</h3>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Assinatura digital amparada pela Lei 14.063/2020. O cliente assina pelo link e o contrato vale em juízo.
-                </p>
-              </Card>
-              <Card className="p-6 shadow-card">
-                <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10 text-accent">
-                  <BadgeCheck className="h-5 w-5" />
-                </span>
-                <h3 className="mt-4 text-lg font-semibold">Contrato sempre atualizado</h3>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Modelo revisado e atualizado conforme a legislação, testado em operação real — você não improvisa cláusula.
-                </p>
-              </Card>
-              <Card className="p-6 shadow-card">
-                <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10 text-accent">
-                  <Sparkles className="h-5 w-5" />
-                </span>
-                <h3 className="mt-4 text-lg font-semibold">Mais que assinatura</h3>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Margem calculada automaticamente e transações organizadas pro seu contador — tudo no mesmo lugar.
-                </p>
-              </Card>
+            <div className="mt-12 grid grid-cols-1 gap-4 md:grid-cols-3">
+              {reasons.map((r) => (
+                <Card key={r.title} className="p-6">
+                  <r.icon className="h-5 w-5 stroke-[1.5] text-[color:var(--color-chalk)]" />
+                  <h3 className="mt-6 text-[20px] font-medium leading-tight">{r.title}</h3>
+                  <p className="mt-2 text-[14px] leading-[1.55] text-[color:var(--color-ash)]">{r.desc}</p>
+                </Card>
+              ))}
             </div>
           </div>
         </section>
 
         {/* PREÇO */}
-        <section id="preco" className="border-t border-border/60 bg-card/40">
-          <div className="mx-auto max-w-3xl px-4 py-20 sm:px-6">
+        <section id="preco" className="border-b border-[color:var(--color-graphite)] scroll-mt-20">
+          <div className="mx-auto max-w-[720px] px-6 py-24">
             <div className="text-center">
-              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Plano mensal. Cancele quando quiser.</h2>
-              <p className="mt-4 text-muted-foreground">
-                Tudo o que você precisa para formalizar suas vendas sob encomenda sem esfriar o cliente.
+              <span className="eyebrow">Plano Intermo</span>
+              <h2 className="mt-4 text-[36px] leading-[1.1] font-medium">Plano mensal. Cancele quando quiser.</h2>
+              <p className="mt-3 text-[14px] text-[color:var(--color-ash)]">
+                Tudo o que você precisa para formalizar vendas sob encomenda.
               </p>
             </div>
-            <Card className="mt-10 overflow-hidden border-border shadow-elevated">
-              <div className="bg-brand p-8 text-center text-primary-foreground">
-                <p className="text-sm font-medium uppercase tracking-wider text-primary-foreground/80">
-                  Plano Intermo
-                </p>
-                <div className="mt-3 flex items-baseline justify-center gap-2">
-                  <span className="text-5xl font-bold tabular-nums">{brl(119)}</span>
-                  <span className="text-base opacity-80">/mês</span>
-                </div>
-                <p className="mt-3 text-sm text-primary-foreground/85">
-                  Menos que a multa de um único contrato mal feito.
-                </p>
+            <Card className="mt-10 p-10">
+              <div className="flex items-baseline justify-center gap-3">
+                <span className="font-display text-[64px] leading-none sm:text-[72px]">{brl(119)}</span>
+                <span className="text-[20px] text-[color:var(--color-ash)]">/mês</span>
               </div>
-              <div className="p-8">
-                <ul className="space-y-3">
-                  {planFeatures.map((f) => (
-                    <li key={f} className="flex items-start gap-3 text-sm">
-                      <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
-                      <span>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Button size="lg" asChild className="mt-8 w-full bg-brand text-primary-foreground hover:opacity-90">
-                  <Link to="/signup">Assinar agora</Link>
-                </Button>
-                <p className="mt-3 text-center text-xs text-muted-foreground">
-                  7 dias de garantia. Não gostou? Devolvemos 100%. Cancele quando quiser.
-                </p>
-              </div>
+              <ul className="mx-auto mt-10 max-w-md space-y-3">
+                {planFeatures.map((f) => (
+                  <li key={f} className="flex items-start gap-3 text-[15px]">
+                    <Check className="mt-[3px] h-4 w-4 shrink-0 text-[color:var(--color-signal-mint)]" />
+                    <span>{f}</span>
+                  </li>
+                ))}
+              </ul>
+              <Button asChild className="mt-10 w-full">
+                <Link to="/signup">Assinar agora</Link>
+              </Button>
+              <p className="mt-4 text-center text-[14px] text-[color:var(--color-ash)]">
+                Cobrança imediata. 7 dias de garantia. Devolvemos 100% se não gostar. Cancele quando quiser.
+              </p>
             </Card>
           </div>
         </section>
 
-        {/* FAQ simples */}
-        <section id="faq" className="border-t border-border/60">
-          <div className="mx-auto max-w-3xl px-4 py-20 sm:px-6">
-            <h2 className="text-center text-3xl font-bold tracking-tight">Perguntas rápidas</h2>
-            <div className="mt-10 grid gap-4">
-              {[
-                {
-                  q: "Como funciona a garantia?",
-                  a: "Você assina e usa por 7 dias. Se não gostar, devolvemos 100% do valor. Cancele quando quiser.",
-                },
-                {
-                  q: "Funciona pelo celular?",
-                  a: "Sim. A Intermo foi desenhada primeiro para o celular — você opera tudo de onde estiver.",
-                },
-                {
-                  q: "Tem limite de contratos?",
-                  a: "Não. No plano Intermo os contratos e assinaturas são ilimitados.",
-                },
-              ].map((item) => (
-                <Card key={item.q} className="p-5">
-                  <p className="font-medium">{item.q}</p>
-                  <p className="mt-2 text-sm text-muted-foreground">{item.a}</p>
+        {/* FAQ */}
+        <section id="faq" className="border-b border-[color:var(--color-graphite)] scroll-mt-20">
+          <div className="mx-auto max-w-[800px] px-6 py-24">
+            <div className="text-center">
+              <span className="eyebrow">Dúvidas</span>
+              <h2 className="mt-4 text-[36px] leading-[1.1] font-medium">Perguntas rápidas</h2>
+            </div>
+            <div className="mt-10 grid gap-3">
+              {faq.map((item) => (
+                <Card key={item.q} className="p-6">
+                  <p className="text-[16px] font-medium">{item.q}</p>
+                  <p className="mt-2 text-[14px] leading-[1.55] text-[color:var(--color-ash)]">{item.a}</p>
                 </Card>
               ))}
             </div>
@@ -268,16 +330,16 @@ function Landing() {
         </section>
       </main>
 
-      <footer className="border-t border-border/60">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 px-4 py-10 sm:flex-row sm:px-6">
-          <div className="flex items-center gap-3 text-sm text-muted-foreground">
-            <Wordmark className="text-base" />
+      <footer>
+        <div className="mx-auto flex max-w-[1200px] flex-col items-center justify-between gap-6 px-6 py-10 sm:flex-row">
+          <div className="flex items-center gap-3 text-[14px] text-[color:var(--color-ash)]">
+            <Wordmark className="text-[16px]" />
             <span>© {new Date().getFullYear()} Intermo</span>
           </div>
-          <nav className="flex items-center gap-6 text-sm text-muted-foreground">
-            <Link to="/termos" className="transition-colors hover:text-foreground">Termos</Link>
-            <Link to="/privacidade" className="transition-colors hover:text-foreground">Privacidade</Link>
-            <Link to="/login" className="transition-colors hover:text-foreground">Entrar</Link>
+          <nav className="flex items-center gap-6 text-[14px] text-[color:var(--color-ash)]" aria-label="Rodapé">
+            <Link to="/termos" className="transition-colors hover:text-[color:var(--color-chalk)]">Termos</Link>
+            <Link to="/privacidade" className="transition-colors hover:text-[color:var(--color-chalk)]">Privacidade</Link>
+            <Link to="/login" className="transition-colors hover:text-[color:var(--color-chalk)]">Entrar</Link>
           </nav>
         </div>
       </footer>
