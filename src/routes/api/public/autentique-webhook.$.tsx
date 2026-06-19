@@ -67,7 +67,7 @@ export const Route = createFileRoute("/api/public/autentique-webhook/$")({
             status: patch.status ?? null,
             signer_email: body.signature?.email ?? null,
             message: typeof body === "object" ? null : null,
-            payload: body as unknown as Record<string, unknown>,
+            payload: JSON.parse(JSON.stringify(body)),
           });
 
           return json({ ok: true });
