@@ -77,10 +77,14 @@ function ChatWindow({
     () =>
       new DefaultChatTransport({
         api: "/api/chat",
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        headers: async (): Promise<Record<string, string>> => {
+          const { data } = await supabase.auth.getSession();
+          const t = data.session?.access_token;
+          return t ? { Authorization: `Bearer ${t}` } : {};
+        },
         body: { contractId },
       }),
-    [token, contractId],
+    [contractId],
   );
 
   const { messages, sendMessage, status } = useChat({
