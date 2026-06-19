@@ -92,12 +92,13 @@ function ContratosPage() {
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={q}
-            onChange={(e) =>
+            onChange={(e) => {
+              const value = e.target.value;
               navigate({
-                search: (prev) => ({ ...prev, q: e.target.value }),
+                search: (prev) => ({ ...prev, q: value }),
                 replace: true,
-              })
-            }
+              } as never);
+            }}
             placeholder="Buscar por título, cliente ou e-mail…"
             className="pl-9"
           />
