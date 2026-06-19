@@ -27,14 +27,16 @@ export const updateMyProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => updateSchema.parse(input))
   .handler(async ({ data, context }) => {
-    const payload: Record<string, unknown> = {
+    const payload = {
       owner_name: data.ownerName,
       company_fantasy_name: data.companyFantasyName,
       company_legal_name: data.companyLegalName,
       company_email: data.companyEmail,
       company_phone: data.companyPhone.replace(/\D/g, ""),
+      ...(data.defaultMarginPct !== undefined
+        ? { default_margin_pct: data.defaultMarginPct }
+        : {}),
     };
-    if (data.defaultMarginPct !== undefined) payload.default_margin_pct = data.defaultMarginPct;
 
     const { error } = await context.supabase
       .from("profiles")
