@@ -1,60 +1,161 @@
-## Contexto
+# Reformular fluxo: Transação ponta-a-ponta + Assinatura white-label + Export NFS
 
-Hoje o login mostra uma ilustração estática (`AuthLayout.tsx > ChatPreviewMock`) com chrome de janela macOS, abertura serif itálico coral, bolha verde e um card "CONTRATO GERADO" inline. O chat real (`chat.$contractId.tsx`) **não** tem nada disso: o PDF aparece só como botão "Baixar PDF" no header.
+## Visão geral
 
-A integração Autentique já existe parcialmente: `sendContractToAutentique` envia, e o webhook `/api/public/autentique-webhook/$` recebe eventos e marca `signed_at`. **O que falta:** baixar o PDF assinado do Autentique quando todos assinam e guardar em storage pra download. Não existe coluna pra isso.
+Hoje o app gira em torno de "Contrato". Vamos transformar isso em **Transação** — onde o contrato é só a primeira etapa de um ciclo que inclui pagamento do cliente, pagamento do fornecedor, frete e consolidação da margem. Cada transação terá ações claras (gerar contrato, enviar pelo WhatsApp, registrar pagamentos, consolidar) e alimentará a planilha mensal de NFS no mesmo formato que o contador já recebe hoje.
 
-## Fase A — Visual do chat (alinhar à ilustração)
+A assinatura digital ficará **híbrida**: o cliente e o lojista assinam numa página totalmente nossa (`/assinar/:token`), com o mesmo visual coral/mint/abyss do app. Por baixo, o Autentique continua sendo disparado em paralelo para manter a validade jurídica registrada lá também — sem o cliente nunca ver o site do Autentique. Cada lojista (tenant) tem uma **pasta própria no Autentique** para não misturar documentos entre clientes.
 
-Mexer só em `src/routes/_authenticated/chat.$contractId.tsx`:
+---
 
-1. **Abertura serif-itálico-coral**: pós-processar a primeira mensagem da IA — primeira "frase curta" (até a primeira `.`, `!` ou `?` dentro dos primeiros ~20 chars, ex.: "Boa tarde.", "Olá.", "Perfeito.") renderiza em `font-serif-display italic text-[color:var(--color-coral)]`, e o resto do parágrafo segue normal. Aplicado só no primeiro parágrafo, sem mexer no markdown subsequente.
+## Etapa 1 — Limpeza do fluxo de entrada
 
-2. **Bolha do usuário**: igualar à ilustração — `bg-[color:var(--color-signal-mint)] text-[color:var(--color-abyss)] rounded-2xl px-4 py-2`, máx 80% largura, alinhada à direita. (Hoje usa `bg-primary` que é parecido mas não idêntico.)
+**Página inicial do chat (`/chat`)**:
+- Remover os três cards de starter atuais.
+- Manter só o hero ("Da conversa ao contrato, sem fricção") e a caixa de texto livre.
+- Botão "Começar" vira **"Nova transação"**.
 
-3. **Card inline "CONTRATO GERADO"**: novo componente `ContractFileCard` renderizado dentro da mensagem da IA quando `contract.pdf_path` existir e for a mensagem mais recente do assistente. Estilo da ilustração: borda sutil, label caps tracking-wide, nome do arquivo clicável que chama `getContractPdfSignedUrl`.
+**Página "Nova transação"** (substitui `/contratos/novo` e a entrada do chat):
+- Mesma tela unificada.
+- Um único starter abaixo do campo: **"Gerar contrato"** — a IA inicia o ritual de coleta (cliente, produto, valores, frete).
 
-4. **Card inline "CONTRATO ASSINADO"**: mesmo componente, variante diferente, aparece quando `contract.signed_pdf_path` existir (Fase B). Antes da Fase B, fica oculto.
+**Sidebar / menu**:
+- "Contratos" → **"Transações"**.
+- "Novo contrato" → **"Nova transação"**.
+- Rotas antigas (`/contratos*`) redirecionam 301 para `/transacoes*`.
 
-5. **Remover botão "Baixar PDF" do header** — toda a navegação do PDF vai pros cards inline (decisão do usuário).
+---
 
-6. **Chrome opcional**: NÃO replicar o semáforo macOS dentro da app real (ele faz sentido na ilustração de marketing, dentro do app vira ruído). Manter header limpo só com "Conversa" + subtitle.
+## Etapa 2 — Renomear Contrato → Transação
 
-## Fase B — Coluna `signed_pdf_path` + storage
+- `contracts` → `transactions` (com view de compatibilidade por 1 release).
+- Coluna `pdf_path` mantida (PDF do contrato é uma etapa da transação).
+- Quota mensal passa a contar **transações**. Função `current_month_contract_count()` → `current_month_transaction_count()`.
+- UI: "Transação" para o registro inteiro; "Contrato" continua existindo como nome do artefato PDF dentro dela.
 
-Migração:
-- `ALTER TABLE contracts ADD COLUMN signed_pdf_path text, ADD COLUMN signed_pdf_downloaded_at timestamptz`.
-- Bucket `contract-pdfs` já existe e é privado — reusar. Caminho: `{user_id}/{contract_id}/signed.pdf`.
+---
 
-## Fase C — Download do PDF assinado via webhook
+## Etapa 3 — Etapas financeiras da transação
 
-Editar `src/routes/api/public/autentique-webhook.$.tsx`:
+Novas colunas em `transactions`:
+- `client_paid_amount`, `client_paid_at`, `client_payment_method`
+- `supplier_paid_amount`, `supplier_paid_at`, `supplier_name`, `supplier_doc`
+- `freight_paid_amount`, `freight_paid_at`, `freight_carrier`
+- `consolidated_at`, `consolidated` (boolean)
+- `margin_calculated` (gerada: remuneração − custo − frete)
+- `tax_estimated` (gerada: 6% sobre margem)
 
-- Quando o cálculo já marca `status = "signed"` (todos assinaram), disparar uma função interna `fetchAndStoreSignedPdf(documentId, contractId)`:
-  1. Query GraphQL no Autentique pedindo `document(id: $id) { files { signed } }` — retorna URL temporária do PDF assinado.
-  2. `fetch` na URL → ArrayBuffer.
-  3. `supabaseAdmin.storage.from("contract-pdfs").upload(path, bytes, { contentType: "application/pdf", upsert: true })`.
-  4. `UPDATE contracts SET signed_pdf_path = path, signed_pdf_downloaded_at = now()`.
-  5. Log em `contract_events` ("Contrato assinado armazenado").
-- Idempotente: se `signed_pdf_path` já existe, pula.
-- Falha no download não derruba o webhook (loga `last_error`, retorna 200 pro Autentique não reenviar infinitamente — botão manual de retry vem depois se precisar).
+**Fluxo na conversa**:
+- Depois do contrato assinado, a IA cobra essas infos na ordem que o lojista quiser informar.
+- Cada resposta atualiza o campo e o **mini checklist visual** no topo do chat: ✓ Contrato assinado · ○ Pagto cliente · ○ Pagto fornecedor · ○ Frete.
+- Quando tudo preenchido, aparece o botão **"Consolidar transação"** (coral sólido) que seta `consolidated_at` e move a transação para o estado final — entra na planilha de NFS do mês.
 
-Nova server fn `getSignedPdfSignedUrl(contract_id)` análoga a `getContractPdfSignedUrl`, gera signed URL do bucket privado.
+---
 
-## Fase D — Mensagem do agente quando assina
+## Etapa 4 — Plataforma de assinatura white-label (híbrido com Autentique)
 
-Quando o status muda pra `signed`, na próxima mensagem da IA na thread daquele contrato, ela já vai conseguir "ver" `signed_pdf_path` (via contexto do chat handler) e o card "CONTRATO ASSINADO" aparece naturalmente. Sem polling em tempo real nesta rodada — usuário recarrega/manda nova mensagem pra ver.
+**Página `/assinar/:token`** (pública, sem autenticação):
+- Mesmo visual do app (header inTermo, fundo abyss, serif coral nos títulos).
+- Mostra dados da transação: lojista, cliente, produto, valor.
+- Preview do PDF do contrato (iframe).
+- Campo de assinatura: desenhar com dedo/mouse **ou** digitar nome completo.
+- Checkbox "Concordo em assinar eletronicamente este contrato" (necessário para validade MP 2.200-2).
+- Botão "Assinar agora" registra: nome, IP, user-agent, timestamp, hash do PDF, imagem da assinatura.
+- Tela de confirmação.
+
+**Por baixo (invisível ao usuário)**:
+- Quando o lojista gera o contrato, disparamos `POST createDocument` para Autentique em paralelo, **dentro da pasta do tenant** (ver Etapa 4b).
+- Quando o signatário assina na nossa página, replicamos a assinatura para o Autentique via API (mesmo CPF/email).
+- Quando todos assinaram em ambos os lados, o webhook do Autentique chega, baixamos o PDF assinado (lógica já existe) e ele vira o `signed_pdf_path` oficial.
+- Se o Autentique falhar, a assinatura na nossa página continua válida — hash + metadados ficam suficientes para defesa autônoma.
+
+**Tabela nova**: `signature_tokens` (token público, transaction_id, signer_role: lojista|cliente, signed_at, ip, user_agent, signature_image_path, expires_at — TTL 30 dias).
+
+### Etapa 4b — Pasta Autentique por tenant (novo)
+
+A API do Autentique suporta `createFolder`, `moveDocumentToFolder` e pastas compartilhadas com a organização (mutations `criando-pastas`, `movendo-documento-para-pasta`). Documentos criados via API aparecem normalmente no painel.autentique.com.br.
+
+- Nova coluna `profiles.autentique_folder_id` (text, nullable).
+- Na primeira vez que um lojista gera um contrato, criamos a pasta com nome `inTermo – <razão social>` (ou nome fantasia) via mutation `createFolder` e gravamos o ID em `profiles.autentique_folder_id`.
+- Toda criação de documento subsequente usa esse `folder_id` no `createDocument` (ou `moveDocumentToFolder` logo após, dependendo do que a API aceitar — checamos no momento da implementação).
+- Botão "Reorganizar no Autentique" nas Configurações para o caso raro do lojista renomear a empresa ou querer recriar a pasta.
+- Resultado: quando o lojista abre `autentique.com.br`, vê **uma pasta limpa só com os documentos dele**, sem misturar com outros tenants do SaaS.
+
+---
+
+## Etapa 5 — Botão WhatsApp para o cliente
+
+Quando o contrato é gerado, junto do card "Contrato gerado" no chat aparece **"Enviar para o cliente via WhatsApp"** que:
+- Gera `https://wa.me/55<telefone>?text=<mensagem>` URL-encoded.
+- Mensagem: *"Olá <nome>, seu contrato da inTermo está pronto! Para assinar, é só clicar aqui: <link /assinar/:token>. Qualquer dúvida, é só chamar."*
+- Abre WhatsApp Web/app do lojista com a mensagem pronta.
+
+Disponível também na página da transação para reenvio. Só aparece se o cliente tem telefone cadastrado.
+
+---
+
+## Etapa 6 — Página `/financeiro` com export XLSX no modelo da planilha
+
+A página Financeiro recebe:
+- Listagem das transações **consolidadas**, agrupadas por mês.
+- Linha de **total da margem** e **imposto estimado (6%)** por mês.
+- Botão **"Exportar planilha do mês"** ao lado de cada mês.
+
+**Export XLSX idêntico ao modelo** (`NFS-VENTO-NORTE-MAIO-2026.xlsx`):
+- Aba `DE 01-MM-AAAA A 31-MM-AAAA`, colunas: CPF, NOME DO CLIENTE, ENDEREÇO, PRODUTO, VALOR DA REMUNERAÇÃO, CUSTO, CUSTO FRETE, VALOR NFS (MARGEM), DESCRIÇÃO DO SERVIÇO, DATA PARA EMISSÃO.
+- DESCRIÇÃO DO SERVIÇO gerada automaticamente no mesmo formato multilinha.
+- Linha final com **TOTAL MARGEM (BASE NFS)** e **IMPOSTO ESTIMADO – DAS Simples Nacional (6%)**.
+- Formatação moeda BR + datas, fonte Arial.
+
+---
 
 ## Detalhes técnicos
 
-- Autentique GraphQL `files.signed` retorna URL pública temporária (~15min). Baixar e re-hospedar é necessário pra link estável.
-- `supabaseAdmin` importado com `await import()` dentro do handler do webhook (regra de import-graph).
-- Card inline lê `contract.pdf_path` / `contract.signed_pdf_path` via query já existente `getChatThread` — adicionar esses campos ao retorno se ainda não tiver.
-- Nenhuma mudança em `AuthLayout.tsx` (a ilustração já está como o usuário quer).
+**Stack**: TanStack Start + Supabase + Autentique GraphQL + AI SDK + Lovable AI Gateway.
 
-## Fora de escopo desta rodada
+**Migração de banco** (uma migration):
+1. `ALTER TABLE contracts RENAME TO transactions` + VIEW de compatibilidade.
+2. ADD COLUMNs financeiros da Etapa 3.
+3. CREATE TABLE `signature_tokens` (RLS: service_role full, anon select por token).
+4. ADD COLUMN `profiles.autentique_folder_id`.
+5. Renomear função `current_month_contract_count` → `current_month_transaction_count`.
 
-- Realtime/polling pra atualizar o card "ASSINADO" sem reload.
-- Botão manual "rebaixar PDF assinado" caso o webhook falhe.
-- Notificação por e-mail quando assina.
-- Exclusão de contrato + cascata em lançamentos financeiros (já listado pra fase futura).
+**Novos server functions** (`src/lib/transactions.functions.ts`):
+- `getTransactionPipeline(id)`, `recordClientPayment`, `recordSupplierPayment`, `recordFreightPayment`, `consolidateTransaction(id)`.
+- `exportMonthlyNfs(year, month)` usando `exceljs` (puro JS, compatível com Cloudflare Workers).
+
+**Novo helper Autentique** (`src/lib/autentique.server.ts`):
+- `ensureTenantFolder(userId)` — lazy-creates pasta e cacheia em `profiles.autentique_folder_id`.
+- `createDocumentInTenantFolder(...)`.
+
+**Nova rota pública** (`src/routes/assinar/$token.tsx` + `src/routes/api/public/sign.$token.tsx`).
+
+**Edge runtime**: `exceljs` (puro JS). Não usar `xlsx-populate`/`node-xlsx`.
+
+**Ordem de implementação** (commits separados):
+1. Migration: rename + colunas + signature_tokens + autentique_folder_id.
+2. UI: remover starters, renomear menu, rotas/redirects.
+3. Helper Autentique com pasta por tenant + ajuste no fluxo atual de criação.
+4. Página `/assinar/:token` + token + replicação Autentique invisível.
+5. Botão WhatsApp no chat e na página da transação.
+6. Conversa com etapas financeiras + checklist + botão consolidar.
+7. Página `/financeiro` + export XLSX.
+
+---
+
+## Fora de escopo (próxima rodada)
+
+- Envio automático mensal da planilha por e-mail ao contador.
+- Aba "USO INTERNO – SEM NFS" no export.
+- Edição/cancelamento de transação consolidada (read-only depois de consolidada).
+- Notificações push/e-mail quando o cliente assina.
+
+---
+
+## Riscos e cuidados
+
+- **Migração `contracts → transactions`** é grande; view de compatibilidade reduz risco. Migration vai em chamada separada para sua aprovação antes do código.
+- **Validade jurídica** da assinatura própria (MP 2.200-2): checkbox de consentimento + Autentique em paralelo cobre cenários de contestação.
+- **Telefone do cliente**: botão WhatsApp só aparece quando cadastrado.
+- **Pasta Autentique**: se a API rejeitar `folder_id` no `createDocument`, fazemos `moveDocumentToFolder` logo depois — fluxo robusto a ambas as formas. Pastas já existentes manualmente no painel do lojista não são tocadas; criamos uma nova chamada "inTermo – <empresa>".
+- **Token de assinatura**: TTL 30 dias, revogável manualmente pelo lojista.
