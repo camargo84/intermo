@@ -51,17 +51,18 @@ export const createContract = createServerFn({ method: "POST" })
     });
     if (!rl.ok) throw new Error("Muitos contratos em sequência. Aguarde 1 minuto.");
 
-    // 3) Quota mensal
+    // 3) Anti-abuso interno (teto alto, não-comercial)
     const { data: count } = await context.supabase.rpc("current_month_contract_count");
     const { data: sub } = await context.supabase
       .from("subscriptions")
       .select("monthly_contract_quota")
       .eq("user_id", context.userId)
       .maybeSingle();
-    const limit = sub?.monthly_contract_quota ?? 200;
-    if ((count ?? 0) >= limit) {
-      throw new Error(`Você atingiu o limite mensal de ${limit} contratos.`);
+    const ceil = sub?.monthly_contract_quota ?? 2000;
+    if ((count ?? 0) >= ceil) {
+      throw new Error("Uso anormal detectado. Tente novamente mais tarde.");
     }
+
 
     const { data: row, error } = await context.supabase
       .from("contracts")
