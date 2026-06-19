@@ -4,7 +4,7 @@ import {
   MessageSquarePlus,
   FileText,
   Wallet,
-  Receipt,
+  CreditCard,
   Settings,
 } from "lucide-react";
 import {
@@ -27,7 +27,7 @@ export const NAV_ITEMS = [
   { title: "Novo contrato", url: "/contratos/novo", icon: MessageSquarePlus },
   { title: "Contratos", url: "/contratos", icon: FileText },
   { title: "Financeiro", url: "/financeiro", icon: Wallet },
-  { title: "NFS", url: "/nfs", icon: Receipt },
+  { title: "Assinatura", url: "/assinatura", icon: CreditCard },
   { title: "Configurações", url: "/configuracoes", icon: Settings },
 ] as const;
 

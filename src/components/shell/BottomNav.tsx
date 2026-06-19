@@ -86,7 +86,7 @@ export function BottomNav() {
                 <DrawerTitle>Mais</DrawerTitle>
               </DrawerHeader>
               <div className="grid gap-1 px-4 pb-6">
-                <DrawerLink to="/nfs" icon={Receipt} label="NFS" onSelect={() => setOpen(false)} />
+                <DrawerLink to="/assinatura" icon={Receipt} label="Assinatura" onSelect={() => setOpen(false)} />
                 <DrawerLink to="/configuracoes" icon={Settings} label="Configurações" onSelect={() => setOpen(false)} />
                 <Button variant="ghost" className="justify-start gap-3" onClick={toggle}>
                   {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
