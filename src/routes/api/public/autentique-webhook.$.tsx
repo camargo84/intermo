@@ -61,7 +61,7 @@ export const Route = createFileRoute("/api/public/autentique-webhook/$")({
 
           const { error: updateErr } = await supabaseAdmin
             .from("contracts")
-            .update(patch)
+            .update(patch as never)
             .eq("id", contract.id);
           if (updateErr) throw updateErr;
 
