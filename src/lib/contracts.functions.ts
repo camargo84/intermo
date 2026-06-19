@@ -7,7 +7,7 @@ import type { Database } from "@/integrations/supabase/types";
 const AUTENTIQUE_ENDPOINT = "https://api.autentique.com.br/v2/graphql";
 
 type Supa = SupabaseClient<Database>;
-type ContractRow = Database["public"]["Tables"]["contracts"]["Row"];
+type ContractRow = Database["public"]["Tables"]["transactions"]["Row"];
 
 const createContractSchema = z.object({
   title: z.string().min(2).max(200),
