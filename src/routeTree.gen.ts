@@ -23,6 +23,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
 import { Route as AuthenticatedContratosIndexRouteImport } from './routes/_authenticated/contratos.index'
 import { Route as AuthenticatedContratosNovoRouteImport } from './routes/_authenticated/contratos.novo'
+import { Route as AuthenticatedContratosContractIdRouteImport } from './routes/_authenticated/contratos.$contractId'
 import { Route as ApiPublicAutentiqueWebhookSplatRouteImport } from './routes/api/public/autentique-webhook.$'
 
 const TermosRoute = TermosRouteImport.update({
@@ -97,6 +98,12 @@ const AuthenticatedContratosNovoRoute =
     path: '/contratos/novo',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedContratosContractIdRoute =
+  AuthenticatedContratosContractIdRouteImport.update({
+    id: '/contratos/$contractId',
+    path: '/contratos/$contractId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const ApiPublicAutentiqueWebhookSplatRoute =
   ApiPublicAutentiqueWebhookSplatRouteImport.update({
     id: '/api/public/autentique-webhook/$',
@@ -116,6 +123,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/nfs': typeof AuthenticatedNfsRoute
+  '/contratos/$contractId': typeof AuthenticatedContratosContractIdRoute
   '/contratos/novo': typeof AuthenticatedContratosNovoRoute
   '/contratos/': typeof AuthenticatedContratosIndexRoute
   '/api/public/autentique-webhook/$': typeof ApiPublicAutentiqueWebhookSplatRoute
@@ -132,6 +140,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/nfs': typeof AuthenticatedNfsRoute
+  '/contratos/$contractId': typeof AuthenticatedContratosContractIdRoute
   '/contratos/novo': typeof AuthenticatedContratosNovoRoute
   '/contratos': typeof AuthenticatedContratosIndexRoute
   '/api/public/autentique-webhook/$': typeof ApiPublicAutentiqueWebhookSplatRoute
@@ -150,6 +159,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/financeiro': typeof AuthenticatedFinanceiroRoute
   '/_authenticated/nfs': typeof AuthenticatedNfsRoute
+  '/_authenticated/contratos/$contractId': typeof AuthenticatedContratosContractIdRoute
   '/_authenticated/contratos/novo': typeof AuthenticatedContratosNovoRoute
   '/_authenticated/contratos/': typeof AuthenticatedContratosIndexRoute
   '/api/public/autentique-webhook/$': typeof ApiPublicAutentiqueWebhookSplatRoute
@@ -168,6 +178,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/financeiro'
     | '/nfs'
+    | '/contratos/$contractId'
     | '/contratos/novo'
     | '/contratos/'
     | '/api/public/autentique-webhook/$'
@@ -184,6 +195,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/financeiro'
     | '/nfs'
+    | '/contratos/$contractId'
     | '/contratos/novo'
     | '/contratos'
     | '/api/public/autentique-webhook/$'
@@ -201,6 +213,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/financeiro'
     | '/_authenticated/nfs'
+    | '/_authenticated/contratos/$contractId'
     | '/_authenticated/contratos/novo'
     | '/_authenticated/contratos/'
     | '/api/public/autentique-webhook/$'
@@ -318,6 +331,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedContratosNovoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/contratos/$contractId': {
+      id: '/_authenticated/contratos/$contractId'
+      path: '/contratos/$contractId'
+      fullPath: '/contratos/$contractId'
+      preLoaderRoute: typeof AuthenticatedContratosContractIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/public/autentique-webhook/$': {
       id: '/api/public/autentique-webhook/$'
       path: '/api/public/autentique-webhook/$'
@@ -333,6 +353,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedFinanceiroRoute: typeof AuthenticatedFinanceiroRoute
   AuthenticatedNfsRoute: typeof AuthenticatedNfsRoute
+  AuthenticatedContratosContractIdRoute: typeof AuthenticatedContratosContractIdRoute
   AuthenticatedContratosNovoRoute: typeof AuthenticatedContratosNovoRoute
   AuthenticatedContratosIndexRoute: typeof AuthenticatedContratosIndexRoute
 }
@@ -342,6 +363,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedFinanceiroRoute: AuthenticatedFinanceiroRoute,
   AuthenticatedNfsRoute: AuthenticatedNfsRoute,
+  AuthenticatedContratosContractIdRoute: AuthenticatedContratosContractIdRoute,
   AuthenticatedContratosNovoRoute: AuthenticatedContratosNovoRoute,
   AuthenticatedContratosIndexRoute: AuthenticatedContratosIndexRoute,
 }
