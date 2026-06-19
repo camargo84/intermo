@@ -77,12 +77,12 @@ export function LoginPage() {
 
   return (
     <AuthLayout
-      title="Entrar na inTermo"
-      subtitle="Continue de onde parou."
+      title="Bem-vindo de volta."
+      subtitle="Continue de onde parou — sua próxima conversa começa em um clique."
       footer={
         <>
           Ainda não tem conta?{" "}
-          <Link to="/signup" className="font-medium text-accent hover:underline">
+          <Link to="/signup" className="font-medium text-primary hover:underline">
             Criar conta
           </Link>
         </>
