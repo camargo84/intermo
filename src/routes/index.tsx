@@ -90,7 +90,7 @@ const reasons = [
 ];
 
 const trustSeals = [
-  { icon: Scale, label: "Validade jurídica" },
+  { icon: Scale, label: "Validade jurídica\n(MP nº 2.200-2/01)\n" },
   { icon: Fingerprint, label: "Assinatura digital" },
   { icon: Lock, label: "Dados criptografados" },
   { icon: ShieldCheck, label: "LGPD" },
@@ -224,7 +224,7 @@ function Landing() {
             {trustSeals.map((s) => (
               <div key={s.label} className="flex items-center gap-3 text-[color:var(--color-chalk)]">
                 <s.icon className="h-4 w-4 stroke-[1.5]" />
-                <span className="text-[14px]">{s.label}</span>
+                <span className="text-[14px] whitespace-pre-line">{s.label}</span>
               </div>
             ))}
           </div>
