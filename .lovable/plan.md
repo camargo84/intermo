@@ -1,64 +1,65 @@
-## Sprints 2 e 3 — Confiança, operação e go-live
+# Plano — Finalização para Produção
 
-Sprint 1 (AbacatePay + assinaturas + guards) já está no ar. Falta destravar suporte, e-mails transacionais, polimento e publicação.
-
----
-
-### Sprint 2 — Confiança e operação
-
-**2.1 Papéis admin (suporte e observabilidade)**
-- Migração: enum `app_role` já existe; criar layout `src/routes/_authenticated/_admin/route.tsx` com gate `has_role('admin')` (server fn `getMyRoles`).
-- `src/routes/_authenticated/_admin/contratos-falha.tsx`: lista `contracts.status='error'` com `last_error`, botão "reprocessar" (chama `sendContractToAutentique` de novo).
-- `src/routes/_authenticated/_admin/assinaturas.tsx`: tabela agregada de `subscriptions` (status, último pagamento, próxima cobrança).
-- Sem item no menu lateral pra usuário comum; admin vê link extra na Topbar.
-
-**2.2 E-mails transacionais (Lovable Email)**
-- Rodar `email_domain--check_email_domain_status`. Se não houver domínio, abrir o setup dialog antes de seguir.
-- `email_domain--scaffold_auth_email_templates` para confirmação de cadastro, reset de senha, magic link.
-- `email_domain--scaffold_transactional_email` para:
-  - "Pagamento falhou" — disparado pelo webhook AbacatePay (`subscription.payment_failed`).
-  - "Contrato enviado para assinatura" — disparado quando `sendContractToAutentique` retorna ok.
-  - "Contrato assinado" — disparado pelo webhook Autentique (`signed`).
-- Aplicar identidade Sandclock terminal nos templates (cores/tipografia do app, body branco).
-
-**2.3 Hardening final**
-- `supabase--configure_social_auth` Google (provider precisa ser ativado pra o botão não dar "Unsupported provider"; HIBP já está on).
-- Auditar `src/routes/api/public/autentique-webhook.$.tsx` pra garantir verificação HMAC timing-safe (mesmo padrão do AbacatePay).
-- Rodar `security--run_security_scan` e tratar críticos.
+Com base nas suas respostas:
+1. **Domínio próprio:** depois. Publicamos em `.lovable.app` agora.
+2. **Google Login:** ativar agora.
+3. **Admin:** `tiago84@gmail.com`.
 
 ---
 
-### Sprint 3 — Polimento e go-live
+## 1. Acesso Admin (tiago84@gmail.com)
 
-**3.1 SEO público**
-- `head()` por rota pública (`/`, `/login`, `/signup`, `/termos`, `/privacidade`) com `<title>`, description, `og:title/description/type`, `twitter:card`. Sem `og:image` no `__root` (substituiria leaf).
-- `public/robots.txt` permitindo tudo, sem `Sitemap:` até publicar.
-- Server route `src/routes/api/public/sitemap.xml.ts` gerando sitemap das rotas públicas.
+- Migration idempotente que insere em `public.user_roles` a role `admin` para o `user_id` correspondente ao e-mail `tiago84@gmail.com` em `auth.users`.
+- Se o usuário ainda não existir no Auth, a migration apenas não insere nada (sem erro) — basta repetir após o primeiro login.
+- Após login, o menu "Admin" aparece automaticamente na Topbar e libera `/contratos-falha` e `/assinaturas`.
 
-**3.2 LGPD**
-- Banner de cookies (aceitar/recusar) persistido em `localStorage`; sem analytics até aceite.
-- `accepted_terms_version` já está no `profiles`; criar versão constante `TERMS_VERSION` e, quando `profile.accepted_terms_version < TERMS_VERSION`, bloquear ações sensíveis (criar/enviar contrato) com modal "aceite os novos termos".
+## 2. Login com Google
 
-**3.3 Operação**
-- Server route `src/routes/api/public/health.ts` retornando `{ ok: true, commit }`.
-- Smoke test manual com Playwright headless: signup → checkout PIX (modo sandbox) → simular webhook → criar contrato → enviar Autentique → simular webhook assinatura → financeiro atualiza.
-- `preview_ui--publish` pra `intermo.lovable.app` (depois de `security--get_scan_results` limpo + revisão de OG tags).
+- Rodar `supabase--configure_social_auth` com `providers: ["google"]` (mantém email habilitado).
+- Atualizar `src/routes/login.tsx` e `src/routes/signup.tsx` para incluir botão "Continuar com Google" usando `lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin })` (broker gerenciado).
+- Garantir que o `handle_new_user` trigger crie profile mesmo sem metadados (já é tolerante — apenas confirmar).
+- Pós-OAuth: redirect para `/dashboard` ou `/assinatura` conforme `has_active_subscription`.
+
+## 3. E-mails Transacionais (publicar em `.lovable.app` primeiro)
+
+- Rodar `email_domain--check_email_domain_status`. Se não existir, abrir diálogo `presentation-open-email-setup` para configurar domínio padrão Lovable (`*.lovable.app` sender) — sem custo de DNS agora.
+- Scaffold dos templates de auth (`email_domain--scaffold_auth_email_templates`) com branding minimal (cabeçalho INTERMO, fundo claro, monospace para identificadores).
+- Scaffold de 3 templates transacionais:
+  - `payment-failed` — disparado pelo webhook AbacatePay (`subscription.payment_failed`).
+  - `contract-sent` — disparado após `sendContractToAutentique` com sucesso.
+  - `contract-signed` — disparado pelo webhook Autentique em `document.signed`.
+- Edge functions de envio (`send-payment-failed`, `send-contract-sent`, `send-contract-signed`) chamadas a partir dos respectivos handlers existentes via `supabase.functions.invoke` (server-side) com retry simples; falhas só logam (não bloqueiam o fluxo principal).
+- Deploy de `auth-email-hook` + funções transacionais.
+- Quando o usuário trouxer o domínio próprio: basta configurar em "Cloud → Emails", sem mudança de código.
+
+## 4. Smoke Test (Playwright headless local)
+
+Roteiro automatizado para validar antes de publicar:
+1. signup novo → redirect `/assinatura`.
+2. mock do webhook AbacatePay (`subscription.completed`) → conta vira ativa.
+3. criar contrato → enviar para Autentique (mock token) → status `sent`.
+4. simular webhook Autentique `document.signed` (HMAC válido) → status `signed` e receita aparece em `/financeiro`.
+5. revogar HMAC → webhook responde 401.
+
+Falhas paralisam o go-live.
+
+## 5. Hardening Final e Publicação
+
+- Rodar `security--run_security_scan` — corrigir críticos antes do publish.
+- Atualizar metadados raiz (`__root.tsx` head): título, descrição, OG/Twitter, favicon coerentes com INTERMO.
+- `preview_ui--publish` com `website_info_status: added_or_updated` e summary descrevendo título/meta/OG/favicon revisados.
+- Após publish, instruir você a:
+  - Configurar webhook AbacatePay para a URL definitiva `https://intermo.lovable.app/api/public/abacate-webhook?webhookSecret=...`.
+  - Confirmar webhook Autentique para `/api/public/autentique-webhook`.
 
 ---
 
-### Itens explicitamente fora do escopo
+## Detalhes técnicos
 
-- NFS continua fora do menu (rota com ComingSoon).
-- Reembolso continua manual (mailto/painel AbacatePay).
-- Domínio próprio: instruções DNS depois, sem bloquear go-live.
-- Sentry/observabilidade externa: ficamos com `last_error` + página admin.
+- **Migration admin:** `insert into public.user_roles (user_id, role) select id, 'admin' from auth.users where email = 'tiago84@gmail.com' on conflict (user_id, role) do nothing;`
+- **Google OAuth:** broker gerenciado pelo Lovable Cloud — sem credenciais próprias. Custom domain depois funciona transparente.
+- **E-mail sender inicial:** subdomínio `.lovable.app` gerenciado (sem DNS). Migração futura para `notify.intermo.com.br` será só configuração no painel "Cloud → Emails".
+- **Sem mudanças** em `auth-middleware.ts`, `client.ts`, `client.server.ts`, `auth-attacher.ts`, `types.ts`, `.env`, `config.toml`.
 
----
-
-### O que vou precisar de você
-
-- Confirmar nome do remetente/subdomínio de e-mail (ex.: `notify.intermo.com.br`) ou aceitar publicar primeiro em `.lovable.app` e configurar o domínio depois.
-- Provider Google: confirma que quer login social com Google já no v1 (sem isso o botão fica off).
-- Versão dos Termos atual (string tipo `2026-06-01`) — uso pra `TERMS_VERSION` e revalidar aceite.
-
-Aprovando, começo pelo 2.1 (admin) e 2.2 (e-mails), que são os bloqueadores de suporte e comunicação.
+## Fora de escopo (mantido)
+NFS-e, refunds manuais, domínio próprio, Sentry externo.
