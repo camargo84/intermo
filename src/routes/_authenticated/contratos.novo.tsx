@@ -12,7 +12,7 @@ import {
 } from "@/lib/contracts.functions";
 
 export const Route = createFileRoute("/_authenticated/contratos/novo")({
-  head: () => ({ meta: [{ title: "Novo contrato — Intermo" }] }),
+  head: () => ({ meta: [{ title: "Novo contrato — inTermo" }] }),
   component: NovoContratoPage,
 });
 

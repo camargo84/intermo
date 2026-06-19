@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-type IntermoMarkProps = {
+type inTermoMarkProps = {
   className?: string;
   /** "plain" = só o símbolo (usa currentColor). "tile" = quadrado com fundo --primary e símbolo claro. */
   variant?: "plain" | "tile";
@@ -8,10 +8,10 @@ type IntermoMarkProps = {
 };
 
 /**
- * Símbolo Intermo: dois nós conectados por um elo (A ↔ Intermo ↔ B).
+ * Símbolo inTermo: dois nós conectados por um elo (A ↔ inTermo ↔ B).
  * SVG em currentColor — colorize via classes (text-accent, text-primary-foreground, etc.).
  */
-export function IntermoMark({ className, variant = "plain", title = "Intermo" }: IntermoMarkProps) {
+export function inTermoMark({ className, variant = "plain", title = "inTermo" }: inTermoMarkProps) {
   const svg = (
     <svg
       viewBox="0 0 24 24"

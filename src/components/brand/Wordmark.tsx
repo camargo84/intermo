@@ -5,7 +5,7 @@ type WordmarkProps = {
   variant?: "default" | "mono";
 };
 
-/** Wordmark "intermo" — "inter" em Chalk, "mo" em Signal Mint. */
+/** Wordmark "inTermo" — "in" em Chalk, "Termo" em Signal Mint. */
 export function Wordmark({ className, variant = "default" }: WordmarkProps) {
   return (
     <span
@@ -14,8 +14,8 @@ export function Wordmark({ className, variant = "default" }: WordmarkProps) {
         className,
       )}
     >
-      <span className={variant === "mono" ? "text-current" : "text-[color:var(--color-chalk)]"}>inter</span>
-      <span className={variant === "mono" ? "text-current" : "text-[color:var(--color-signal-mint)]"}>mo</span>
+      <span className={variant === "mono" ? "text-current" : "text-[color:var(--color-chalk)]"}>in</span>
+      <span className={variant === "mono" ? "text-current" : "text-[color:var(--color-signal-mint)]"}>Termo</span>
     </span>
   );
 }

@@ -4,10 +4,10 @@ import { Logo } from "@/components/brand/Logo";
 export const Route = createFileRoute("/termos")({
   head: () => ({
     meta: [
-      { title: "Termos de uso — Intermo" },
-      { name: "description", content: "Termos de uso da plataforma Intermo." },
-      { property: "og:title", content: "Termos de uso — Intermo" },
-      { property: "og:description", content: "Termos de uso da plataforma Intermo." },
+      { title: "Termos de uso — inTermo" },
+      { name: "description", content: "Termos de uso da plataforma inTermo." },
+      { property: "og:title", content: "Termos de uso — inTermo" },
+      { property: "og:description", content: "Termos de uso da plataforma inTermo." },
       { property: "og:type", content: "article" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -30,11 +30,11 @@ function TermsPage() {
         <p className="mt-2 text-sm text-muted-foreground">Última atualização: {new Date().toLocaleDateString("pt-BR")}</p>
         <div className="prose prose-sm dark:prose-invert mt-8 max-w-none space-y-4 text-foreground/90">
           <p>
-            Bem-vindo à Intermo. Este é um documento provisório, com o texto final em revisão jurídica.
+            Bem-vindo à inTermo. Este é um documento provisório, com o texto final em revisão jurídica.
             Ao usar a plataforma, você concorda com as condições aqui descritas.
           </p>
           <h2 className="text-lg font-semibold">1. Sobre o serviço</h2>
-          <p>A Intermo oferece ferramentas para intermediação de vendas, geração de contratos, assinatura digital e emissão de NFS.</p>
+          <p>A inTermo oferece ferramentas para intermediação de vendas, geração de contratos, assinatura digital e emissão de NFS.</p>
           <h2 className="text-lg font-semibold">2. Conta</h2>
           <p>Você é responsável por manter a confidencialidade das credenciais de acesso e pelas ações realizadas em sua conta.</p>
           <h2 className="text-lg font-semibold">3. Plano e cobrança</h2>

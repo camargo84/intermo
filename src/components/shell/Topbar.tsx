@@ -69,7 +69,7 @@ export function Topbar() {
       <SidebarTrigger className="hidden md:inline-flex" />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold leading-none text-foreground">{profile.companyName}</p>
-        <p className="mt-1 hidden text-xs text-muted-foreground sm:block">Painel Intermo</p>
+        <p className="mt-1 hidden text-xs text-muted-foreground sm:block">Painel inTermo</p>
       </div>
       <div className="flex items-center gap-1">
         <ThemeToggle />

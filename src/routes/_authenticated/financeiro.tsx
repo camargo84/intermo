@@ -8,7 +8,7 @@ import { listContracts } from "@/lib/contracts.functions";
 import { getMyProfile } from "@/lib/profiles.functions";
 
 export const Route = createFileRoute("/_authenticated/financeiro")({
-  head: () => ({ meta: [{ title: "Financeiro — Intermo" }] }),
+  head: () => ({ meta: [{ title: "Financeiro — inTermo" }] }),
   component: FinanceiroPage,
 });
 

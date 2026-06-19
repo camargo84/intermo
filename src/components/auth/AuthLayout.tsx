@@ -14,7 +14,7 @@ export function AuthLayout({ title, subtitle, children, footer }: AuthLayoutProp
   return (
     <div className="relative flex min-h-screen flex-col bg-background">
       <header className="flex items-center justify-between px-6 py-5">
-        <Link to="/" aria-label="Intermo">
+        <Link to="/" aria-label="inTermo">
           <Logo />
         </Link>
         <ThemeToggle />
@@ -32,7 +32,7 @@ export function AuthLayout({ title, subtitle, children, footer }: AuthLayoutProp
       </main>
 
       <footer className="px-6 py-6 text-center text-xs text-muted-foreground">
-        © {new Date().getFullYear()} Intermo
+        © {new Date().getFullYear()} inTermo
       </footer>
     </div>
   );

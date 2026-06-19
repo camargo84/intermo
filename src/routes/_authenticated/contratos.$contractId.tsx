@@ -23,7 +23,7 @@ import { Separator } from "@/components/ui/separator";
 import { getContract, resendContract } from "@/lib/contracts.functions";
 
 export const Route = createFileRoute("/_authenticated/contratos/$contractId")({
-  head: () => ({ meta: [{ title: "Detalhes do contrato — Intermo" }] }),
+  head: () => ({ meta: [{ title: "Detalhes do contrato — inTermo" }] }),
   component: ContractDetailsPage,
   errorComponent: ({ error, reset }) => {
     const isNotFound = error?.message === "NOT_FOUND";

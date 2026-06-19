@@ -33,7 +33,7 @@ const searchSchema = z.object({
 });
 
 export const Route = createFileRoute("/_authenticated/contratos/")({
-  head: () => ({ meta: [{ title: "Contratos — Intermo" }] }),
+  head: () => ({ meta: [{ title: "Contratos — inTermo" }] }),
   validateSearch: zodValidator(searchSchema),
   component: ContratosPage,
 });

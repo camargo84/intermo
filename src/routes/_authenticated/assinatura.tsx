@@ -16,7 +16,7 @@ import {
 import { brl } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/assinatura")({
-  head: () => ({ meta: [{ title: "Assinatura — Intermo" }] }),
+  head: () => ({ meta: [{ title: "Assinatura — inTermo" }] }),
   component: AssinaturaPage,
 });
 
@@ -74,7 +74,7 @@ function AssinaturaPage() {
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
       <header className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Assinatura Intermo</h1>
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Assinatura inTermo</h1>
         <p className="text-sm text-muted-foreground">
           R$ 119/mês via AbacatePay (PIX ou cartão). 7 dias de garantia — se não gostar, devolvemos 100%.
         </p>

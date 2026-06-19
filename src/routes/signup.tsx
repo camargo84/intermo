@@ -18,12 +18,12 @@ import { formatCNPJ, formatPhoneBR, isValidCNPJ } from "@/lib/format";
 export const Route = createFileRoute("/signup")({
   head: () => ({
     meta: [
-      { title: "Criar conta — Intermo" },
+      { title: "Criar conta — inTermo" },
       {
         name: "description",
-        content: "Crie sua conta na Intermo: contratos com validade jurídica em minutos. R$ 119/mês com 7 dias de garantia.",
+        content: "Crie sua conta na inTermo: contratos com validade jurídica em minutos. R$ 119/mês com 7 dias de garantia.",
       },
-      { property: "og:title", content: "Criar conta — Intermo" },
+      { property: "og:title", content: "Criar conta — inTermo" },
       {
         property: "og:description",
         content: "Contratos com validade jurídica em minutos. R$ 119/mês com garantia de 7 dias.",
@@ -110,7 +110,7 @@ function SignupPage() {
       return;
     }
     toast.success("Conta criada!", {
-      description: "Bem-vindo à Intermo. Confirme seu e-mail se solicitado.",
+      description: "Bem-vindo à inTermo. Confirme seu e-mail se solicitado.",
     });
     await router.invalidate();
     navigate({ to: "/assinatura" });
@@ -118,7 +118,7 @@ function SignupPage() {
 
   return (
     <AuthLayout
-      title="Criar sua conta Intermo"
+      title="Criar sua conta inTermo"
       subtitle="7 dias de garantia. Não gostou? Devolvemos 100%."
       footer={
         <>
