@@ -29,7 +29,7 @@ const schema = z.object({
   companyLegalName: z.string().min(2, "Informe a razão social."),
   companyEmail: z.string().email("E-mail inválido."),
   companyPhone: z.string().min(8, "Telefone inválido."),
-  defaultMarginPct: z.coerce.number().min(0).max(99),
+  defaultMarginPct: z.number().min(0).max(99),
 });
 type FormData = z.infer<typeof schema>;
 
