@@ -57,7 +57,7 @@ export function LoginPage() {
     }
     toast.success("Bem-vindo de volta!");
     await router.invalidate();
-    navigate({ to: "/dashboard" });
+    navigate({ to: "/chat" });
   }
 
   async function onGoogle() {
@@ -72,17 +72,17 @@ export function LoginPage() {
     }
     if (result.redirected) return;
     await router.invalidate();
-    navigate({ to: "/dashboard" });
+    navigate({ to: "/chat" });
   }
 
   return (
     <AuthLayout
-      title="Entrar na inTermo"
-      subtitle="Continue de onde parou."
+      title="Bem-vindo de volta."
+      subtitle="Continue de onde parou — sua próxima conversa começa em um clique."
       footer={
         <>
           Ainda não tem conta?{" "}
-          <Link to="/signup" className="font-medium text-accent hover:underline">
+          <Link to="/signup" className="font-medium text-primary hover:underline">
             Criar conta
           </Link>
         </>
