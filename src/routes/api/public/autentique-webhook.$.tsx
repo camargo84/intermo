@@ -9,12 +9,24 @@ export const Route = createFileRoute("/api/public/autentique-webhook/$")({
         if (!expected) {
           return json({ error: "webhook não configurado" }, 500);
         }
-        const provided = (params._splat ?? "").trim();
+
+        // Prefer secret via Authorization header (Bearer) or X-Autentique-Token.
+        // URL-path secret kept only as backward-compat fallback during migration.
+        const authHeader = request.headers.get("authorization") ?? "";
+        const bearer = authHeader.toLowerCase().startsWith("bearer ")
+          ? authHeader.slice(7).trim()
+          : "";
+        const headerToken =
+          bearer || (request.headers.get("x-autentique-token") ?? "").trim();
+        const pathToken = (params._splat ?? "").trim();
+        const provided = headerToken || pathToken;
+
         const a = Buffer.from(provided);
         const b = Buffer.from(expected);
         if (a.length !== b.length || !timingSafeEqual(a, b)) {
           return json({ error: "unauthorized" }, 401);
         }
+
 
         let body: AutentiquePayload;
         try {
