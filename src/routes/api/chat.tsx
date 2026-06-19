@@ -51,7 +51,7 @@ export const Route = createFileRoute("/api/chat")({
         // Garante ownership do contrato (thread)
         if (body.contractId) {
           const { data: c } = await supabase
-            .from("contracts").select("id").eq("id", body.contractId).maybeSingle();
+            .from("transactions").select("id").eq("id", body.contractId).maybeSingle();
           if (!c) return new Response("Contrato não encontrado", { status: 404 });
         }
 
@@ -213,7 +213,7 @@ export const Route = createFileRoute("/api/chat")({
           const { data: hasSub } = await supabase.rpc("has_active_subscription", { _user_id: userId });
           if (!hasSub) return { error: "Sua assinatura não está ativa." };
           // anti-abuso
-          const { data: count } = await supabase.rpc("current_month_contract_count");
+          const { data: count } = await supabase.rpc("current_month_transaction_count");
           const { data: sub } = await supabase.from("subscriptions").select("monthly_contract_quota").eq("user_id", userId).maybeSingle();
           const ceil = sub?.monthly_contract_quota ?? 2000;
           if ((count ?? 0) >= ceil) return { error: "Uso anormal detectado." };
@@ -249,7 +249,7 @@ export const Route = createFileRoute("/api/chat")({
 
           const title = `Contrato — ${cli.name}`;
           const content = input.produtos.map((p) => `${p.quantidade}x ${p.descricao}`).join("; ");
-          const { data: row, error } = await supabase.from("contracts").insert({
+          const { data: row, error } = await supabase.from("transactions").insert({
             user_id: userId,
             client_id: input.client_id,
             title, content,
@@ -266,7 +266,7 @@ export const Route = createFileRoute("/api/chat")({
         }
 
         async function pdfCore(contract_id: string, parcelas: number | null) {
-          const { data: contract } = await supabase.from("contracts").select("*").eq("id", contract_id).maybeSingle();
+          const { data: contract } = await supabase.from("transactions").select("*").eq("id", contract_id).maybeSingle();
           if (!contract) return { error: "Contrato não encontrado." };
           if (!contract.client_id) return { error: "Contrato sem cliente." };
           const { data: cliente } = await supabase.from("clients").select("*").eq("id", contract.client_id).maybeSingle();
@@ -299,7 +299,7 @@ export const Route = createFileRoute("/api/chat")({
             upsert: true, contentType: "application/pdf",
           });
           if (upErr) return { error: upErr.message };
-          await supabase.from("contracts").update({ pdf_path: path }).eq("id", contract.id);
+          await supabase.from("transactions").update({ pdf_path: path }).eq("id", contract.id);
           const { data: s } = await supabaseAdmin.storage.from("contract-pdfs").createSignedUrl(path, 600);
           return { pdf_path: path, signed_url: s?.signedUrl ?? null };
         }

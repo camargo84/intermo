@@ -50,7 +50,7 @@ export const Route = createFileRoute("/api/public/autentique-webhook/$")({
             "@/integrations/supabase/client.server"
           );
           const { data: contract, error: fetchErr } = await supabaseAdmin
-            .from("contracts")
+            .from("transactions")
             .select("id,user_id,status,autentique_signers,signed_pdf_path")
             .eq("autentique_document_id", documentId)
             .maybeSingle();
@@ -66,7 +66,7 @@ export const Route = createFileRoute("/api/public/autentique-webhook/$")({
 
           if (Object.keys(patch).length > 0) {
             const { error: updateErr } = await supabaseAdmin
-              .from("contracts")
+              .from("transactions")
               .update(patch as never)
               .eq("id", contract.id);
             if (updateErr) throw updateErr;
@@ -181,7 +181,7 @@ async function fetchAndStoreSignedPdf({
 
   // 4) Marcar no contrato
   const { error: updErr } = await supabaseAdmin
-    .from("contracts")
+    .from("transactions")
     .update({
       signed_pdf_path: path,
       signed_pdf_downloaded_at: new Date().toISOString(),

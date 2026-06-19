@@ -72,7 +72,7 @@ export const criarContrato = createServerFn({ method: "POST" })
     if (!hasSub) throw new Error("Sua assinatura não está ativa.");
 
     // Anti-abuso interno (não exibe limite)
-    const { data: count } = await context.supabase.rpc("current_month_contract_count");
+    const { data: count } = await context.supabase.rpc("current_month_transaction_count");
     const { data: sub } = await context.supabase
       .from("subscriptions").select("monthly_contract_quota")
       .eq("user_id", context.userId).maybeSingle();
@@ -98,7 +98,7 @@ export const criarContrato = createServerFn({ method: "POST" })
     const content = data.produtos.map((p) => `${p.quantidade}x ${p.descricao}`).join("; ");
 
     const { data: row, error } = await context.supabase
-      .from("contracts")
+      .from("transactions")
       .insert({
         user_id: context.userId,
         client_id: data.client_id,
@@ -125,7 +125,7 @@ export const gerarPdfContrato = createServerFn({ method: "POST" })
   .inputValidator((i: unknown) => z.object({ contract_id: z.string().uuid(), parcelas: z.number().int().positive().optional().nullable() }).parse(i))
   .handler(async ({ data, context }) => {
     const { data: contract, error } = await context.supabase
-      .from("contracts").select("*").eq("id", data.contract_id).maybeSingle();
+      .from("transactions").select("*").eq("id", data.contract_id).maybeSingle();
     if (error || !contract) throw new Error("Contrato não encontrado.");
     if (!contract.client_id) throw new Error("Contrato sem cliente vinculado.");
 
@@ -168,7 +168,7 @@ export const gerarPdfContrato = createServerFn({ method: "POST" })
       .upload(path, pdfBytes, { upsert: true, contentType: "application/pdf" });
     if (upErr) throw new Error(upErr.message);
 
-    await context.supabase.from("contracts").update({ pdf_path: path }).eq("id", contract.id);
+    await context.supabase.from("transactions").update({ pdf_path: path }).eq("id", contract.id);
 
     const { data: signed } = await supabaseAdmin.storage.from("contract-pdfs").createSignedUrl(path, 600);
     return { pdf_path: path, signed_url: signed?.signedUrl ?? null };
@@ -180,7 +180,7 @@ export const getContractPdfSignedUrl = createServerFn({ method: "POST" })
   .inputValidator((i: unknown) => z.object({ contract_id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { data: c } = await context.supabase
-      .from("contracts").select("pdf_path,user_id").eq("id", data.contract_id).maybeSingle();
+      .from("transactions").select("pdf_path,user_id").eq("id", data.contract_id).maybeSingle();
     if (!c?.pdf_path) return { url: null as string | null };
     if (c.user_id !== context.userId) return { url: null };
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -194,7 +194,7 @@ export const getSignedContractPdfUrl = createServerFn({ method: "POST" })
   .inputValidator((i: unknown) => z.object({ contract_id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { data: c } = await context.supabase
-      .from("contracts").select("signed_pdf_path,user_id").eq("id", data.contract_id).maybeSingle();
+      .from("transactions").select("signed_pdf_path,user_id").eq("id", data.contract_id).maybeSingle();
     if (!c?.signed_pdf_path) return { url: null as string | null };
     if (c.user_id !== context.userId) return { url: null };
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

@@ -23,7 +23,7 @@ export const listFailedContracts = createServerFn({ method: "GET" })
     if (!isAdmin) throw new Error("Forbidden");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data, error } = await supabaseAdmin
-      .from("contracts")
+      .from("transactions")
       .select("id,user_id,title,client_name,client_email,status,last_error,sent_at,created_at")
       .eq("status", "error")
       .order("created_at", { ascending: false })
