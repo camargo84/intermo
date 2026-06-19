@@ -87,7 +87,7 @@ function Landing() {
               <Link to="/login">Entrar</Link>
             </Button>
             <Button asChild>
-              <Link to="/signup">Começar grátis</Link>
+              <Link to="/signup">Assinar agora</Link>
             </Button>
           </div>
         </div>
@@ -120,7 +120,7 @@ function Landing() {
                   <a href="#como-funciona">Ver como funciona</a>
                 </Button>
               </div>
-              <p className="mt-4 text-left text-xs text-muted-foreground">Teste grátis por 7 dias. Sem cartão.</p>
+              <p className="mt-4 text-left text-xs text-muted-foreground">7 dias de garantia. Não gostou? Devolvemos 100%. Cancele quando quiser.</p>
             </div>
             <div className="hidden md:col-span-5 md:block" aria-hidden />
           </div>
@@ -201,7 +201,7 @@ function Landing() {
         <section id="preco" className="border-t border-border/60 bg-card/40">
           <div className="mx-auto max-w-3xl px-4 py-20 sm:px-6">
             <div className="text-center">
-              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Um plano. Sem pegadinha.</h2>
+              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Plano mensal. Cancele quando quiser.</h2>
               <p className="mt-4 text-muted-foreground">
                 Tudo o que você precisa para formalizar suas vendas sob encomenda sem esfriar o cliente.
               </p>
@@ -229,10 +229,10 @@ function Landing() {
                   ))}
                 </ul>
                 <Button size="lg" asChild className="mt-8 w-full bg-brand text-primary-foreground hover:opacity-90">
-                  <Link to="/signup">Experimente grátis por 7 dias</Link>
+                  <Link to="/signup">Assinar agora</Link>
                 </Button>
                 <p className="mt-3 text-center text-xs text-muted-foreground">
-                  Sem cartão. Até 3 contratos no teste.
+                  7 dias de garantia. Não gostou? Devolvemos 100%. Cancele quando quiser.
                 </p>
               </div>
             </Card>
@@ -246,8 +246,8 @@ function Landing() {
             <div className="mt-10 grid gap-4">
               {[
                 {
-                  q: "Preciso de cartão para começar?",
-                  a: "Não. Você experimenta por 7 dias (até 3 contratos) sem pagar nada.",
+                  q: "Como funciona a garantia?",
+                  a: "Você assina e usa por 7 dias. Se não gostar, devolvemos 100% do valor. Cancele quando quiser.",
                 },
                 {
                   q: "Funciona pelo celular?",
