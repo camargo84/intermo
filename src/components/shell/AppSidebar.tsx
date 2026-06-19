@@ -1,6 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard,
+  Sparkles,
   MessageSquarePlus,
   FileText,
   Wallet,
@@ -24,6 +25,7 @@ import { IntermoMark } from "@/components/brand/IntermoMark";
 
 export const NAV_ITEMS = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+  { title: "Chat com IA", url: "/chat", icon: Sparkles },
   { title: "Novo contrato", url: "/contratos/novo", icon: MessageSquarePlus },
   { title: "Contratos", url: "/contratos", icon: FileText },
   { title: "Financeiro", url: "/financeiro", icon: Wallet },
