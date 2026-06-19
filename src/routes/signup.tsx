@@ -80,7 +80,7 @@ function SignupPage() {
       description: "Bem-vindo à Intermo. Confirme seu e-mail se solicitado.",
     });
     await router.invalidate();
-    navigate({ to: "/dashboard" });
+    navigate({ to: "/assinatura" });
   }
 
   return (

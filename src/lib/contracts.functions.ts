@@ -22,6 +22,36 @@ export const createContract = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => createContractSchema.parse(input))
   .handler(async ({ data, context }) => {
+    // 1) Guard de assinatura
+    const { data: hasSub, error: subErr } = await context.supabase
+      .rpc("has_active_subscription", { _user_id: context.userId });
+    if (subErr) throw new Error(subErr.message);
+    if (!hasSub) {
+      throw new Error("Sua assinatura não está ativa. Acesse /assinatura para regularizar.");
+    }
+
+    // 2) Rate-limit (10 contratos por minuto por usuário)
+    const { checkRateLimit } = await import("@/lib/rate-limit.server");
+    const rl = await checkRateLimit({
+      userId: context.userId,
+      action: "create_contract",
+      windowSeconds: 60,
+      max: 10,
+    });
+    if (!rl.ok) throw new Error("Muitos contratos em sequência. Aguarde 1 minuto.");
+
+    // 3) Quota mensal
+    const { data: count } = await context.supabase.rpc("current_month_contract_count");
+    const { data: sub } = await context.supabase
+      .from("subscriptions")
+      .select("monthly_contract_quota")
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    const limit = sub?.monthly_contract_quota ?? 200;
+    if ((count ?? 0) >= limit) {
+      throw new Error(`Você atingiu o limite mensal de ${limit} contratos.`);
+    }
+
     const { data: row, error } = await context.supabase
       .from("contracts")
       .insert({
@@ -84,6 +114,10 @@ export const sendContractToAutentique = createServerFn({ method: "POST" })
     z.object({ contractId: z.string().uuid() }).parse(input),
   )
   .handler(async ({ data, context }) => {
+    const { data: hasSub } = await context.supabase
+      .rpc("has_active_subscription", { _user_id: context.userId });
+    if (!hasSub) throw new Error("Sua assinatura não está ativa.");
+
     const { data: contract, error } = await context.supabase
       .from("contracts")
       .select("*")
