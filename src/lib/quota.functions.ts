@@ -11,13 +11,13 @@ export const getMyMonthlyQuota = createServerFn({ method: "GET" })
 
     const { data: sub } = await context.supabase
       .from("subscriptions")
-      .select("monthly_contract_quota,status")
+      .select("status")
       .eq("user_id", context.userId)
       .maybeSingle();
 
+    // Não expõe limite ao front: o plano é ilimitado; o teto interno é só anti-abuso.
     return {
       used: Number(count ?? 0),
-      limit: sub?.monthly_contract_quota ?? 200,
       hasActiveSubscription: sub?.status === "active",
     };
   });
