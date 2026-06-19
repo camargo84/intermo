@@ -120,7 +120,7 @@ function Landing() {
                   <a href="#como-funciona">Ver como funciona</a>
                 </Button>
               </div>
-              <p className="mt-4 text-left text-xs text-muted-foreground">Teste grátis por 7 dias. Sem cartão.</p>
+              <p className="mt-4 text-left text-xs text-muted-foreground">7 dias de garantia. Não gostou? Devolvemos 100%. Cancele quando quiser.</p>
             </div>
             <div className="hidden md:col-span-5 md:block" aria-hidden />
           </div>
