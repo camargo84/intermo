@@ -163,6 +163,13 @@ function mergeSigners(
   return null;
 }
 
+interface ContractPatch {
+  status?: string;
+  signed_at?: string | null;
+  last_error?: string | null;
+  autentique_signers?: SignerRecord[];
+}
+
 function buildPatch({
   eventType,
   body,
@@ -171,15 +178,14 @@ function buildPatch({
   eventType: string;
   body: AutentiquePayload;
   currentSigners: SignerRecord[];
-}): Record<string, unknown> {
-  const patch: Record<string, unknown> = {};
+}): ContractPatch {
+  const patch: ContractPatch = {};
   const signers = mergeSigners(currentSigners, body);
   if (signers) patch.autentique_signers = signers;
 
   const ev = eventType.toLowerCase();
 
   if (ev.includes("signed") && !ev.includes("rejected")) {
-    // document.signed / signed → todos assinaram
     patch.status = "signed";
     patch.signed_at =
       body.signature?.signed_at ?? new Date().toISOString();
@@ -192,7 +198,6 @@ function buildPatch({
     patch.status = "error";
     patch.last_error = "Documento removido na Autentique";
   }
-  // signature.accepted / signature.viewed → só atualiza signers (já feito acima)
 
   return patch;
 }
