@@ -26,8 +26,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 
 const mainItems = [
+  { title: "Chat", url: "/chat", icon: MessageSquarePlus },
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Chat", url: "/contratos/novo", icon: MessageSquarePlus },
   { title: "Contratos", url: "/contratos", icon: FileText },
   { title: "Financeiro", url: "/financeiro", icon: Wallet },
 ] as const;

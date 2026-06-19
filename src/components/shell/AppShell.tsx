@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { AppSidebar } from "./AppSidebar";
+import { ClaudeSidebar } from "./ClaudeSidebar";
 import { Topbar } from "./Topbar";
 import { BottomNav } from "./BottomNav";
 import { SubscriptionBanner } from "@/components/billing/SubscriptionBanner";
@@ -11,7 +11,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
         <div className="hidden md:block">
-          <AppSidebar />
+          <ClaudeSidebar />
         </div>
         <SidebarInset className="flex min-w-0 flex-1 flex-col">
           <Topbar />
