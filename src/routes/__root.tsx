@@ -14,6 +14,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AmbientBackground } from "@/components/ambient-background";
 
 function NotFoundComponent() {
   return (
@@ -75,14 +76,13 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
-// Script anti-flash: lê localStorage e aplica .dark ANTES de hidratar.
+// Script anti-flash: dark é o padrão; respeita escolha salva no localStorage.
 const themeBootstrap = `
 (function(){try{
   var t=localStorage.getItem('intermo:theme');
-  if(!t){t=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}
-  if(t==='dark'){document.documentElement.classList.add('dark');}
+  if(t!=='light'){document.documentElement.classList.add('dark');t='dark';}
   document.documentElement.style.colorScheme=t;
-}catch(e){}})();
+}catch(e){document.documentElement.classList.add('dark');}})();
 `;
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
@@ -96,7 +96,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content:
           "Intermo: transforme a conversa em contrato assinado em minutos, com validade jurídica. Para empresários que vendem sob encomenda.",
       },
-      { name: "theme-color", content: "#1f3a7a" },
+      { name: "theme-color", content: "#0A0A0B" },
       { property: "og:site_name", content: "Intermo" },
       { property: "og:title", content: "Intermo — Intermediar ficou simples." },
       {
@@ -112,7 +112,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap",
       },
       {
         rel: "icon",
@@ -167,6 +167,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider delayDuration={200}>
+        <AmbientBackground />
         {/* Required: nested routes render here. */}
         <Outlet />
         <Toaster richColors position="top-right" />
