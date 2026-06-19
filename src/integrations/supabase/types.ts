@@ -14,7 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      contracts: {
+        Row: {
+          autentique_document_id: string | null
+          autentique_signers: Json | null
+          client_doc: string | null
+          client_email: string
+          client_name: string
+          content: string
+          created_at: string
+          id: string
+          last_error: string | null
+          sent_at: string | null
+          signed_at: string | null
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+          value_cents: number | null
+        }
+        Insert: {
+          autentique_document_id?: string | null
+          autentique_signers?: Json | null
+          client_doc?: string | null
+          client_email: string
+          client_name: string
+          content: string
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          sent_at?: string | null
+          signed_at?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+          value_cents?: number | null
+        }
+        Update: {
+          autentique_document_id?: string | null
+          autentique_signers?: Json | null
+          client_doc?: string | null
+          client_email?: string
+          client_name?: string
+          content?: string
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          sent_at?: string | null
+          signed_at?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+          value_cents?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
