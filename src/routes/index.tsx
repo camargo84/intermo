@@ -201,7 +201,7 @@ function Landing() {
         <section id="preco" className="border-t border-border/60 bg-card/40">
           <div className="mx-auto max-w-3xl px-4 py-20 sm:px-6">
             <div className="text-center">
-              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Um plano. Sem pegadinha.</h2>
+              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Plano mensal. Cancele quando quiser.</h2>
               <p className="mt-4 text-muted-foreground">
                 Tudo o que você precisa para formalizar suas vendas sob encomenda sem esfriar o cliente.
               </p>
