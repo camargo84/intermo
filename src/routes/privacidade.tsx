@@ -6,6 +6,10 @@ export const Route = createFileRoute("/privacidade")({
     meta: [
       { title: "Política de privacidade — Intermo" },
       { name: "description", content: "Política de privacidade da plataforma Intermo." },
+      { property: "og:title", content: "Política de privacidade — Intermo" },
+      { property: "og:description", content: "Como tratamos seus dados na Intermo." },
+      { property: "og:type", content: "article" },
+      { name: "twitter:card", content: "summary" },
     ],
     links: [{ rel: "canonical", href: "/privacidade" }],
   }),

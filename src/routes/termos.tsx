@@ -6,6 +6,10 @@ export const Route = createFileRoute("/termos")({
     meta: [
       { title: "Termos de uso — Intermo" },
       { name: "description", content: "Termos de uso da plataforma Intermo." },
+      { property: "og:title", content: "Termos de uso — Intermo" },
+      { property: "og:description", content: "Termos de uso da plataforma Intermo." },
+      { property: "og:type", content: "article" },
+      { name: "twitter:card", content: "summary" },
     ],
     links: [{ rel: "canonical", href: "/termos" }],
   }),

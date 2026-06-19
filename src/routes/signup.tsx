@@ -15,7 +15,23 @@ import { AuthLayout } from "@/components/auth/AuthLayout";
 import { formatCNPJ, formatPhoneBR, isValidCNPJ } from "@/lib/format";
 
 export const Route = createFileRoute("/signup")({
-  head: () => ({ meta: [{ title: "Criar conta — Intermo" }] }),
+  head: () => ({
+    meta: [
+      { title: "Criar conta — Intermo" },
+      {
+        name: "description",
+        content: "Crie sua conta na Intermo: contratos com validade jurídica em minutos. R$ 119/mês com 7 dias de garantia.",
+      },
+      { property: "og:title", content: "Criar conta — Intermo" },
+      {
+        property: "og:description",
+        content: "Contratos com validade jurídica em minutos. R$ 119/mês com garantia de 7 dias.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+    links: [{ rel: "canonical", href: "/signup" }],
+  }),
   component: SignupPage,
 });
 
