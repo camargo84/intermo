@@ -40,7 +40,7 @@ export const listContracts = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("contracts")
       .select(
-        "id,title,client_name,client_email,status,autentique_signers,sent_at,created_at",
+        "id,title,client_name,client_email,status,autentique_signers,sent_at,signed_at,last_error,created_at",
       )
       .order("created_at", { ascending: false })
       .limit(100);
