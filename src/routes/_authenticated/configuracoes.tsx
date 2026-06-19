@@ -184,7 +184,7 @@ function ConfiguracoesPage() {
                   min={0}
                   max={99}
                   step="1"
-                  {...register("defaultMarginPct")}
+                  {...register("defaultMarginPct", { valueAsNumber: true })}
                 />
                 <p className="text-xs text-muted-foreground">
                   Usada nos cards de Financeiro pra estimar lucro sobre a receita.
