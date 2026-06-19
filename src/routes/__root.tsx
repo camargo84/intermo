@@ -14,6 +14,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { CookieBanner } from "@/components/legal/CookieBanner";
 
 function NotFoundComponent() {
   return (
@@ -173,6 +174,7 @@ function RootComponent() {
       <TooltipProvider delayDuration={200}>
         {/* Required: nested routes render here. */}
         <Outlet />
+        <CookieBanner />
         <Toaster richColors position="top-right" />
       </TooltipProvider>
     </QueryClientProvider>
