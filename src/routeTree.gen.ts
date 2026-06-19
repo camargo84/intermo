@@ -24,13 +24,13 @@ import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authen
 import { Route as AuthenticatedAssinaturaRouteImport } from './routes/_authenticated/assinatura'
 import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/_admin/route'
 import { Route as AuthenticatedContratosIndexRouteImport } from './routes/_authenticated/contratos.index'
+import { Route as ApiPublicSitemapDotxmlRouteImport } from './routes/api/public/sitemap[.]xml'
 import { Route as ApiPublicHealthRouteImport } from './routes/api/public/health'
 import { Route as ApiPublicAbacateWebhookRouteImport } from './routes/api/public/abacate-webhook'
 import { Route as AuthenticatedContratosNovoRouteImport } from './routes/_authenticated/contratos.novo'
 import { Route as AuthenticatedContratosContractIdRouteImport } from './routes/_authenticated/contratos.$contractId'
 import { Route as AuthenticatedAdminContratosFalhaRouteImport } from './routes/_authenticated/_admin/contratos-falha'
 import { Route as AuthenticatedAdminAssinaturasRouteImport } from './routes/_authenticated/_admin/assinaturas'
-import { Route as ApiPublicSitemapXmlRouteImport } from './routes/api/public/sitemap.xml'
 import { Route as ApiPublicAutentiqueWebhookSplatRouteImport } from './routes/api/public/autentique-webhook.$'
 
 const TermosRoute = TermosRouteImport.update({
@@ -108,6 +108,11 @@ const AuthenticatedContratosIndexRoute =
     path: '/contratos/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicSitemapDotxmlRoute = ApiPublicSitemapDotxmlRouteImport.update({
+  id: '/api/public/sitemap.xml',
+  path: '/api/public/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHealthRoute = ApiPublicHealthRouteImport.update({
   id: '/api/public/health',
   path: '/api/public/health',
@@ -142,11 +147,6 @@ const AuthenticatedAdminAssinaturasRoute =
     path: '/assinaturas',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
-const ApiPublicSitemapXmlRoute = ApiPublicSitemapXmlRouteImport.update({
-  id: '/api/public/sitemap/xml',
-  path: '/api/public/sitemap/xml',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiPublicAutentiqueWebhookSplatRoute =
   ApiPublicAutentiqueWebhookSplatRouteImport.update({
     id: '/api/public/autentique-webhook/$',
@@ -173,9 +173,9 @@ export interface FileRoutesByFullPath {
   '/contratos/novo': typeof AuthenticatedContratosNovoRoute
   '/api/public/abacate-webhook': typeof ApiPublicAbacateWebhookRoute
   '/api/public/health': typeof ApiPublicHealthRoute
+  '/api/public/sitemap.xml': typeof ApiPublicSitemapDotxmlRoute
   '/contratos/': typeof AuthenticatedContratosIndexRoute
   '/api/public/autentique-webhook/$': typeof ApiPublicAutentiqueWebhookSplatRoute
-  '/api/public/sitemap/xml': typeof ApiPublicSitemapXmlRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -196,9 +196,9 @@ export interface FileRoutesByTo {
   '/contratos/novo': typeof AuthenticatedContratosNovoRoute
   '/api/public/abacate-webhook': typeof ApiPublicAbacateWebhookRoute
   '/api/public/health': typeof ApiPublicHealthRoute
+  '/api/public/sitemap.xml': typeof ApiPublicSitemapDotxmlRoute
   '/contratos': typeof AuthenticatedContratosIndexRoute
   '/api/public/autentique-webhook/$': typeof ApiPublicAutentiqueWebhookSplatRoute
-  '/api/public/sitemap/xml': typeof ApiPublicSitemapXmlRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -222,9 +222,9 @@ export interface FileRoutesById {
   '/_authenticated/contratos/novo': typeof AuthenticatedContratosNovoRoute
   '/api/public/abacate-webhook': typeof ApiPublicAbacateWebhookRoute
   '/api/public/health': typeof ApiPublicHealthRoute
+  '/api/public/sitemap.xml': typeof ApiPublicSitemapDotxmlRoute
   '/_authenticated/contratos/': typeof AuthenticatedContratosIndexRoute
   '/api/public/autentique-webhook/$': typeof ApiPublicAutentiqueWebhookSplatRoute
-  '/api/public/sitemap/xml': typeof ApiPublicSitemapXmlRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -247,9 +247,9 @@ export interface FileRouteTypes {
     | '/contratos/novo'
     | '/api/public/abacate-webhook'
     | '/api/public/health'
+    | '/api/public/sitemap.xml'
     | '/contratos/'
     | '/api/public/autentique-webhook/$'
-    | '/api/public/sitemap/xml'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -270,9 +270,9 @@ export interface FileRouteTypes {
     | '/contratos/novo'
     | '/api/public/abacate-webhook'
     | '/api/public/health'
+    | '/api/public/sitemap.xml'
     | '/contratos'
     | '/api/public/autentique-webhook/$'
-    | '/api/public/sitemap/xml'
   id:
     | '__root__'
     | '/'
@@ -295,9 +295,9 @@ export interface FileRouteTypes {
     | '/_authenticated/contratos/novo'
     | '/api/public/abacate-webhook'
     | '/api/public/health'
+    | '/api/public/sitemap.xml'
     | '/_authenticated/contratos/'
     | '/api/public/autentique-webhook/$'
-    | '/api/public/sitemap/xml'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -311,8 +311,8 @@ export interface RootRouteChildren {
   TermosRoute: typeof TermosRoute
   ApiPublicAbacateWebhookRoute: typeof ApiPublicAbacateWebhookRoute
   ApiPublicHealthRoute: typeof ApiPublicHealthRoute
+  ApiPublicSitemapDotxmlRoute: typeof ApiPublicSitemapDotxmlRoute
   ApiPublicAutentiqueWebhookSplatRoute: typeof ApiPublicAutentiqueWebhookSplatRoute
-  ApiPublicSitemapXmlRoute: typeof ApiPublicSitemapXmlRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -422,6 +422,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedContratosIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/sitemap.xml': {
+      id: '/api/public/sitemap.xml'
+      path: '/api/public/sitemap.xml'
+      fullPath: '/api/public/sitemap.xml'
+      preLoaderRoute: typeof ApiPublicSitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/health': {
       id: '/api/public/health'
       path: '/api/public/health'
@@ -463,13 +470,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/assinaturas'
       preLoaderRoute: typeof AuthenticatedAdminAssinaturasRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
-    }
-    '/api/public/sitemap/xml': {
-      id: '/api/public/sitemap/xml'
-      path: '/api/public/sitemap/xml'
-      fullPath: '/api/public/sitemap/xml'
-      preLoaderRoute: typeof ApiPublicSitemapXmlRouteImport
-      parentRoute: typeof rootRouteImport
     }
     '/api/public/autentique-webhook/$': {
       id: '/api/public/autentique-webhook/$'
@@ -536,8 +536,8 @@ const rootRouteChildren: RootRouteChildren = {
   TermosRoute: TermosRoute,
   ApiPublicAbacateWebhookRoute: ApiPublicAbacateWebhookRoute,
   ApiPublicHealthRoute: ApiPublicHealthRoute,
+  ApiPublicSitemapDotxmlRoute: ApiPublicSitemapDotxmlRoute,
   ApiPublicAutentiqueWebhookSplatRoute: ApiPublicAutentiqueWebhookSplatRoute,
-  ApiPublicSitemapXmlRoute: ApiPublicSitemapXmlRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

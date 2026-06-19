@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 const PUBLIC_ROUTES = ["/", "/login", "/signup", "/termos", "/privacidade"];
 
-export const Route = createFileRoute("/api/public/sitemap/xml")({
+export const Route = createFileRoute("/api/public/sitemap.xml")({
   server: {
     handlers: {
       GET: async ({ request }) => {
