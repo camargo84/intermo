@@ -5,13 +5,13 @@ export const Route = createFileRoute("/termos")({
   head: () => ({
     meta: [
       { title: "Termos de uso — inTermo" },
-      { name: "description", content: "Termos de uso da plataforma inTermo." },
+      { name: "description", content: "Termos de uso da inTermo: condições do serviço, plano de R$ 119/mês com contratos ilimitados e regras anti-abuso." },
       { property: "og:title", content: "Termos de uso — inTermo" },
-      { property: "og:description", content: "Termos de uso da plataforma inTermo." },
+      { property: "og:description", content: "Termos de uso da inTermo: condições do serviço, plano de R$ 119/mês com contratos ilimitados e regras anti-abuso." },
       { property: "og:type", content: "article" },
       { name: "twitter:card", content: "summary" },
     ],
-    links: [{ rel: "canonical", href: "/termos" }],
+    links: [{ rel: "canonical", href: "https://intermo.com.br/termos" }],
   }),
   component: TermsPage,
 });

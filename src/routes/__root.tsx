@@ -143,7 +143,30 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           ),
       },
     ],
-    scripts: [{ children: themeBootstrap }],
+    scripts: [
+      { children: themeBootstrap },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "Organization",
+              name: "inTermo",
+              url: "https://intermo.com.br",
+              logo: "https://intermo.com.br/favicon.ico",
+              description:
+                "Plataforma para vendedores sob encomenda formalizarem vendas com contrato de validade jurídica.",
+            },
+            {
+              "@type": "WebSite",
+              name: "inTermo",
+              url: "https://intermo.com.br",
+            },
+          ],
+        }),
+      },
+    ],
   }),
   shellComponent: RootShell,
   component: RootComponent,
