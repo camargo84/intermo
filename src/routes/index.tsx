@@ -73,7 +73,7 @@ const planFeatures = [
 function Landing() {
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur">
+      <header className="sticky top-0 z-40 border-b border-[color:var(--border-hairline)] bg-background/60 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
           <Logo />
           <nav className="hidden items-center gap-8 text-sm font-medium text-foreground/80 md:flex">
@@ -86,7 +86,7 @@ function Landing() {
             <Button variant="ghost" asChild className="hidden sm:inline-flex">
               <Link to="/login">Entrar</Link>
             </Button>
-            <Button asChild className="bg-brand text-primary-foreground hover:opacity-90">
+            <Button asChild>
               <Link to="/signup">Começar grátis</Link>
             </Button>
           </div>
@@ -96,22 +96,21 @@ function Landing() {
       <main>
         {/* HERO */}
         <section className="relative overflow-hidden">
-          <div className="absolute inset-0 -z-10 bg-brand-soft" aria-hidden />
-          <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
-            <div className="mx-auto max-w-3xl text-center">
-              <span className="inline-flex items-center rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
+          <div className="mx-auto grid max-w-6xl grid-cols-1 gap-12 px-4 py-20 sm:px-6 sm:py-28 md:grid-cols-12">
+            <div className="md:col-span-7">
+              <span className="inline-flex items-center rounded-full border border-[color:var(--border-hairline)] bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
                 Para quem vende sob encomenda
               </span>
-              <h1 className="mt-6 text-balance text-4xl font-bold tracking-tight text-foreground sm:text-6xl">
+              <h1 className="mt-6 text-balance text-left text-4xl font-bold tracking-tight text-foreground sm:text-6xl">
                 Cliente empolgado não espera burocracia.
               </h1>
-              <p className="mx-auto mt-6 max-w-2xl text-balance text-lg text-muted-foreground sm:text-xl">
+              <p className="mt-6 max-w-[640px] text-balance text-left text-lg text-muted-foreground sm:text-xl">
                 O <strong className="text-foreground">"fechado!"</strong> tem prazo de validade. A Intermo transforma a conversa em
                 contrato assinado em minutos, com validade jurídica e a segurança que o seu negócio merece.
                 Sem esfriar a venda, sem improviso.
               </p>
-              <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                <Button size="lg" asChild className="bg-brand text-primary-foreground hover:opacity-90">
+              <div className="mt-10 flex flex-col items-start justify-start gap-3 sm:flex-row">
+                <Button size="lg" asChild>
                   <Link to="/signup">
                     Fechar antes de esfriar
                     <ArrowRight className="ml-2 h-4 w-4" />
@@ -121,8 +120,9 @@ function Landing() {
                   <a href="#como-funciona">Ver como funciona</a>
                 </Button>
               </div>
-              <p className="mt-4 text-xs text-muted-foreground">Teste grátis por 7 dias. Sem cartão.</p>
+              <p className="mt-4 text-left text-xs text-muted-foreground">Teste grátis por 7 dias. Sem cartão.</p>
             </div>
+            <div className="hidden md:col-span-5 md:block" aria-hidden />
           </div>
         </section>
 
