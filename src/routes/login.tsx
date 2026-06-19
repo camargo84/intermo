@@ -57,7 +57,7 @@ export function LoginPage() {
     }
     toast.success("Bem-vindo de volta!");
     await router.invalidate();
-    navigate({ to: "/dashboard" });
+    navigate({ to: "/chat" });
   }
 
   async function onGoogle() {
@@ -72,7 +72,7 @@ export function LoginPage() {
     }
     if (result.redirected) return;
     await router.invalidate();
-    navigate({ to: "/dashboard" });
+    navigate({ to: "/chat" });
   }
 
   return (
