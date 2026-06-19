@@ -17,6 +17,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AuthenticatedNfsRouteImport } from './routes/_authenticated/nfs'
 import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authenticated/financeiro'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
@@ -70,6 +71,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiChatRoute = ApiChatRouteImport.update({
+  id: '/api/chat',
+  path: '/api/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedNfsRoute = AuthenticatedNfsRouteImport.update({
@@ -167,6 +173,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/nfs': typeof AuthenticatedNfsRoute
+  '/api/chat': typeof ApiChatRoute
   '/assinaturas': typeof AuthenticatedAdminAssinaturasRoute
   '/contratos-falha': typeof AuthenticatedAdminContratosFalhaRoute
   '/contratos/$contractId': typeof AuthenticatedContratosContractIdRoute
@@ -190,6 +197,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/nfs': typeof AuthenticatedNfsRoute
+  '/api/chat': typeof ApiChatRoute
   '/assinaturas': typeof AuthenticatedAdminAssinaturasRoute
   '/contratos-falha': typeof AuthenticatedAdminContratosFalhaRoute
   '/contratos/$contractId': typeof AuthenticatedContratosContractIdRoute
@@ -216,6 +224,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/financeiro': typeof AuthenticatedFinanceiroRoute
   '/_authenticated/nfs': typeof AuthenticatedNfsRoute
+  '/api/chat': typeof ApiChatRoute
   '/_authenticated/_admin/assinaturas': typeof AuthenticatedAdminAssinaturasRoute
   '/_authenticated/_admin/contratos-falha': typeof AuthenticatedAdminContratosFalhaRoute
   '/_authenticated/contratos/$contractId': typeof AuthenticatedContratosContractIdRoute
@@ -241,6 +250,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/financeiro'
     | '/nfs'
+    | '/api/chat'
     | '/assinaturas'
     | '/contratos-falha'
     | '/contratos/$contractId'
@@ -264,6 +274,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/financeiro'
     | '/nfs'
+    | '/api/chat'
     | '/assinaturas'
     | '/contratos-falha'
     | '/contratos/$contractId'
@@ -289,6 +300,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/financeiro'
     | '/_authenticated/nfs'
+    | '/api/chat'
     | '/_authenticated/_admin/assinaturas'
     | '/_authenticated/_admin/contratos-falha'
     | '/_authenticated/contratos/$contractId'
@@ -309,6 +321,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
   TermosRoute: typeof TermosRoute
+  ApiChatRoute: typeof ApiChatRoute
   ApiPublicAbacateWebhookRoute: typeof ApiPublicAbacateWebhookRoute
   ApiPublicHealthRoute: typeof ApiPublicHealthRoute
   ApiPublicSitemapDotxmlRoute: typeof ApiPublicSitemapDotxmlRoute
@@ -371,6 +384,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/chat': {
+      id: '/api/chat'
+      path: '/api/chat'
+      fullPath: '/api/chat'
+      preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/nfs': {
@@ -534,6 +554,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,
   TermosRoute: TermosRoute,
+  ApiChatRoute: ApiChatRoute,
   ApiPublicAbacateWebhookRoute: ApiPublicAbacateWebhookRoute,
   ApiPublicHealthRoute: ApiPublicHealthRoute,
   ApiPublicSitemapDotxmlRoute: ApiPublicSitemapDotxmlRoute,
@@ -542,13 +563,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

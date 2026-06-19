@@ -307,7 +307,7 @@ export const Route = createFileRoute("/api/chat")({
         const result = streamText({
           model,
           system: SYSTEM_PROMPT,
-          messages: convertToModelMessages(body.messages),
+          messages: await convertToModelMessages(body.messages),
           tools: { buscar_cliente, consultar_cep, upsert_cliente, criar_contrato, gerar_pdf_contrato },
           stopWhen: stepCountIs(50),
         });
