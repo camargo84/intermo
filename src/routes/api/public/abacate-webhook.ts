@@ -1,5 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { verifyWebhookSignature } from "@/lib/abacatepay.server";
+import {
+  verifyWebhookSignature,
+  changeSubscriptionPlan,
+  ensureFullProduct,
+  ABACATEPAY_FULL_PRODUCT_PRICE_CENTS,
+} from "@/lib/abacatepay.server";
 
 // AbacatePay webhook (apiVersion 2). Configurar a URL no dashboard:
 //   <origin>/api/public/abacate-webhook?webhookSecret=<ABACATEPAY_WEBHOOK_SECRET>
@@ -101,16 +106,20 @@ async function processEvent(
 
   switch (event.event) {
     case "subscription.completed":
-    case "subscription.renewed":
+    case "subscription.renewed": {
       updates.status = "active";
       updates.last_payment_at = new Date().toISOString();
+      if (typeof sub.amount === "number") updates.last_amount_cents = sub.amount;
       if (sub.nextBilling) updates.current_period_end = sub.nextBilling;
       else {
         const d = new Date();
         d.setDate(d.getDate() + 31);
         updates.current_period_end = d.toISOString();
       }
+      // Aplica decremento + mudança pro preço cheio quando for o caso.
+      await handlePromoCycle({ supabase, userId, subscriptionId: sub.id ?? null, updates });
       break;
+    }
     case "subscription.trial_started":
       updates.status = "active";
       if (sub.trialEndsAt) updates.current_period_end = sub.trialEndsAt;
@@ -135,6 +144,52 @@ async function processEvent(
   await supabase
     .from("subscriptions")
     .upsert({ user_id: userId, ...updates }, { onConflict: "user_id" });
+}
+
+// Lê o estado atual da promo, decrementa, e — quando faltar a última cobrança
+// promo — agenda /subscriptions/change-plan pro produto cheio (R$149).
+// O AbacatePay aplica no próximo ciclo, mesmo cartão, sem re-checkout.
+async function handlePromoCycle(args: {
+  supabase: AdminSupabase;
+  userId: string;
+  subscriptionId: string | null;
+  updates: Record<string, unknown>;
+}) {
+  const { supabase, userId, subscriptionId, updates } = args;
+  const { data: current } = await supabase
+    .from("subscriptions")
+    .select("plan,promo_cycles_remaining,plan_change_scheduled_at")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (!current || current.plan !== "promo") return;
+  const remaining = current.promo_cycles_remaining;
+  if (remaining == null) return;
+
+  const next = Math.max(0, remaining - 1);
+  updates.promo_cycles_remaining = next;
+
+  // Quando ainda faltar 1 cobrança promo (= próximo ciclo já será o cheio),
+  // agenda a troca de produto. Idempotente via plan_change_scheduled_at.
+  if (next === 1 && !current.plan_change_scheduled_at && subscriptionId) {
+    try {
+      const fullProduct = await ensureFullProduct();
+      await changeSubscriptionPlan({
+        subscriptionId,
+        productId: fullProduct.id,
+        quantity: 1,
+      });
+      updates.plan_change_scheduled_at = new Date().toISOString();
+      updates.amount_cents = ABACATEPAY_FULL_PRODUCT_PRICE_CENTS;
+    } catch (err) {
+      // Log e segue — o cron/admin pode reagendar manualmente se precisar.
+      console.error("[abacate-webhook] change-plan falhou", err);
+    }
+  }
+
+  if (next === 0) {
+    updates.plan = "full";
+  }
 }
 
 function extractUserId(externalId?: string | null): string | null {
