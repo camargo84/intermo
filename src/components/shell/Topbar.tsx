@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { getMyRoles } from "@/lib/roles.functions";
+import { IntermoMark } from "@/components/brand/IntermoMark";
 import { useEffect, useState } from "react";
 
 type Profile = { companyName: string; ownerName: string; ownerEmail: string };
@@ -73,7 +74,9 @@ export function Topbar() {
         <p className="truncate text-sm font-semibold leading-none text-foreground">
           {profile.companyName}
         </p>
-        <p className="mt-1 hidden text-xs text-muted-foreground sm:block">Painel inTermo</p>
+        <p className="mt-1 hidden items-center gap-1 text-xs text-muted-foreground sm:flex">
+          <IntermoMark variant="plain" className="h-3.5 w-3.5 text-muted-foreground" /> Painel inTermo
+        </p>
       </div>
       <div className="flex items-center gap-1">
         <ThemeToggle />

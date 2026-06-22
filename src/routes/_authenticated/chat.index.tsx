@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { createDraftContractForChat } from "@/lib/chat.functions";
+import { IntermoMark } from "@/components/brand/IntermoMark";
 
 export const Route = createFileRoute("/_authenticated/chat/")({
   head: () => ({ meta: [{ title: "Chat com IA — inTermo" }] }),
@@ -53,7 +54,9 @@ function ChatEntryPage() {
   return (
     <div className="mx-auto flex min-h-[calc(100vh-10rem)] w-full max-w-3xl flex-col items-center justify-center gap-10 px-4 py-12">
       <div className="text-center">
-        <p className="eyebrow mb-3 text-primary/80">inTermo</p>
+        <p className="eyebrow mb-3 inline-flex items-center gap-1.5 text-primary/80">
+          <IntermoMark variant="plain" className="h-3.5 w-3.5 text-primary/80" /> inTermo
+        </p>
         <h1 className="font-serif-display text-4xl leading-tight text-foreground sm:text-5xl md:text-6xl">
           Da conversa ao contrato,
           <br />

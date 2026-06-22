@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { brl } from "@/lib/format";
 import { listContracts } from "@/lib/contracts.functions";
 import { getMyMonthlyQuota } from "@/lib/quota.functions";
+import { IntermoMark } from "@/components/brand/IntermoMark";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — inTermo" }] }),
@@ -79,7 +80,8 @@ function DashboardPage() {
     <div className="mx-auto w-full max-w-6xl space-y-8">
       <header>
         <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Olá! 👋</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
+          <IntermoMark variant="plain" className="h-3.5 w-3.5 text-muted-foreground" />
           Aqui está como está o seu mês na inTermo.
         </p>
       </header>

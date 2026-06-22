@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Wordmark } from "@/components/brand/Wordmark";
+import { Logo } from "@/components/brand/Logo";
 import { LivePanel } from "@/components/landing/LivePanel";
 import { brl } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -243,7 +243,7 @@ function Landing() {
       {/* TOP BAR */}
       <header className="sticky top-0 z-40 border-b border-[color:var(--color-graphite)] bg-[color:var(--color-abyss)]/85 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between px-6">
-          <Wordmark className="text-[18px]" />
+          <Logo className="text-[18px]" />
           <nav className="hidden items-center gap-8 md:flex" aria-label="Principal">
             <NavLink id="como-funciona" label="Como funciona" active={active === "como-funciona"} />
             <NavLink id="preco" label="Preço" active={active === "preco"} />
@@ -438,7 +438,7 @@ function Landing() {
       <footer>
         <div className="mx-auto flex max-w-[1200px] flex-col items-center justify-between gap-6 px-6 py-10 sm:flex-row">
           <div className="flex items-center gap-3 text-[14px] text-[color:var(--color-ash)]">
-            <Wordmark className="text-[16px]" />
+            <Logo className="text-[16px]" />
             <span>© {new Date().getFullYear()} inTermo</span>
           </div>
           <nav
