@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { CheckCircle2, Loader2, ShieldCheck, Sparkles } from "lucide-react";
+import { IntermoMark } from "@/components/brand/IntermoMark";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
