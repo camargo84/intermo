@@ -78,6 +78,7 @@ export const Route = createFileRoute("/api/chat")({
             let q = supabase
               .from("clients")
               .select("id,name,cpf,cnpj,email,phone,cidade,uf")
+              .eq("user_id", userId)
               .limit(5);
             if (digits.length >= 11) q = q.or(`cpf.eq.${digits},cnpj.eq.${digits}`);
             else q = q.ilike("name", `%${query}%`);

@@ -13,6 +13,7 @@ import {
   FileSignature,
   MessageCircle,
   CheckCircle2,
+  AlertCircle,
   Circle,
   UserPlus,
   UserSearch,
@@ -405,9 +406,10 @@ const TOOL_LABELS: Record<string, { running: string; done: string }> = {
   validate_cnpj: { running: "Validando CNPJ…", done: "CNPJ validado" },
 };
 
-function toolLabel(name: string, state?: string) {
+function toolLabel(name: string, state?: string, errorMessage?: string) {
   const entry = TOOL_LABELS[name];
   const isDone = state === "output-available" || state === "result";
+  if (errorMessage) return `Falha: ${errorMessage}`;
   if (entry) return isDone ? entry.done : entry.running;
   return isDone ? "Concluído" : "Processando…";
 }
@@ -476,17 +478,29 @@ function MessageBlock({
           const toolName = part.type.replace("tool-", "");
           const state = (part as { state?: string }).state;
           const isDone = state === "output-available" || state === "result";
+          const output = (part as { output?: unknown }).output;
+          const errorMessage =
+            isDone && output && typeof output === "object" && "error" in output
+              ? String((output as { error?: unknown }).error ?? "")
+              : undefined;
+          const hasError = Boolean(errorMessage);
           return (
             <div
               key={idx}
-              className="mt-2 inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-[11px] text-muted-foreground"
+              className={
+                hasError
+                  ? "mt-2 inline-flex items-center gap-2 rounded-full border border-destructive/40 bg-destructive/10 px-3 py-1 text-[11px] text-destructive"
+                  : "mt-2 inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-[11px] text-muted-foreground"
+              }
             >
-              {isDone ? (
+              {hasError ? (
+                <AlertCircle className="h-3 w-3" />
+              ) : isDone ? (
                 <CheckCircle2 className="h-3 w-3 text-[color:var(--color-signal-mint)]" />
               ) : (
                 <Loader2 className="h-3 w-3 animate-spin" />
               )}
-              {toolLabel(toolName, state)}
+              {toolLabel(toolName, state, errorMessage)}
             </div>
           );
         }
