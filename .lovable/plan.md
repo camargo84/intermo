@@ -1,52 +1,58 @@
-# Starter padrão + chips contextuais no chat real
+# Correções do inTermo — achados do teste de estresse
 
-Hoje o `/chat` (entrada) tem um starter fixo demais ("Gerar contrato — iPhone 15 Pro…") e o `/chat/$contractId` (conversa em andamento) não tem nenhuma ação rápida — só campo de texto. Vou padronizar com um **starter único** na entrada e uma **barra de chips contextuais** que evolui com a conversa.
+Sim, li os dois arquivos (achados-2.md + MEGACOMANDO_LOVABLE-2.md). Abaixo o plano dividido em ondas, por prioridade. Posso executar tudo em sequência ou só uma onda — me diga.
 
-## 1. `/chat` (entrada) — `src/routes/_authenticated/chat.index.tsx`
+## P0 — Bloqueios e segurança
 
-- Remover o cartão starter atual com o prompt comprido de iPhone.
-- Substituir por **um único chip "Criar transação"** logo abaixo do composer.
-- Clicar no chip preenche o composer com `"Quero criar uma nova transação."` e dispara o envio (cria draft + abre `/chat/$contractId` com a mensagem inicial — mesmo fluxo atual de `start(prompt)`).
-- Manter input livre acima — quem quiser já descrever a venda direto, descreve.
+### 1. Login: blindar contra vazamento de senha na URL (`/login`)
+- `src/routes/login.tsx`: adicionar `method="post"` no `<form>` (hoje só tem `onSubmit`), garantir `e.preventDefault()` ainda que o handler do react-hook-form já faça isso.
+- Adicionar estado `isHydrated` (set em `useEffect`) e desabilitar o botão "Entrar" enquanto `!isHydrated` — fecha a janela de corrida pré-hidratação.
+- Aplicar o mesmo blindagem em `signup.tsx` e `reset-password.tsx`.
 
-## 2. `/chat/$contractId` (conversa) — `src/routes/_authenticated/chat.$contractId.tsx`
+### 2. Barra de ações no detalhe da transação (`/transacoes/$contractId`)
+- Em `src/routes/_authenticated/transacoes.$contractId.tsx`: adicionar header com botões **Enviar para assinatura** (primário), **Baixar PDF**, **Editar**, **Excluir** (com `AlertDialog` de confirmação).
+- "Enviar para assinatura" desabilitado quando faltar cliente, valor ou dados da empresa em `/configuracoes` — tooltip mostra o motivo.
+- Reusar a server function/fluxo Autentique já existente no chat; após envio, atualizar status e gravar evento em `contract_events` para aparecer no Histórico.
 
-Adicionar uma **linha de chips de ação rápida acima do composer** (entre o histórico e o textarea). Os chips são derivados do estado atual da transação e mudam à medida que a conversa progride. Clicar num chip envia a mensagem correspondente (mesmo path do `send()`).
+### 3. Type drift `event_fingerprint`
+- Adicionar `event_fingerprint: string | null` ao tipo `contract_events` (Insert/Row/Update) em `src/integrations/supabase/types.ts` para `tsc --noEmit` sair 0 sem cast no webhook.
 
-Estados e chips (mostrar 2–3 mais relevantes por vez, na ordem):
+## P1 — Integridade de dados
 
-| Estado atual                                  | Chips sugeridos                                                          |
-| --------------------------------------------- | ------------------------------------------------------------------------ |
-| Sem cliente cadastrado                        | **Cadastrar cliente** · Buscar cliente existente                         |
-| Cliente ok, sem produto                       | **Adicionar produto** · Adicionar serviço                                |
-| Produto ok, sem forma de pagamento            | **Definir forma de pagamento** (PIX à vista / parcelado / boleto)        |
-| Tudo preenchido, sem PDF                      | **Gerar contrato** · Revisar resumo                                      |
-| PDF gerado, sem assinatura                    | **Enviar link de assinatura por WhatsApp** · Baixar PDF                  |
-| Contrato assinado, sem pagamento do cliente   | **Registrar pagamento do cliente**                                       |
-| Cliente pago, sem pagamento ao fornecedor     | **Registrar pagamento ao fornecedor**                                    |
-| Tudo pago                                     | **Consolidar transação** (mesma ação que já existe no header)            |
+### 4. Parar de criar rascunhos órfãos (criação lazy + GC)
+- `/chat` (index) e botão "Nova transação": só criar a row em `transactions` no primeiro `sendMessage` real; antes disso manter estado local.
+- Corrigir Enter na home do `/chat`: criar conversa **E** enviar a 1ª mensagem na mesma ação (hoje cria UUID vazio).
+- Migration: job/edge function que apaga rascunhos sem cliente e sem mensagens com >24h (ou no logout). Decidir janela com o usuário; padrão sugerido: 24h.
 
-Derivação do estado:
-- `client_name`, `pdf_path`, `signed_pdf_path`/`status === "signed"`, `client_paid_at`, `supplier_paid_at`, `freight_paid_at` já vêm em `ContractSummary` (e em `data.contract` do `getChatThread`).
-- "Sem produto" / "sem forma de pagamento" precisam de 2 campos extras no select de `getChatThread` (`src/lib/chat.functions.ts`): `has_items` (`exists` de `contract_items`) e `payment_method` (campo em `contracts`/`transactions`). Vou adicionar só o que falta, sem mudar schema.
+### 5. Travar duplo-envio no chat (`/chat/$contractId`)
+- Desabilitar botão e input enquanto `status === "submitted" | "streaming"`.
+- Bloquear Enter quando já houver request em voo; idempotência por id de mensagem para evitar 2 inserts.
 
-Comportamento dos chips:
-- Cada chip tem `label` curto + `prompt` que ele envia. Ex.: chip "Adicionar produto" envia `"Quero adicionar um produto."` e o agente segue o próprio roteiro pedindo descrição/quantidade/valor.
-- Os chips **desaparecem** enquanto `status === "submitted" | "streaming"` para não competirem com o "Pensando…".
-- "Enviar link de assinatura por WhatsApp" reaproveita a função `openWhatsapp()` já existente (não passa pelo agente).
-- "Baixar PDF" reaproveita `onOpenPdf` que já existe.
-- "Consolidar transação" reaproveita `handleConsolidate`.
+### 6. Validação em `/configuracoes`
+- Marcar como obrigatórios: ownerName, companyCnpj, companyEmail, representativeCpf, representativeName, comarca (lista exata a confirmar).
+- Validar no client (zod) e no server function que persiste.
+- Normalizar CNPJ/CPF/CEP guardando apenas dígitos; formatar só na exibição. Migration leve para normalizar registros existentes.
 
-## 3. Visual
+### 7. Semântica do `/financeiro`
+- KPIs continuam só de assinadas.
+- Lista do mês passa a ter duas seções (ou filtro de status): **Assinadas** e **Em aberto**, deixando claro que receita ≠ lista.
 
-- Chips em linha horizontal com scroll horizontal no mobile, altura compacta, mesma família do design (border `border/60`, fundo `card/60`, hover sutil), com ícone do lucide à esquerda. Reaproveitar tokens existentes — sem cor nova.
-- Sem mudança de layout do composer ou do header.
+## P2 — i18n, nomenclatura, copy
 
-## Aceite
-- Em `/chat` aparece exatamente **um chip "Criar transação"**; clicar inicia a conversa.
-- Em qualquer `/chat/$contractId`, a linha de chips reflete o próximo passo lógico do contrato e some quando o agente está respondendo.
-- Conforme o contrato avança (cliente cadastrado → produto → pagamento → PDF → assinatura → pagamentos → consolidação), os chips mudam sozinhos sem reload.
-- Nenhum chip envia ação que o sistema ainda não faz hoje (todas mapeiam para mensagens que o agente já trata, ou para `openWhatsapp` / `onOpenPdf` / `handleConsolidate` existentes).
+### 8. Padronização
+- Adicionar redirect 301 `/transactions → /transacoes` (rota stub que chama `redirect`).
+- Definir termo canônico **Transação** (já é o do menu e do modelo) e atualizar cabeçalho/textos de `/transacoes` que ainda dizem "Contrato".
+- Mapear enum `draft → Rascunho` (e demais status) num helper único usado em `/financeiro`, `/transacoes`, sidebar.
+- Default de tema das páginas públicas: dark-first, alinhado ao app.
 
-## Pergunta para você antes de implementar
-Os chips devem **enviar a mensagem imediatamente** ao clicar (mais rápido, 1 toque), ou **só preencher o textarea** para você editar antes de enviar? Padrão sugerido: enviar imediatamente.
+### 9. Suavizar copy fiscal do FAQ (landing)
+- Reescrever o item do FAQ sobre tributação em tom condicional, citando regime/CNAE/município e orientação do contador; deixar claro que inTermo organiza dados e não presta consultoria fiscal.
+
+## Validação final
+- Rodar `npx tsc --noEmit` (deve sair 0) e o build.
+- Devolver checklist com itens concluídos vs itens que ainda dependem de decisão de produto (ex.: janela do GC de rascunhos, termo canônico final).
+
+## Perguntas antes de implementar
+1. Posso tocar tudo de uma vez ou prefere começar só pela P0?
+2. Termo canônico: confirma **Transação** (e eu removo "Contrato" dos cabeçalhos)?
+3. GC de rascunhos: janela de 24h ok, ou prefere outro valor / só no logout?
