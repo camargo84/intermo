@@ -7,9 +7,21 @@ const API_BASE = "https://api.abacatepay.com/v2";
 export const ABACATEPAY_PUBLIC_HMAC_KEY =
   "t9dXRhHHo3yDEj5pVDYz0frf7q6bMKyMRmxxCPIPp3RCplBfXRxqlC6ZpiWmOqj4L63qEaeUOtrCI8P0VMUgo6iIga2ri9ogaHFs0WIIywSMg0q7RmBfybe1E5XJcfC4IW3alNqym0tXoAKkzvfEjZxV6bE0oG2zJrNNYmUCKZyV0KZ3JS8Votf9EAWWYdiDkMkpbMdPggfh1EqHlVkMiTady6jOR3hyzGEHrIz2Ret0xHKMbiqkr9HS1JhNHDX9";
 
-export const ABACATEPAY_PRODUCT_EXTERNAL_ID = "intermo-mensal-v1";
-export const ABACATEPAY_PRODUCT_NAME = "inTermo — Assinatura mensal";
-export const ABACATEPAY_PRODUCT_PRICE_CENTS = 11900;
+// Dois produtos: promo (6 primeiros meses, 20% off) e full (preço cheio).
+// A migração de promo→full no 6º ciclo é feita via /subscriptions/change-plan,
+// no mesmo cartão, sem re-checkout do cliente.
+export const ABACATEPAY_PROMO_PRODUCT_EXTERNAL_ID = "intermo-mensal-promo-v1";
+export const ABACATEPAY_PROMO_PRODUCT_NAME = "inTermo — Boas-vindas (6 primeiros meses)";
+export const ABACATEPAY_PROMO_PRODUCT_PRICE_CENTS = 11900;
+
+export const ABACATEPAY_FULL_PRODUCT_EXTERNAL_ID = "intermo-mensal-v1";
+export const ABACATEPAY_FULL_PRODUCT_NAME = "inTermo — Assinatura mensal";
+export const ABACATEPAY_FULL_PRODUCT_PRICE_CENTS = 14900;
+
+export const PROMO_CYCLES = 6;
+
+// Compat retroativo — código antigo que importava esse símbolo continua funcionando.
+export const ABACATEPAY_PRODUCT_PRICE_CENTS = ABACATEPAY_PROMO_PRODUCT_PRICE_CENTS;
 
 type AbacateResponse<T> = { data: T | null; success?: boolean; error?: string | null };
 
@@ -76,31 +88,58 @@ interface AbacateProduct {
   cycle?: string | null;
 }
 
-// Garante o produto de assinatura no AbacatePay, idempotente por externalId.
-export async function ensureSubscriptionProduct(): Promise<AbacateProduct> {
-  // Lista e procura pelo externalId.
+async function ensureProduct(opts: {
+  externalId: string;
+  name: string;
+  price: number;
+  description: string;
+}): Promise<AbacateProduct> {
   try {
     const list = await abacateFetch<{ products?: AbacateProduct[] } | AbacateProduct[]>(
       "/products/list?limit=100",
       { method: "GET" },
     );
     const items = Array.isArray(list) ? list : (list?.products ?? []);
-    const existing = items.find((p) => p.externalId === ABACATEPAY_PRODUCT_EXTERNAL_ID);
+    const existing = items.find((p) => p.externalId === opts.externalId);
     if (existing) return existing;
   } catch {
-    // segue pra criar; erro de listagem não deve travar
+    // se a listagem falhar, segue pra criar
   }
   return abacateFetch<AbacateProduct>("/products/create", {
     method: "POST",
     json: {
-      externalId: ABACATEPAY_PRODUCT_EXTERNAL_ID,
-      name: ABACATEPAY_PRODUCT_NAME,
-      price: ABACATEPAY_PRODUCT_PRICE_CENTS,
+      externalId: opts.externalId,
+      name: opts.name,
+      price: opts.price,
       currency: "BRL",
       cycle: "MONTHLY",
-      description: "Acesso completo à plataforma inTermo (renovação mensal).",
+      description: opts.description,
     },
   });
+}
+
+export function ensurePromoProduct(): Promise<AbacateProduct> {
+  return ensureProduct({
+    externalId: ABACATEPAY_PROMO_PRODUCT_EXTERNAL_ID,
+    name: ABACATEPAY_PROMO_PRODUCT_NAME,
+    price: ABACATEPAY_PROMO_PRODUCT_PRICE_CENTS,
+    description:
+      "Acesso completo à plataforma inTermo nos 6 primeiros meses (oferta de boas-vindas, 20% off).",
+  });
+}
+
+export function ensureFullProduct(): Promise<AbacateProduct> {
+  return ensureProduct({
+    externalId: ABACATEPAY_FULL_PRODUCT_EXTERNAL_ID,
+    name: ABACATEPAY_FULL_PRODUCT_NAME,
+    price: ABACATEPAY_FULL_PRODUCT_PRICE_CENTS,
+    description: "Acesso completo à plataforma inTermo (renovação mensal, preço cheio).",
+  });
+}
+
+// Mantido pra compatibilidade — equivale ao produto promo.
+export function ensureSubscriptionProduct(): Promise<AbacateProduct> {
+  return ensurePromoProduct();
 }
 
 export interface AbacateSubscriptionCheckout {
@@ -133,6 +172,24 @@ export async function cancelAbacateSubscription(subscriptionId: string): Promise
   await abacateFetch<unknown>("/subscriptions/cancel", {
     method: "POST",
     json: { id: subscriptionId },
+  });
+}
+
+// Troca o produto da assinatura ativa. A mudança fica PENDING e é aplicada
+// automaticamente no início do próximo ciclo, no mesmo cartão.
+// Doc: https://docs.abacatepay.com/pages/subscriptions/change-plan
+export async function changeSubscriptionPlan(input: {
+  subscriptionId: string;
+  productId: string;
+  quantity?: number;
+}): Promise<void> {
+  await abacateFetch<unknown>("/subscriptions/change-plan", {
+    method: "POST",
+    json: {
+      id: input.subscriptionId,
+      productId: input.productId,
+      quantity: input.quantity ?? 1,
+    },
   });
 }
 
