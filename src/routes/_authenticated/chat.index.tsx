@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useRef, useEffect } from "react";
-import { Loader2, ArrowRight, Sparkles, FileText, Wallet } from "lucide-react";
+import { Loader2, ArrowRight, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -13,24 +13,12 @@ export const Route = createFileRoute("/_authenticated/chat/")({
   component: ChatEntryPage,
 });
 
-const SUGGESTIONS = [
-  {
-    icon: Sparkles,
-    title: "Criar um contrato",
-    prompt:
-      "Quero criar um contrato de intermediação para um iPhone 15 Pro 256GB preto, valor R$ 9.000 à vista.",
-  },
-  {
-    icon: FileText,
-    title: "Conferir últimos contratos",
-    prompt: "Me mostra um resumo dos últimos contratos que eu emiti.",
-  },
-  {
-    icon: Wallet,
-    title: "Como funciona o pagamento?",
-    prompt: "Como o cliente paga e como o sistema registra isso no financeiro?",
-  },
-] as const;
+const STARTER = {
+  icon: Sparkles,
+  title: "Gerar contrato",
+  prompt:
+    "Quero criar um contrato de intermediação para um iPhone 15 Pro 256GB preto, valor R$ 9.000 à vista.",
+} as const;
 
 function ChatEntryPage() {
   const navigate = useNavigate();
@@ -48,7 +36,6 @@ function ChatEntryPage() {
     setBusy(true);
     try {
       const { contractId } = await create();
-      // Passa a primeira mensagem para a thread via sessionStorage
       try {
         sessionStorage.setItem(`chat:initial:${contractId}`, prompt.trim());
       } catch {
@@ -104,27 +91,26 @@ function ChatEntryPage() {
               className="gap-1"
             >
               {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowRight className="h-3.5 w-3.5" />}
-              Começar
+              Nova transação
             </Button>
           </div>
         </div>
 
-        <div className="mt-6 grid gap-2 sm:grid-cols-3">
-          {SUGGESTIONS.map((s) => (
-            <button
-              key={s.title}
-              type="button"
-              onClick={() => void start(s.prompt)}
-              disabled={busy}
-              className="group flex flex-col gap-2 rounded-xl border border-border bg-card/40 p-4 text-left transition hover:border-primary/40 hover:bg-card/80 disabled:opacity-60"
-            >
-              <s.icon className="h-4 w-4 text-primary" />
-              <div>
-                <div className="text-sm font-medium text-foreground">{s.title}</div>
-                <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">{s.prompt}</div>
+        <div className="mt-6 flex justify-center">
+          <button
+            type="button"
+            onClick={() => void start(STARTER.prompt)}
+            disabled={busy}
+            className="group flex max-w-md items-start gap-3 rounded-xl border border-border bg-card/40 p-4 text-left transition hover:border-primary/40 hover:bg-card/80 disabled:opacity-60"
+          >
+            <STARTER.icon className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+            <div>
+              <div className="text-sm font-medium text-foreground">{STARTER.title}</div>
+              <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                {STARTER.prompt}
               </div>
-            </button>
-          ))}
+            </div>
+          </button>
         </div>
       </div>
     </div>

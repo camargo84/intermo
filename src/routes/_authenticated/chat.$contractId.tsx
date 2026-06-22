@@ -5,14 +5,14 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { Loader2, ArrowUp, FileText, FileSignature } from "lucide-react";
+import { Loader2, ArrowUp, FileText, FileSignature, MessageCircle, CheckCircle2, Circle } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-import { getChatThread } from "@/lib/chat.functions";
+import { getChatThread, consolidateTransaction } from "@/lib/chat.functions";
 import {
   getContractPdfSignedUrl,
   getSignedContractPdfUrl,
@@ -29,6 +29,12 @@ type ContractSummary = {
   signed_pdf_path: string | null;
   status: string | null;
   title: string | null;
+  client_name?: string | null;
+  client_phone?: string | null;
+  client_paid_at?: string | null;
+  supplier_paid_at?: string | null;
+  freight_paid_at?: string | null;
+  consolidated?: boolean | null;
 };
 
 function ChatThreadPage() {
@@ -159,13 +165,74 @@ function ChatWindow({
     return slug.slice(0, 60) || "contrato";
   }, [contract?.title]);
 
+  const consolidate = useServerFn(consolidateTransaction);
+  const [consolidating, setConsolidating] = useState(false);
+
+  async function handleConsolidate() {
+    if (consolidating) return;
+    setConsolidating(true);
+    try {
+      await consolidate({ data: { contractId } });
+      toast.success("Transação consolidada.");
+      queryClient.invalidateQueries({ queryKey: ["chat-thread", contractId] });
+    } catch (e) {
+      toast.error("Não foi possível consolidar", {
+        description: e instanceof Error ? e.message : "Tente novamente.",
+      });
+    } finally {
+      setConsolidating(false);
+    }
+  }
+
+  function openWhatsapp() {
+    const raw = (contract?.client_phone ?? "").replace(/\D/g, "");
+    const phone = raw ? (raw.startsWith("55") ? raw : `55${raw}`) : "";
+    const firstName = (contract?.client_name ?? "").split(" ")[0] || "tudo bem";
+    const filename = `${fileBase}.pdf`;
+    const text = encodeURIComponent(
+      `Olá ${firstName}! Segue o contrato pra você revisar e assinar: ${filename}. Qualquer dúvida me avisa por aqui.`,
+    );
+    const url = phone ? `https://wa.me/${phone}?text=${text}` : `https://wa.me/?text=${text}`;
+    window.open(url, "_blank");
+  }
+
+  const contractSigned = Boolean(contract?.signed_pdf_path) || contract?.status === "signed";
+  const clientPaid = Boolean(contract?.client_paid_at);
+  const supplierPaid = Boolean(contract?.supplier_paid_at);
+  const freightPaid = Boolean(contract?.freight_paid_at);
+  const allDone = contractSigned && clientPaid && supplierPaid;
+  const isConsolidated = Boolean(contract?.consolidated);
+
   return (
     <div className="mx-auto flex h-[calc(100vh-9rem)] w-full max-w-3xl flex-col">
       <header className="border-b border-border/60 pb-4">
-        <h1 className="font-serif-display text-2xl text-foreground">Conversa</h1>
-        <p className="text-xs text-muted-foreground">
-          Descreva a venda em linguagem natural. O assistente cuida do resto.
-        </p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="font-serif-display text-2xl text-foreground">Conversa</h1>
+            <p className="text-xs text-muted-foreground">
+              Descreva a venda em linguagem natural. O assistente cuida do resto.
+            </p>
+          </div>
+          {(contract?.pdf_path || allDone) && (
+            <div className="flex flex-wrap items-center gap-2">
+              <ChecklistItem done={contractSigned} label="Contrato" />
+              <ChecklistItem done={clientPaid} label="Pagto cliente" />
+              <ChecklistItem done={supplierPaid} label="Pagto forn." />
+              <ChecklistItem done={freightPaid} label="Frete" optional />
+              {allDone && !isConsolidated && (
+                <Button size="sm" variant="outline" onClick={handleConsolidate} disabled={consolidating}>
+                  {consolidating ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : null}
+                  Consolidar transação
+                </Button>
+              )}
+              {isConsolidated && (
+                <span className="rounded-full bg-[color:var(--color-signal-mint)]/20 px-2 py-0.5 text-[10px] font-medium text-[color:var(--color-signal-mint)]">
+                  Consolidada
+                </span>
+              )}
+            </div>
+          )}
+        </div>
       </header>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto py-6">
@@ -192,7 +259,6 @@ function ChatWindow({
               Pensando…
             </div>
           )}
-          {/* Cards inline do contrato — aparecem fora de bolha, como na ilustração */}
           {(contract?.pdf_path || contract?.signed_pdf_path) && !busy && (
             <div className="space-y-2">
               {contract?.pdf_path && (
@@ -201,6 +267,7 @@ function ChatWindow({
                   filename={`${fileBase}.pdf`}
                   variant="generated"
                   onOpen={onOpenPdf}
+                  onWhatsapp={openWhatsapp}
                 />
               )}
               {contract?.signed_pdf_path && (
@@ -215,6 +282,7 @@ function ChatWindow({
           )}
         </div>
       </div>
+
 
       <div className="border-t border-border/60 pt-3">
         <div className="rounded-2xl border border-border bg-card/60 p-2 shadow-sm">
@@ -331,37 +399,80 @@ function MessageBlock({
   );
 }
 
+function ChecklistItem({
+  done,
+  label,
+  optional,
+}: {
+  done: boolean;
+  label: string;
+  optional?: boolean;
+}) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] ${
+        done
+          ? "border-[color:var(--color-signal-mint)]/40 bg-[color:var(--color-signal-mint)]/10 text-[color:var(--color-signal-mint)]"
+          : optional
+            ? "border-border/60 text-muted-foreground/70"
+            : "border-border text-muted-foreground"
+      }`}
+    >
+      {done ? <CheckCircle2 className="h-3 w-3" /> : <Circle className="h-3 w-3" />}
+      {label}
+    </span>
+  );
+}
+
 function ContractFileCard({
   label,
   filename,
   variant,
   onOpen,
+  onWhatsapp,
 }: {
   label: string;
   filename: string;
   variant: "generated" | "signed";
   onOpen: () => Promise<void>;
+  onWhatsapp?: () => void;
 }) {
   const Icon = variant === "signed" ? FileSignature : FileText;
   return (
-    <button
-      type="button"
-      onClick={() => void onOpen()}
-      className="group flex w-full max-w-md items-center gap-3 rounded-xl border border-border/80 bg-card/50 px-4 py-3 text-left transition hover:border-primary/40 hover:bg-card/80"
-    >
-      <Icon
-        className={
-          variant === "signed"
-            ? "h-5 w-5 shrink-0 text-[color:var(--color-signal-mint)]"
-            : "h-5 w-5 shrink-0 text-[color:var(--color-coral)]"
-        }
-      />
-      <div className="min-w-0 flex-1">
-        <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-          {label}
+    <div className="group flex w-full max-w-md items-center gap-3 rounded-xl border border-border/80 bg-card/50 px-4 py-3 transition hover:border-primary/40 hover:bg-card/80">
+      <button
+        type="button"
+        onClick={() => void onOpen()}
+        className="flex flex-1 items-center gap-3 text-left"
+      >
+        <Icon
+          className={
+            variant === "signed"
+              ? "h-5 w-5 shrink-0 text-[color:var(--color-signal-mint)]"
+              : "h-5 w-5 shrink-0 text-[color:var(--color-coral)]"
+          }
+        />
+        <div className="min-w-0 flex-1">
+          <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+            {label}
+          </div>
+          <div className="truncate text-sm text-foreground group-hover:underline">{filename}</div>
         </div>
-        <div className="truncate text-sm text-foreground group-hover:underline">{filename}</div>
-      </div>
-    </button>
+      </button>
+      {onWhatsapp && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onWhatsapp();
+          }}
+          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#25D366]/10 text-[#25D366] transition hover:bg-[#25D366]/20"
+          title="Enviar pelo WhatsApp"
+          aria-label="Enviar pelo WhatsApp"
+        >
+          <MessageCircle className="h-4 w-4" />
+        </button>
+      )}
+    </div>
   );
 }

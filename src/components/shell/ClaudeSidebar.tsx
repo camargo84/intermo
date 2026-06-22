@@ -31,7 +31,7 @@ import { cn } from "@/lib/utils";
 
 const SECONDARY = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Contratos", url: "/contratos", icon: FileText },
+  { title: "Transações", url: "/contratos", icon: FileText },
   { title: "Financeiro", url: "/financeiro", icon: Wallet },
 ] as const;
 
@@ -87,11 +87,11 @@ export function ClaudeSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={handleNewChat}
-                  tooltip="Novo contrato"
+                  tooltip="Nova transação"
                   className="bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary"
                 >
                   <Plus className="h-4 w-4" />
-                  <span className="font-medium">Novo contrato</span>
+                  <span className="font-medium">Nova transação</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
