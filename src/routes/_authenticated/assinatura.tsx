@@ -82,7 +82,10 @@ function AssinaturaPage() {
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
       <header className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Assinatura inTermo</h1>
+        <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight sm:text-3xl">
+          <IntermoMark variant="plain" className="h-6 w-6 text-foreground" />
+          Assinatura inTermo
+        </h1>
         <p className="text-sm text-muted-foreground">
           {isActive && plan === "full"
             ? "R$ 149/mês via AbacatePay (cartão). 7 dias de garantia."
