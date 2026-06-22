@@ -46,12 +46,16 @@ type ContractSummary = {
   signed_pdf_path: string | null;
   status: string | null;
   title: string | null;
+  client_id?: string | null;
   client_name?: string | null;
   client_phone?: string | null;
   client_paid_at?: string | null;
   supplier_paid_at?: string | null;
   freight_paid_at?: string | null;
   consolidated?: boolean | null;
+  forma_pagamento?: string | null;
+  produtos?: unknown;
+  value_cents?: number | null;
 };
 
 function ChatThreadPage() {
