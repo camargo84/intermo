@@ -5,14 +5,14 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { Loader2, ArrowUp, FileText, FileSignature } from "lucide-react";
+import { Loader2, ArrowUp, FileText, FileSignature, MessageCircle, CheckCircle2, Circle } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-import { getChatThread } from "@/lib/chat.functions";
+import { getChatThread, consolidateTransaction } from "@/lib/chat.functions";
 import {
   getContractPdfSignedUrl,
   getSignedContractPdfUrl,
@@ -29,6 +29,12 @@ type ContractSummary = {
   signed_pdf_path: string | null;
   status: string | null;
   title: string | null;
+  client_name?: string | null;
+  client_phone?: string | null;
+  client_paid_at?: string | null;
+  supplier_paid_at?: string | null;
+  freight_paid_at?: string | null;
+  consolidated?: boolean | null;
 };
 
 function ChatThreadPage() {
