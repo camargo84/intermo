@@ -74,28 +74,20 @@ function ChatPreviewMock() {
       <div className="space-y-4 text-[13px] leading-relaxed">
         <div className="text-white/90">
           <span className="font-serif-display text-base italic text-[color:var(--color-coral)]">
-            Boa tarde.
+            Olá.
           </span>{" "}
-          Posso te ajudar a formalizar um contrato agora. Me conta o produto, valor e a forma de
-          pagamento.
+          Posso te ajudar a registrar uma venda. Me conta o nome e o CPF do cliente para começar.
         </div>
 
         <div className="flex justify-end">
           <div className="max-w-[80%] rounded-2xl bg-[color:var(--color-signal-mint)] px-3 py-2 text-[13px] text-[color:var(--color-abyss)]">
-            iPhone 15 Pro 256GB preto, R$ 9.000 à vista, para Maria.
+            Cliente novo. Depois te passo os produtos e a forma de pagamento.
           </div>
         </div>
 
         <div className="text-white/85">
-          Perfeito. Vou pedir os dados da Maria — você prefere passar agora ou me autoriza a gerar
-          um link para ela mesma preencher?
-        </div>
-
-        <div className="rounded-xl border border-white/10 bg-black/30 p-3 text-[12px] text-white/70">
-          <div className="mb-1 text-[10px] uppercase tracking-[0.14em] text-white/40">
-            contrato gerado
-          </div>
-          intermediacao-iphone-15-maria.pdf
+          Combinado. Vou pedir os dados em etapas: cadastro do cliente, produtos e valores, e a
+          forma de pagamento. No final eu gero o contrato em PDF para você revisar.
         </div>
       </div>
     </div>
