@@ -269,6 +269,8 @@ function ContractDetailsPage() {
                   onClick={() => sendMut.mutate()}
                   disabled={!canSend || sendMut.isPending}
                   size="sm"
+                  title={!canSend ? `Não é possível enviar: ${sendDisabledReason}` : undefined}
+                  aria-describedby={!canSend ? "send-disabled-reason" : undefined}
                 >
                   {sendMut.isPending ? (
                     <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
@@ -277,6 +279,11 @@ function ContractDetailsPage() {
                   )}
                   Enviar para assinatura
                 </Button>
+                {!canSend && (
+                  <span id="send-disabled-reason" className="sr-only">
+                    Não é possível enviar: {sendDisabledReason}
+                  </span>
+                )}
               </span>
             </TooltipTrigger>
             {!canSend && (

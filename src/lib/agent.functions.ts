@@ -99,7 +99,7 @@ export const criarContrato = createServerFn({ method: "POST" })
     // Cliente pertence ao usuário?
     const { data: cli, error: ce } = await context.supabase
       .from("clients")
-      .select("id,name")
+      .select("id,name,email,cpf,cnpj")
       .eq("id", data.client_id)
       .maybeSingle();
     if (ce) throw new Error(ce.message);
@@ -109,6 +109,8 @@ export const criarContrato = createServerFn({ method: "POST" })
 
     const title = `Contrato — ${cli.name}`;
     const content = data.produtos.map((p) => `${p.quantidade}x ${p.descricao}`).join("; ");
+    const clientDoc = (cli.cpf ?? cli.cnpj ?? null) as string | null;
+    const clientEmail = (cli.email ?? "") as string;
 
     const { data: row, error } = await context.supabase
       .from("transactions")
@@ -118,9 +120,9 @@ export const criarContrato = createServerFn({ method: "POST" })
         title,
         content,
         client_name: cli.name,
-        client_email: "",
+        client_email: clientEmail,
+        client_doc: clientDoc,
         produtos: data.produtos,
-        valor_cents: undefined, // legacy alias preserved below
         value_cents: data.valor_cents,
         forma_pagamento: data.forma_pagamento,
         entrada_cents: data.entrada_cents,
