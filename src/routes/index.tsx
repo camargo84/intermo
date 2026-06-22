@@ -57,7 +57,7 @@ export const Route = createFileRoute("/")({
               name: "Por que vender por encomenda como intermediação?",
               acceptedAnswer: {
                 "@type": "Answer",
-                text: "Operar no modelo de intermediação pode reduzir a carga tributária: os impostos incidem sobre a sua margem (o valor do serviço de intermediação), não sobre o preço cheio do produto. Pra isso valer, cada venda precisa de um contrato de prestação de serviço formalizado com o cliente.",
+                text: "A depender do enquadramento da sua empresa (regime tributário, CNAE e legislação municipal), operar como intermediadora pode levar os impostos a incidir sobre a sua margem (o valor do serviço), não sobre o preço cheio do produto. Pra valer juridicamente, cada venda precisa de um contrato de prestação de serviço formalizado com o cliente. A inTermo organiza os dados e gera o contrato — a validação fiscal é com o seu contador.",
               },
             },
             {
@@ -171,7 +171,7 @@ const faq = [
   },
   {
     q: "Por que vender por encomenda como intermediação?",
-    a: "Operar no modelo de intermediação pode reduzir a carga tributária: os impostos incidem sobre a sua margem (o valor do serviço de intermediação), não sobre o preço cheio do produto. Pra isso valer, cada venda precisa de um contrato de prestação de serviço formalizado com o cliente.",
+    a: "A depender do enquadramento da sua empresa (regime tributário, CNAE e legislação municipal), operar como intermediadora pode levar os impostos a incidir sobre a sua margem (o valor do serviço), não sobre o preço cheio do produto. Pra valer juridicamente, cada venda precisa de um contrato de prestação de serviço formalizado com o cliente. A inTermo organiza os dados e gera o contrato — a validação fiscal é com o seu contador.",
   },
   {
     q: "Como funciona na prática?",

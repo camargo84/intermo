@@ -28,18 +28,21 @@ function ChatEntryPage() {
   }, []);
 
   async function start(prompt: string) {
-    if (!prompt.trim() || busy) return;
+    const text = prompt.trim();
+    if (!text || busy) return;
     setBusy(true);
+    setInput("");
     try {
       const { contractId } = await create();
       try {
-        sessionStorage.setItem(`chat:initial:${contractId}`, prompt.trim());
+        sessionStorage.setItem(`chat:initial:${contractId}`, text);
       } catch {
         /* ignore */
       }
       navigate({ to: "/chat/$contractId", params: { contractId } });
     } catch (err) {
       setBusy(false);
+      setInput(text); // devolve a mensagem se falhou
       toast.error("Não consegui abrir uma nova conversa", {
         description: err instanceof Error ? err.message : "Tente novamente.",
       });

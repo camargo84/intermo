@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Logo } from "@/components/brand/Logo";
 import { IntermoMark } from "@/components/brand/IntermoMark";
-import { createDraftContractForChat, listMyChatThreads } from "@/lib/chat.functions";
+import { listMyChatThreads } from "@/lib/chat.functions";
 import { cn } from "@/lib/utils";
 
 const SECONDARY = [
@@ -47,20 +47,16 @@ export function ClaudeSidebar() {
   const navigate = useNavigate();
 
   const fetchThreads = useServerFn(listMyChatThreads);
-  const createDraft = useServerFn(createDraftContractForChat);
   const { data, isLoading } = useQuery({
     queryKey: ["my-chat-threads"],
     queryFn: () => fetchThreads(),
     staleTime: 15_000,
   });
 
-  async function handleNewChat() {
-    try {
-      const { contractId } = await createDraft();
-      navigate({ to: "/chat/$contractId", params: { contractId } });
-    } catch {
-      navigate({ to: "/chat" });
-    }
+  function handleNewChat() {
+    // Criação lazy: vai pra home do /chat; o rascunho só nasce quando o
+    // usuário digita a primeira mensagem.
+    navigate({ to: "/chat" });
   }
 
   const threads = data?.threads ?? [];

@@ -29,22 +29,30 @@ export const Route = createFileRoute("/_authenticated/configuracoes")({
   component: ConfiguracoesPage,
 });
 
+const onlyDigits = (s: string | undefined) => (s ?? "").replace(/\D/g, "");
+
 const schema = z.object({
   ownerName: z.string().min(2, "Informe seu nome."),
   companyFantasyName: z.string().min(2, "Informe o nome fantasia."),
   companyLegalName: z.string().min(2, "Informe a razão social."),
   companyEmail: z.string().email("E-mail inválido."),
-  companyPhone: z.string().min(8, "Telefone inválido."),
-  companyCnpj: z.string().optional(),
+  companyPhone: z.string().refine((v) => onlyDigits(v).length >= 10, "Telefone inválido."),
+  companyCnpj: z
+    .string()
+    .refine((v) => onlyDigits(v).length === 14, "CNPJ deve ter 14 dígitos."),
   defaultMarginPct: z.number().min(0).max(99),
-  companyAddress: z.string().optional(),
-  companyCity: z.string().optional(),
-  companyUf: z.string().optional(),
-  companyCep: z.string().optional(),
-  representativeName: z.string().optional(),
-  representativeCpf: z.string().optional(),
+  companyAddress: z.string().min(3, "Informe o endereço."),
+  companyCity: z.string().min(2, "Informe a cidade."),
+  companyUf: z.string().length(2, "UF deve ter 2 letras."),
+  companyCep: z
+    .string()
+    .refine((v) => onlyDigits(v).length === 8, "CEP deve ter 8 dígitos."),
+  representativeName: z.string().min(2, "Informe o representante legal."),
+  representativeCpf: z
+    .string()
+    .refine((v) => onlyDigits(v).length === 11, "CPF deve ter 11 dígitos."),
   representativeQualification: z.string().optional(),
-  comarca: z.string().optional(),
+  comarca: z.string().min(2, "Informe a comarca de foro."),
 });
 type FormData = z.infer<typeof schema>;
 
@@ -127,9 +135,19 @@ function ConfiguracoesPage() {
   async function onSubmit(values: FormData) {
     setSaving(true);
     try {
-      await updateProfile({ data: values });
+      // Normaliza documentos: salvamos apenas dígitos. Formatação fica na exibição.
+      const normalized = {
+        ...values,
+        companyCnpj: onlyDigits(values.companyCnpj),
+        companyPhone: onlyDigits(values.companyPhone),
+        companyCep: onlyDigits(values.companyCep),
+        representativeCpf: onlyDigits(values.representativeCpf),
+        companyUf: values.companyUf.toUpperCase(),
+      };
+      await updateProfile({ data: normalized });
       toast.success("Dados salvos.");
       await queryClient.invalidateQueries({ queryKey: ["my-profile"] });
+      await queryClient.invalidateQueries({ queryKey: ["profile-readiness"] });
     } catch (err) {
       toast.error("Não foi possível salvar", {
         description: err instanceof Error ? err.message : "Tente novamente.",
