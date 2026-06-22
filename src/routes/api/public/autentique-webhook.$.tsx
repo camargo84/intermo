@@ -2,7 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { timingSafeEqual } from "node:crypto";
 import {
   buildPatch,
+  computeEventFingerprint,
   extractEventType,
+  shouldFetchSignedPdf,
   type AutentiquePayload,
   type SignerRecord,
 } from "@/lib/autentique-webhook.logic";
@@ -61,7 +63,12 @@ export const Route = createFileRoute("/api/public/autentique-webhook/$")({
           const currentSigners = Array.isArray(contract.autentique_signers)
             ? (contract.autentique_signers as SignerRecord[])
             : [];
-          const patch = buildPatch({ eventType, body, currentSigners });
+          const patch = buildPatch({
+            eventType,
+            body,
+            currentSigners,
+            currentStatus: contract.status as string | null,
+          });
 
           if (Object.keys(patch).length > 0) {
             const { error: updateErr } = await supabaseAdmin
@@ -71,19 +78,40 @@ export const Route = createFileRoute("/api/public/autentique-webhook/$")({
             if (updateErr) throw updateErr;
           }
 
-          // Registra o evento no histórico, sempre
-          await supabaseAdmin.from("contract_events").insert({
-            contract_id: contract.id,
-            event_type: eventType,
-            status: patch.status ?? null,
-            signer_email: body.signature?.email ?? null,
-            message: typeof body === "object" ? null : null,
-            payload: JSON.parse(JSON.stringify(body)),
+          // Registra o evento no histórico de forma idempotente. A Autentique
+          // reentrega webhooks; o fingerprint determinístico (ver
+          // computeEventFingerprint) é a chave: onConflict + ignoreDuplicates
+          // faz a 2ª entrega do MESMO evento ser descartada sem erro, mantendo
+          // a trilha de auditoria limpa. Eventos sem fingerprint (não deveria
+          // ocorrer aqui, pois documentId já foi validado) caem no insert comum.
+          const eventFingerprint = computeEventFingerprint({
+            documentId,
+            eventType,
+            body,
           });
+          await supabaseAdmin.from("contract_events").upsert(
+            {
+              contract_id: contract.id,
+              event_type: eventType,
+              status: patch.status ?? null,
+              signer_email: body.signature?.email ?? null,
+              message: null,
+              payload: JSON.parse(JSON.stringify(body)),
+              event_fingerprint: eventFingerprint,
+            },
+            { onConflict: "event_fingerprint", ignoreDuplicates: true },
+          );
 
-          // Quando todos assinaram, baixar PDF assinado da Autentique e armazenar.
-          // Idempotente: pula se signed_pdf_path já existe.
-          if (patch.status === "signed" && !contract.signed_pdf_path) {
+          // Quando o contrato está assinado e ainda não temos o PDF arquivado,
+          // baixar da Autentique. Ver shouldFetchSignedPdf para a regra (cobre
+          // reenvio do "signed" após falha de download). Idempotente.
+          if (
+            shouldFetchSignedPdf({
+              patchStatus: patch.status,
+              currentStatus: contract.status as string | null,
+              signedPdfPath: contract.signed_pdf_path as string | null,
+            })
+          ) {
             try {
               await fetchAndStoreSignedPdf({
                 supabaseAdmin,
