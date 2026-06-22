@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useRef, useEffect } from "react";
-import { Loader2, ArrowRight, Sparkles } from "lucide-react";
+import { Loader2, ArrowRight, FilePlus2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -14,12 +14,7 @@ export const Route = createFileRoute("/_authenticated/chat/")({
   component: ChatEntryPage,
 });
 
-const STARTER = {
-  icon: Sparkles,
-  title: "Gerar contrato",
-  prompt:
-    "Quero criar um contrato de intermediação para um iPhone 15 Pro 256GB preto, valor R$ 9.000 à vista.",
-} as const;
+const STARTER_PROMPT = "Quero criar uma nova transação.";
 
 function ChatEntryPage() {
   const navigate = useNavigate();
@@ -105,20 +100,15 @@ function ChatEntryPage() {
           </div>
         </div>
 
-        <div className="mt-6 flex justify-center">
+        <div className="mt-4 flex justify-center">
           <button
             type="button"
-            onClick={() => void start(STARTER.prompt)}
+            onClick={() => void start(STARTER_PROMPT)}
             disabled={busy}
-            className="group flex max-w-md items-start gap-3 rounded-xl border border-border bg-card/40 p-4 text-left transition hover:border-primary/40 hover:bg-card/80 disabled:opacity-60"
+            className="group inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-4 py-2 text-sm text-foreground transition hover:border-primary/40 hover:bg-card disabled:opacity-60"
           >
-            <STARTER.icon className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-            <div>
-              <div className="text-sm font-medium text-foreground">{STARTER.title}</div>
-              <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                {STARTER.prompt}
-              </div>
-            </div>
+            <FilePlus2 className="h-4 w-4 text-primary" />
+            Criar transação
           </button>
         </div>
       </div>
