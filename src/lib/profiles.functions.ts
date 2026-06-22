@@ -21,6 +21,7 @@ const updateSchema = z.object({
   companyLegalName: z.string().min(2).max(200),
   companyEmail: z.string().email().max(200),
   companyPhone: z.string().min(8).max(40),
+  companyCnpj: z.string().max(20).optional().nullable(),
   defaultMarginPct: z.number().min(0).max(99).optional(),
   // novos
   companyAddress: z.string().max(240).optional().nullable(),
@@ -40,6 +41,24 @@ export const updateMyProfile = createServerFn({ method: "POST" })
     const repCpf = data.representativeCpf ? onlyDigits(data.representativeCpf) : null;
     if (repCpf && !validateCPF(repCpf)) throw new Error("CPF do representante inválido.");
 
+    // CNPJ é imutável depois de cadastrado, mas pode ser preenchido se ainda está vazio.
+    let cnpjPatch: { company_cnpj: string } | Record<string, never> = {};
+    const newCnpjDigits = data.companyCnpj ? onlyDigits(data.companyCnpj) : "";
+    if (newCnpjDigits) {
+      const { data: current } = await context.supabase
+        .from("profiles")
+        .select("company_cnpj")
+        .eq("id", context.userId)
+        .maybeSingle();
+      const existing = current?.company_cnpj ? onlyDigits(current.company_cnpj) : "";
+      if (!existing) {
+        if (!validateCNPJ(newCnpjDigits)) throw new Error("CNPJ inválido.");
+        cnpjPatch = { company_cnpj: newCnpjDigits };
+      } else if (existing !== newCnpjDigits) {
+        throw new Error("CNPJ não pode ser alterado depois do cadastro.");
+      }
+    }
+
     const payload = {
       owner_name: data.ownerName,
       company_fantasy_name: data.companyFantasyName,
@@ -55,6 +74,7 @@ export const updateMyProfile = createServerFn({ method: "POST" })
       representative_qualification: data.representativeQualification ?? null,
       comarca: data.comarca ?? null,
       ...(data.defaultMarginPct !== undefined ? { default_margin_pct: data.defaultMarginPct } : {}),
+      ...cnpjPatch,
     };
 
     const { error } = await context.supabase

@@ -35,6 +35,7 @@ const schema = z.object({
   companyLegalName: z.string().min(2, "Informe a razão social."),
   companyEmail: z.string().email("E-mail inválido."),
   companyPhone: z.string().min(8, "Telefone inválido."),
+  companyCnpj: z.string().optional(),
   defaultMarginPct: z.number().min(0).max(99),
   companyAddress: z.string().optional(),
   companyCity: z.string().optional(),
@@ -86,6 +87,7 @@ function ConfiguracoesPage() {
       companyLegalName: "",
       companyEmail: "",
       companyPhone: "",
+      companyCnpj: "",
       defaultMarginPct: 30,
       companyAddress: "",
       companyCity: "",
@@ -98,6 +100,8 @@ function ConfiguracoesPage() {
     },
   });
 
+  const cnpjLocked = Boolean(profileData?.profile?.company_cnpj);
+
   useEffect(() => {
     const p = profileData?.profile;
     if (!p) return;
@@ -107,6 +111,7 @@ function ConfiguracoesPage() {
       companyLegalName: p.company_legal_name ?? "",
       companyEmail: p.company_email ?? "",
       companyPhone: p.company_phone ? formatPhoneBR(p.company_phone) : "",
+      companyCnpj: p.company_cnpj ? formatCNPJ(p.company_cnpj) : "",
       defaultMarginPct: Number(p.default_margin_pct ?? 30),
       companyAddress: p.company_address ?? "",
       companyCity: p.company_city ?? "",
@@ -299,18 +304,23 @@ function ConfiguracoesPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>CNPJ</Label>
+                <Label htmlFor="companyCnpj">CNPJ</Label>
                 <Input
-                  value={
-                    profileData?.profile?.company_cnpj
-                      ? formatCNPJ(profileData.profile.company_cnpj)
-                      : ""
-                  }
-                  readOnly
-                  disabled
+                  id="companyCnpj"
+                  {...register("companyCnpj", {
+                    onChange: (e) =>
+                      setValue("companyCnpj", formatCNPJ(e.target.value), {
+                        shouldValidate: false,
+                      }),
+                  })}
+                  readOnly={cnpjLocked}
+                  disabled={cnpjLocked}
+                  placeholder={cnpjLocked ? undefined : "00.000.000/0000-00"}
                 />
                 <p className="text-xs text-muted-foreground">
-                  CNPJ não pode ser alterado depois do cadastro.
+                  {cnpjLocked
+                    ? "CNPJ não pode ser alterado depois de cadastrado."
+                    : "Informe o CNPJ da empresa. Depois de salvo, não poderá ser alterado."}
                 </p>
               </div>
 
