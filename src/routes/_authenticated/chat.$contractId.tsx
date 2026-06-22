@@ -328,7 +328,27 @@ function ChatWindow({
         </div>
       </div>
 
+      {!busy && token && (
+        <SuggestionChips
+          contract={contract}
+          contractSigned={contractSigned}
+          clientPaid={clientPaid}
+          supplierPaid={supplierPaid}
+          freightPaid={freightPaid}
+          allDone={allDone}
+          isConsolidated={isConsolidated}
+          consolidating={consolidating}
+          onSend={(text) => {
+            void sendMessage({ text });
+          }}
+          onOpenPdf={onOpenPdf}
+          onWhatsapp={openWhatsapp}
+          onConsolidate={handleConsolidate}
+        />
+      )}
+
       <div className="border-t border-border/60 pt-3">
+
         <div className="rounded-2xl border border-border bg-card/60 p-2 shadow-sm">
           <Textarea
             ref={textareaRef}
