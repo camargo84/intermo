@@ -1,58 +1,69 @@
-# Correções do inTermo — achados do teste de estresse
+# Correções do inTermo — plano consolidado (decisões aprovadas)
 
-Sim, li os dois arquivos (achados-2.md + MEGACOMANDO_LOVABLE-2.md). Abaixo o plano dividido em ondas, por prioridade. Posso executar tudo em sequência ou só uma onda — me diga.
+Decisões confirmadas:
+- Escopo: **executar tudo de uma vez** (P0 → P1 → P2 num único passe).
+- Termo canônico: **Transação** (remover "Contrato" dos cabeçalhos/menus da app; "contrato" só fica em contextos jurídicos: corpo do PDF, /termos, /assinar/$token).
+- GC de rascunhos: janela de **30 dias** (rascunho sem cliente E sem mensagens com >30d é apagado).
+
+---
 
 ## P0 — Bloqueios e segurança
 
-### 1. Login: blindar contra vazamento de senha na URL (`/login`)
-- `src/routes/login.tsx`: adicionar `method="post"` no `<form>` (hoje só tem `onSubmit`), garantir `e.preventDefault()` ainda que o handler do react-hook-form já faça isso.
-- Adicionar estado `isHydrated` (set em `useEffect`) e desabilitar o botão "Entrar" enquanto `!isHydrated` — fecha a janela de corrida pré-hidratação.
-- Aplicar o mesmo blindagem em `signup.tsx` e `reset-password.tsx`.
+### 1. Login: blindar contra vazamento de senha na URL
+- `src/routes/login.tsx`: adicionar `method="post"` no `<form>`, manter `onSubmit={handleSubmit(onSubmit)}` (já chama preventDefault via RHF).
+- Adicionar `isHydrated` (useEffect → true) e desabilitar "Entrar" enquanto `!isHydrated` para fechar a janela de corrida pré-hidratação.
+- Aplicar o mesmo em `src/routes/signup.tsx` e `src/routes/reset-password.tsx`.
 
 ### 2. Barra de ações no detalhe da transação (`/transacoes/$contractId`)
-- Em `src/routes/_authenticated/transacoes.$contractId.tsx`: adicionar header com botões **Enviar para assinatura** (primário), **Baixar PDF**, **Editar**, **Excluir** (com `AlertDialog` de confirmação).
-- "Enviar para assinatura" desabilitado quando faltar cliente, valor ou dados da empresa em `/configuracoes` — tooltip mostra o motivo.
-- Reusar a server function/fluxo Autentique já existente no chat; após envio, atualizar status e gravar evento em `contract_events` para aparecer no Histórico.
+- Em `src/routes/_authenticated/transacoes.$contractId.tsx`, adicionar header de ações com:
+  - **Enviar para assinatura** (primário) — dispara geração de PDF + envio Autentique (reusar a server fn já usada no chat). Desabilitado quando faltar cliente, valor ou dados essenciais da empresa em `/configuracoes`; tooltip explica o motivo.
+  - **Baixar PDF** — link para `contract-pdfs` via signed URL (server fn).
+  - **Editar** — leva para `/chat/$contractId` (fluxo conversacional existente).
+  - **Excluir** — `AlertDialog` de confirmação; soft/hard delete conforme padrão atual de `transactions`.
+- Após envio, invalidar query e gravar evento em `contract_events` para o Histórico refletir.
 
 ### 3. Type drift `event_fingerprint`
-- Adicionar `event_fingerprint: string | null` ao tipo `contract_events` (Insert/Row/Update) em `src/integrations/supabase/types.ts` para `tsc --noEmit` sair 0 sem cast no webhook.
+- Adicionar `event_fingerprint: string | null` em `contract_events` (Row/Insert/Update) em `src/integrations/supabase/types.ts` para `tsc --noEmit` sair 0 sem cast no webhook.
+
+---
 
 ## P1 — Integridade de dados
 
-### 4. Parar de criar rascunhos órfãos (criação lazy + GC)
-- `/chat` (index) e botão "Nova transação": só criar a row em `transactions` no primeiro `sendMessage` real; antes disso manter estado local.
-- Corrigir Enter na home do `/chat`: criar conversa **E** enviar a 1ª mensagem na mesma ação (hoje cria UUID vazio).
-- Migration: job/edge function que apaga rascunhos sem cliente e sem mensagens com >24h (ou no logout). Decidir janela com o usuário; padrão sugerido: 24h.
+### 4. Parar de criar rascunhos órfãos
+- `/chat` index e botão "Nova transação": **não** persistir `transactions` ao abrir; só criar no primeiro `sendMessage` real.
+- Corrigir Enter na home do `/chat`: mesma ação cria a conversa **e** envia a 1ª mensagem.
+- GC: server fn agendável (chamada manual + cron via `/api/public/cron/gc-drafts` com `CRON_SECRET`) que apaga rascunhos sem `client_name` e sem mensagens com `updated_at < now() - interval '30 days'`. Também faz a limpeza ao logout.
 
-### 5. Travar duplo-envio no chat (`/chat/$contractId`)
-- Desabilitar botão e input enquanto `status === "submitted" | "streaming"`.
-- Bloquear Enter quando já houver request em voo; idempotência por id de mensagem para evitar 2 inserts.
+### 5. Travar duplo-envio no chat
+- Em `src/routes/_authenticated/chat.$contractId.tsx`: desabilitar input + botão enquanto `status === "submitted" | "streaming"`; bloquear Enter; chave de idempotência por id de mensagem do lado servidor para deduplicar.
 
-### 6. Validação em `/configuracoes`
-- Marcar como obrigatórios: ownerName, companyCnpj, companyEmail, representativeCpf, representativeName, comarca (lista exata a confirmar).
-- Validar no client (zod) e no server function que persiste.
-- Normalizar CNPJ/CPF/CEP guardando apenas dígitos; formatar só na exibição. Migration leve para normalizar registros existentes.
+### 6. Validar `/configuracoes`
+- Schema zod com obrigatórios: `ownerName`, `companyCnpj`, `companyEmail`, `representativeName`, `representativeCpf`, `comarca`.
+- Validar no client e na server fn de save.
+- Normalizar CNPJ/CPF/CEP para só dígitos antes de gravar; formatar na exibição (helper único). Migration leve para normalizar registros existentes.
 
 ### 7. Semântica do `/financeiro`
-- KPIs continuam só de assinadas.
-- Lista do mês passa a ter duas seções (ou filtro de status): **Assinadas** e **Em aberto**, deixando claro que receita ≠ lista.
+- KPIs continuam só de transações assinadas.
+- Lista do mês em duas seções: **Assinadas** e **Em aberto**, com totais separados.
+
+---
 
 ## P2 — i18n, nomenclatura, copy
 
-### 8. Padronização
-- Adicionar redirect 301 `/transactions → /transacoes` (rota stub que chama `redirect`).
-- Definir termo canônico **Transação** (já é o do menu e do modelo) e atualizar cabeçalho/textos de `/transacoes` que ainda dizem "Contrato".
-- Mapear enum `draft → Rascunho` (e demais status) num helper único usado em `/financeiro`, `/transacoes`, sidebar.
-- Default de tema das páginas públicas: dark-first, alinhado ao app.
+### 8. Padronização (termo canônico = Transação)
+- Substituir "Contrato/Contratos" por "Transação/Transações" em: cabeçalho de `/transacoes`, breadcrumbs, botão "Voltar", `transacoes.$contractId` ("Detalhes da transação"), sidebar, toasts. Manter "contrato" só em /termos, PDF e `/assinar/$token`.
+- Adicionar route stub `src/routes/transactions.tsx` que faz `redirect({ to: "/transacoes", statusCode: 301 })` (mesma coisa para `/transactions/$id`).
+- Helper único `statusLabel(status)` em PT-BR (`draft→Rascunho`, etc.) usado em `/financeiro`, `/transacoes`, sidebar.
+- Default de tema: páginas públicas (landing, /login, /signup, /termos, /privacidade) começam **dark** para alinhar com o app.
 
 ### 9. Suavizar copy fiscal do FAQ (landing)
-- Reescrever o item do FAQ sobre tributação em tom condicional, citando regime/CNAE/município e orientação do contador; deixar claro que inTermo organiza dados e não presta consultoria fiscal.
+- Reescrever o item do FAQ sobre tributação em condicional: "pode, a depender do enquadramento (regime/CNAE/município) e mediante orientação do seu contador". Deixar claro que a inTermo organiza dados e não presta consultoria fiscal.
+
+---
 
 ## Validação final
-- Rodar `npx tsc --noEmit` (deve sair 0) e o build.
-- Devolver checklist com itens concluídos vs itens que ainda dependem de decisão de produto (ex.: janela do GC de rascunhos, termo canônico final).
+- `npx tsc --noEmit` → 0.
+- Build.
+- Checklist no fim com o que ficou pronto vs pendente de produto.
 
-## Perguntas antes de implementar
-1. Posso tocar tudo de uma vez ou prefere começar só pela P0?
-2. Termo canônico: confirma **Transação** (e eu removo "Contrato" dos cabeçalhos)?
-3. GC de rascunhos: janela de 24h ok, ou prefere outro valor / só no logout?
+Vou começar pelo P0 e seguir até o P2 sem pausar.
