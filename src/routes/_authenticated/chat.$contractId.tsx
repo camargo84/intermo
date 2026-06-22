@@ -573,3 +573,174 @@ function ContractFileCard({
     </div>
   );
 }
+
+type ChipDef = {
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  onClick: () => void;
+  tone?: "primary" | "default" | "whatsapp";
+};
+
+function SuggestionChips({
+  contract,
+  contractSigned,
+  clientPaid,
+  supplierPaid,
+  freightPaid,
+  allDone,
+  isConsolidated,
+  consolidating,
+  onSend,
+  onOpenPdf,
+  onWhatsapp,
+  onConsolidate,
+}: {
+  contract: ContractSummary | null;
+  contractSigned: boolean;
+  clientPaid: boolean;
+  supplierPaid: boolean;
+  freightPaid: boolean;
+  allDone: boolean;
+  isConsolidated: boolean;
+  consolidating: boolean;
+  onSend: (text: string) => void;
+  onOpenPdf: () => Promise<void>;
+  onWhatsapp: () => Promise<void>;
+  onConsolidate: () => Promise<void>;
+}) {
+  const hasClient = Boolean(
+    contract?.client_id || (contract?.client_name && contract.client_name !== "—"),
+  );
+  const produtos = contract?.produtos;
+  const hasProducts = Array.isArray(produtos) && produtos.length > 0;
+  const hasPayment = Boolean(contract?.forma_pagamento);
+  const hasPdf = Boolean(contract?.pdf_path);
+
+  if (isConsolidated) return null;
+
+  const chips: ChipDef[] = [];
+
+  if (!hasClient) {
+    chips.push({
+      label: "Cadastrar cliente",
+      icon: UserPlus,
+      tone: "primary",
+      onClick: () => onSend("Quero cadastrar um novo cliente."),
+    });
+    chips.push({
+      label: "Buscar cliente existente",
+      icon: UserSearch,
+      onClick: () => onSend("Quero buscar um cliente já cadastrado pelo nome ou CPF."),
+    });
+  } else if (!hasProducts) {
+    chips.push({
+      label: "Adicionar produto",
+      icon: Package,
+      tone: "primary",
+      onClick: () => onSend("Quero adicionar um produto à transação."),
+    });
+  } else if (!hasPayment) {
+    chips.push({
+      label: "PIX à vista",
+      icon: Wallet,
+      tone: "primary",
+      onClick: () => onSend("A forma de pagamento é PIX à vista."),
+    });
+    chips.push({
+      label: "Parcelado",
+      icon: Wallet,
+      onClick: () => onSend("O pagamento será parcelado. Vou te passar as condições."),
+    });
+    chips.push({
+      label: "Boleto",
+      icon: Wallet,
+      onClick: () => onSend("A forma de pagamento é boleto."),
+    });
+  } else if (!hasPdf) {
+    chips.push({
+      label: "Revisar resumo",
+      icon: ClipboardCheck,
+      onClick: () => onSend("Me mostre o resumo da transação antes de gerar o contrato."),
+    });
+    chips.push({
+      label: "Gerar contrato",
+      icon: ScrollText,
+      tone: "primary",
+      onClick: () => onSend("Pode gerar o contrato."),
+    });
+  } else if (!contractSigned) {
+    chips.push({
+      label: "Enviar para assinatura por WhatsApp",
+      icon: Send,
+      tone: "whatsapp",
+      onClick: () => {
+        void onWhatsapp();
+      },
+    });
+    chips.push({
+      label: "Baixar PDF",
+      icon: Download,
+      onClick: () => {
+        void onOpenPdf();
+      },
+    });
+  } else if (!clientPaid) {
+    chips.push({
+      label: "Registrar pagamento do cliente",
+      icon: BadgeCheck,
+      tone: "primary",
+      onClick: () => onSend("O cliente acabou de pagar. Registra o pagamento do cliente."),
+    });
+  } else if (!supplierPaid) {
+    chips.push({
+      label: "Registrar pagamento ao fornecedor",
+      icon: BadgeCheck,
+      tone: "primary",
+      onClick: () => onSend("Paguei o fornecedor. Registra o pagamento do fornecedor."),
+    });
+  } else if (!freightPaid) {
+    chips.push({
+      label: "Registrar frete pago",
+      icon: Truck,
+      onClick: () => onSend("Paguei o frete. Registra o frete."),
+    });
+    chips.push({
+      label: "Sem frete",
+      icon: Truck,
+      onClick: () => onSend("Essa transação não tem frete."),
+    });
+  } else if (allDone) {
+    chips.push({
+      label: consolidating ? "Consolidando…" : "Consolidar transação",
+      icon: ClipboardCheck,
+      tone: "primary",
+      onClick: () => {
+        if (!consolidating) void onConsolidate();
+      },
+    });
+  }
+
+  if (chips.length === 0) return null;
+
+  return (
+    <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-2 pt-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {chips.map((c) => {
+        const Icon = c.icon;
+        const base =
+          "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition disabled:opacity-60";
+        const tone =
+          c.tone === "primary"
+            ? "border-primary/40 bg-primary/10 text-foreground hover:bg-primary/15"
+            : c.tone === "whatsapp"
+              ? "border-[#25D366]/40 bg-[#25D366]/10 text-foreground hover:bg-[#25D366]/15"
+              : "border-border bg-card/60 text-foreground hover:bg-card";
+        return (
+          <button key={c.label} type="button" onClick={c.onClick} className={`${base} ${tone}`}>
+            <Icon className="h-3.5 w-3.5" />
+            {c.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
