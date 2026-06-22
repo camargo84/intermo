@@ -165,13 +165,74 @@ function ChatWindow({
     return slug.slice(0, 60) || "contrato";
   }, [contract?.title]);
 
+  const consolidate = useServerFn(consolidateTransaction);
+  const [consolidating, setConsolidating] = useState(false);
+
+  async function handleConsolidate() {
+    if (consolidating) return;
+    setConsolidating(true);
+    try {
+      await consolidate({ data: { contractId } });
+      toast.success("Transação consolidada.");
+      queryClient.invalidateQueries({ queryKey: ["chat-thread", contractId] });
+    } catch (e) {
+      toast.error("Não foi possível consolidar", {
+        description: e instanceof Error ? e.message : "Tente novamente.",
+      });
+    } finally {
+      setConsolidating(false);
+    }
+  }
+
+  function openWhatsapp() {
+    const raw = (contract?.client_phone ?? "").replace(/\D/g, "");
+    const phone = raw ? (raw.startsWith("55") ? raw : `55${raw}`) : "";
+    const firstName = (contract?.client_name ?? "").split(" ")[0] || "tudo bem";
+    const filename = `${fileBase}.pdf`;
+    const text = encodeURIComponent(
+      `Olá ${firstName}! Segue o contrato pra você revisar e assinar: ${filename}. Qualquer dúvida me avisa por aqui.`,
+    );
+    const url = phone ? `https://wa.me/${phone}?text=${text}` : `https://wa.me/?text=${text}`;
+    window.open(url, "_blank");
+  }
+
+  const contractSigned = Boolean(contract?.signed_pdf_path) || contract?.status === "signed";
+  const clientPaid = Boolean(contract?.client_paid_at);
+  const supplierPaid = Boolean(contract?.supplier_paid_at);
+  const freightPaid = Boolean(contract?.freight_paid_at);
+  const allDone = contractSigned && clientPaid && supplierPaid;
+  const isConsolidated = Boolean(contract?.consolidated);
+
   return (
     <div className="mx-auto flex h-[calc(100vh-9rem)] w-full max-w-3xl flex-col">
       <header className="border-b border-border/60 pb-4">
-        <h1 className="font-serif-display text-2xl text-foreground">Conversa</h1>
-        <p className="text-xs text-muted-foreground">
-          Descreva a venda em linguagem natural. O assistente cuida do resto.
-        </p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="font-serif-display text-2xl text-foreground">Conversa</h1>
+            <p className="text-xs text-muted-foreground">
+              Descreva a venda em linguagem natural. O assistente cuida do resto.
+            </p>
+          </div>
+          {(contract?.pdf_path || allDone) && (
+            <div className="flex flex-wrap items-center gap-2">
+              <ChecklistItem done={contractSigned} label="Contrato" />
+              <ChecklistItem done={clientPaid} label="Pagto cliente" />
+              <ChecklistItem done={supplierPaid} label="Pagto forn." />
+              <ChecklistItem done={freightPaid} label="Frete" optional />
+              {allDone && !isConsolidated && (
+                <Button size="sm" variant="outline" onClick={handleConsolidate} disabled={consolidating}>
+                  {consolidating ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : null}
+                  Consolidar transação
+                </Button>
+              )}
+              {isConsolidated && (
+                <span className="rounded-full bg-[color:var(--color-signal-mint)]/20 px-2 py-0.5 text-[10px] font-medium text-[color:var(--color-signal-mint)]">
+                  Consolidada
+                </span>
+              )}
+            </div>
+          )}
+        </div>
       </header>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto py-6">
@@ -198,7 +259,6 @@ function ChatWindow({
               Pensando…
             </div>
           )}
-          {/* Cards inline do contrato — aparecem fora de bolha, como na ilustração */}
           {(contract?.pdf_path || contract?.signed_pdf_path) && !busy && (
             <div className="space-y-2">
               {contract?.pdf_path && (
@@ -207,6 +267,7 @@ function ChatWindow({
                   filename={`${fileBase}.pdf`}
                   variant="generated"
                   onOpen={onOpenPdf}
+                  onWhatsapp={openWhatsapp}
                 />
               )}
               {contract?.signed_pdf_path && (
@@ -221,6 +282,7 @@ function ChatWindow({
           )}
         </div>
       </div>
+
 
       <div className="border-t border-border/60 pt-3">
         <div className="rounded-2xl border border-border bg-card/60 p-2 shadow-sm">
