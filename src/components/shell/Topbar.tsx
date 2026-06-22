@@ -20,6 +20,8 @@ import { getMyRoles } from "@/lib/roles.functions";
 import { IntermoMark } from "@/components/brand/IntermoMark";
 import { useEffect, useState } from "react";
 
+import { getMyProfile } from "@/lib/profiles.functions";
+
 type Profile = { companyName: string; ownerName: string; ownerEmail: string };
 
 function initialsOf(name: string) {
@@ -37,28 +39,48 @@ export function Topbar() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const fetchRoles = useServerFn(getMyRoles);
+  const fetchProfile = useServerFn(getMyProfile);
   const { data: rolesData } = useQuery({
     queryKey: ["my-roles"],
     queryFn: () => fetchRoles(),
     staleTime: 5 * 60_000,
   });
   const isAdmin = rolesData?.isAdmin ?? false;
-  const [profile, setProfile] = useState<Profile>({
-    companyName: "Sua empresa",
-    ownerName: "Você",
-    ownerEmail: "",
+  const { data: profileData } = useQuery({
+    queryKey: ["my-profile"],
+    queryFn: () => fetchProfile(),
+    staleTime: 60_000,
   });
+  const [authMeta, setAuthMeta] = useState<{
+    metaName: string;
+    metaCompany: string;
+    email: string;
+    emailUser: string;
+  }>({ metaName: "", metaCompany: "", email: "", emailUser: "" });
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       const meta = (data.user?.user_metadata ?? {}) as Record<string, string>;
-      setProfile({
-        companyName: meta.company_fantasy_name || meta.company_legal_name || "Sua empresa",
-        ownerName: meta.owner_name || data.user?.email?.split("@")[0] || "Você",
-        ownerEmail: data.user?.email ?? "",
+      setAuthMeta({
+        metaName: meta.owner_name ?? "",
+        metaCompany: meta.company_fantasy_name || meta.company_legal_name || "",
+        email: data.user?.email ?? "",
+        emailUser: data.user?.email?.split("@")[0] ?? "",
       });
     });
   }, []);
+
+  const p = profileData?.profile;
+  const profile: Profile = {
+    companyName:
+      (p?.company_fantasy_name ?? "") ||
+      (p?.company_legal_name ?? "") ||
+      authMeta.metaCompany ||
+      "Sua empresa",
+    ownerName:
+      (p?.owner_name ?? "") || authMeta.metaName || authMeta.emailUser || "Você",
+    ownerEmail: authMeta.email,
+  };
 
   async function handleLogout() {
     await queryClient.cancelQueries();
