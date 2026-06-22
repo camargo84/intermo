@@ -97,8 +97,8 @@ export const Route = createFileRoute("/api/public/autentique-webhook/$")({
               signer_email: body.signature?.email ?? null,
               message: null,
               payload: JSON.parse(JSON.stringify(body)),
-              event_fingerprint: eventFingerprint,
-            },
+              event_fingerprint: eventFingerprint as any,
+            } as any,
             { onConflict: "event_fingerprint", ignoreDuplicates: true },
           );
 
