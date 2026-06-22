@@ -383,9 +383,7 @@ function toolLabel(name: string, state?: string) {
  * `*123.456*.789-09` não sejam interpretados como ênfase e percam os dígitos.
  */
 function sanitizeMarkdown(text: string): string {
-  return text
-    .replace(/(\d)([*_])/g, "$1\\$2")
-    .replace(/([*_])(\d)/g, "\\$1$2");
+  return text.replace(/(\d)([*_])/g, "$1\\$2").replace(/([*_])(\d)/g, "\\$1$2");
 }
 
 function MessageBlock({
