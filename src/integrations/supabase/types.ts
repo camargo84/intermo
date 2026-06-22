@@ -574,6 +574,7 @@ export type Database = {
     }
     Functions: {
       current_month_transaction_count: { Args: never; Returns: number }
+      gc_orphan_drafts: { Args: { _dry_run?: boolean }; Returns: number }
       has_active_subscription: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
         Args: {
