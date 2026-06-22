@@ -106,7 +106,10 @@ function ChatEntryPage() {
         <div className="mt-4 flex justify-center">
           <button
             type="button"
-            onClick={() => void start(STARTER_PROMPT)}
+            onClick={() => {
+              if (input.trim()) void start(input);
+              else textareaRef.current?.focus();
+            }}
             disabled={busy}
             className="group inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-4 py-2 text-sm text-foreground transition hover:border-primary/40 hover:bg-card disabled:opacity-60"
           >
