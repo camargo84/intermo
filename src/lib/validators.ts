@@ -118,29 +118,56 @@ function ate999(n: number): string {
   return partes.join(" e ");
 }
 
+function juntarGrupos(partes: string[], ultimoValor: number): string {
+  // Une grupos seguindo a norma do "e": o conector liga o ÚLTIMO grupo
+  // somente quando seu valor numérico é < 100 ou múltiplo exato de 100
+  // (cem, duzentos... quinhentos). Ex.: "mil e quinhentos" (500), mas
+  // "mil novecentos e noventa e nove" (999, não conecta com "e").
+  if (partes.length === 0) return "";
+  if (partes.length === 1) return partes[0];
+  const ultimo = partes[partes.length - 1];
+  const anteriores = partes.slice(0, -1).join(", ");
+  const levaE = ultimoValor < 100 || ultimoValor % 100 === 0;
+  return levaE ? `${anteriores} e ${ultimo}` : `${anteriores} ${ultimo}`;
+}
+
 function inteiroPorExtenso(n: number): string {
   if (n === 0) return "zero";
-  const milhoes = Math.floor(n / 1_000_000);
+  const bilhoes = Math.floor(n / 1_000_000_000);
+  const milhoes = Math.floor((n % 1_000_000_000) / 1_000_000);
   const milhares = Math.floor((n % 1_000_000) / 1000);
   const resto = n % 1000;
   const partes: string[] = [];
+  if (bilhoes > 0) partes.push(bilhoes === 1 ? "um bilhão" : `${ate999(bilhoes)} bilhões`);
   if (milhoes > 0) partes.push(milhoes === 1 ? "um milhão" : `${ate999(milhoes)} milhões`);
   if (milhares > 0) partes.push(milhares === 1 ? "mil" : `${ate999(milhares)} mil`);
   if (resto > 0) partes.push(ate999(resto));
-  return partes.join(" e ");
+  // valor do último grupo não-nulo, para decidir o conector "e"
+  const ultimoValor = resto > 0 ? resto : milhares > 0 ? milhares : milhoes > 0 ? milhoes : bilhoes;
+  return juntarGrupos(partes, ultimoValor);
+}
+
+/** Indica se o inteiro termina em milhão/bilhão "redondo" (exige "de reais"). */
+function exigeDe(reais: number): boolean {
+  if (reais < 1_000_000) return false;
+  return reais % 1_000_000 === 0;
 }
 
 export function valorPorExtenso(cents: number): string {
   const reais = Math.floor(cents / 100);
   const centavos = cents % 100;
   const partes: string[] = [];
-  if (reais > 0) partes.push(`${inteiroPorExtenso(reais)} ${reais === 1 ? "real" : "reais"}`);
+  if (reais > 0) {
+    const moeda = reais === 1 ? "real" : exigeDe(reais) ? "de reais" : "reais";
+    partes.push(`${inteiroPorExtenso(reais)} ${moeda}`);
+  }
   if (centavos > 0)
     partes.push(`${inteiroPorExtenso(centavos)} ${centavos === 1 ? "centavo" : "centavos"}`);
   if (partes.length === 0) return "zero real";
   return partes.join(" e ");
 }
 
-export function brl(cents: number): string {
+/** Formata centavos (inteiro) como moeda BRL. Para reais decimais, use `brl` de `@/lib/format`. */
+export function brlFromCents(cents: number): string {
   return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
