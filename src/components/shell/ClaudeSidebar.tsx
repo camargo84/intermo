@@ -117,10 +117,20 @@ export function ClaudeSidebar() {
                   </li>
                 )}
                 {threads.map((t) => {
-                  const contract = (t as { transactions?: { id: string; title?: string | null; client_name?: string | null } }).transactions;
+                  const contract = (
+                    t as {
+                      transactions?: {
+                        id: string;
+                        title?: string | null;
+                        client_name?: string | null;
+                      };
+                    }
+                  ).transactions;
                   const id = contract?.id ?? (t as { contract_id: string }).contract_id;
                   const label =
-                    (contract?.client_name && contract.client_name !== "—" ? contract.client_name : null) ??
+                    (contract?.client_name && contract.client_name !== "—"
+                      ? contract.client_name
+                      : null) ??
                     contract?.title ??
                     "Nova transação";
                   const active = pathname === `/chat/${id}`;

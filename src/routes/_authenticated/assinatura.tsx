@@ -32,7 +32,8 @@ function AssinaturaPage() {
     queryKey: ["my-subscription"],
     queryFn: () => fetchSub(),
     refetchInterval: (q) => {
-      const status = (q.state.data as { subscription?: { status?: string } } | undefined)?.subscription?.status;
+      const status = (q.state.data as { subscription?: { status?: string } } | undefined)
+        ?.subscription?.status;
       return status === "pending" ? 5000 : false;
     },
   });
@@ -76,7 +77,8 @@ function AssinaturaPage() {
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Assinatura inTermo</h1>
         <p className="text-sm text-muted-foreground">
-          R$ 119/mês via AbacatePay (PIX ou cartão). 7 dias de garantia — se não gostar, devolvemos 100%.
+          R$ 119/mês via AbacatePay (PIX ou cartão). 7 dias de garantia — se não gostar, devolvemos
+          100%.
         </p>
       </header>
 
@@ -93,12 +95,14 @@ function AssinaturaPage() {
         <CardContent className="space-y-4">
           {sub?.current_period_end && (
             <div className="text-sm text-muted-foreground">
-              Próxima cobrança em <strong className="text-foreground">{formatDate(sub.current_period_end)}</strong>.
+              Próxima cobrança em{" "}
+              <strong className="text-foreground">{formatDate(sub.current_period_end)}</strong>.
             </div>
           )}
           {sub?.last_payment_at && (
             <div className="text-sm text-muted-foreground">
-              Último pagamento em <strong className="text-foreground">{formatDate(sub.last_payment_at)}</strong>.
+              Último pagamento em{" "}
+              <strong className="text-foreground">{formatDate(sub.last_payment_at)}</strong>.
             </div>
           )}
 
@@ -112,7 +116,11 @@ function AssinaturaPage() {
             </div>
           ) : (
             <Button size="lg" onClick={handleStart} disabled={busy} className="w-full sm:w-auto">
-              {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+              {busy ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="mr-2 h-4 w-4" />
+              )}
               {sub?.status === "pending" ? "Continuar pagamento" : "Assinar por R$ 119/mês"}
             </Button>
           )}
@@ -138,13 +146,13 @@ function AssinaturaPage() {
               Painel de acompanhamento, financeiro e histórico
             </li>
             <li className="flex items-start gap-2">
-              <ShieldCheck className="mt-0.5 h-4 w-4 text-accent" />
-              7 dias de garantia total — reembolso integral por e-mail
+              <ShieldCheck className="mt-0.5 h-4 w-4 text-accent" />7 dias de garantia total —
+              reembolso integral por e-mail
             </li>
           </ul>
           <p className="mt-4 text-xs text-muted-foreground">
-            Valor cobrado: {brl(119)} por mês. Para pedir reembolso nos 7 primeiros dias, escreva pra
-            ajuda@intermo.com.br.
+            Valor cobrado: {brl(119)} por mês. Para pedir reembolso nos 7 primeiros dias, escreva
+            pra ajuda@intermo.com.br.
           </p>
         </CardContent>
       </Card>
@@ -153,7 +161,10 @@ function AssinaturaPage() {
 }
 
 function StatusBadge({ status }: { status?: string }) {
-  const map: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+  const map: Record<
+    string,
+    { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
+  > = {
     active: { label: "Ativa", variant: "default" },
     pending: { label: "Aguardando pagamento", variant: "secondary" },
     past_due: { label: "Em atraso", variant: "destructive" },
@@ -184,7 +195,11 @@ function statusDescription(status?: string) {
 
 function formatDate(iso: string) {
   try {
-    return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+    return new Date(iso).toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
   } catch {
     return iso;
   }

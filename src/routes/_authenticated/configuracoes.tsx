@@ -72,13 +72,29 @@ function ConfiguracoesPage() {
     queryFn: () => fetchLogoUrl(),
   });
 
-  const { register, handleSubmit, setValue, reset, formState: { errors } } = useForm<FormData>({
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    reset,
+    formState: { errors },
+  } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      ownerName: "", companyFantasyName: "", companyLegalName: "",
-      companyEmail: "", companyPhone: "", defaultMarginPct: 30,
-      companyAddress: "", companyCity: "", companyUf: "", companyCep: "",
-      representativeName: "", representativeCpf: "", representativeQualification: "", comarca: "",
+      ownerName: "",
+      companyFantasyName: "",
+      companyLegalName: "",
+      companyEmail: "",
+      companyPhone: "",
+      defaultMarginPct: 30,
+      companyAddress: "",
+      companyCity: "",
+      companyUf: "",
+      companyCep: "",
+      representativeName: "",
+      representativeCpf: "",
+      representativeQualification: "",
+      comarca: "",
     },
   });
 
@@ -194,7 +210,11 @@ function ConfiguracoesPage() {
           <div className="flex items-center gap-4">
             <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-md border bg-muted">
               {logoData?.url ? (
-                <img src={logoData.url} alt="Logo da empresa" className="h-full w-full object-contain" />
+                <img
+                  src={logoData.url}
+                  alt="Logo da empresa"
+                  className="h-full w-full object-contain"
+                />
               ) : (
                 <span className="text-xs text-muted-foreground">sem logo</span>
               )}
@@ -207,7 +227,11 @@ function ConfiguracoesPage() {
                 onChange={(e) => e.target.files?.[0] && handleLogoFile(e.target.files[0])}
               />
               <span className="inline-flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-sm hover:bg-accent">
-                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                {uploading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4" />
+                )}
                 Enviar logo (PNG/JPG, até 2MB)
               </span>
             </Label>
@@ -224,9 +248,9 @@ function ConfiguracoesPage() {
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            Seus contratos são organizados em uma pasta exclusiva na sua conta
-            Autentique. Use o botão abaixo se você renomeou a empresa ou quer
-            recriar a pasta — os contratos já enviados continuam onde estão.
+            Seus contratos são organizados em uma pasta exclusiva na sua conta Autentique. Use o
+            botão abaixo se você renomeou a empresa ou quer recriar a pasta — os contratos já
+            enviados continuam onde estão.
           </p>
           <Button
             type="button"
@@ -258,7 +282,9 @@ function ConfiguracoesPage() {
               <div className="space-y-2">
                 <Label htmlFor="ownerName">Seu nome</Label>
                 <Input id="ownerName" {...register("ownerName")} />
-                {errors.ownerName && <p className="text-xs text-destructive">{errors.ownerName.message}</p>}
+                {errors.ownerName && (
+                  <p className="text-xs text-destructive">{errors.ownerName.message}</p>
+                )}
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
@@ -274,8 +300,18 @@ function ConfiguracoesPage() {
 
               <div className="space-y-2">
                 <Label>CNPJ</Label>
-                <Input value={profileData?.profile?.company_cnpj ? formatCNPJ(profileData.profile.company_cnpj) : ""} readOnly disabled />
-                <p className="text-xs text-muted-foreground">CNPJ não pode ser alterado depois do cadastro.</p>
+                <Input
+                  value={
+                    profileData?.profile?.company_cnpj
+                      ? formatCNPJ(profileData.profile.company_cnpj)
+                      : ""
+                  }
+                  readOnly
+                  disabled
+                />
+                <p className="text-xs text-muted-foreground">
+                  CNPJ não pode ser alterado depois do cadastro.
+                </p>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
@@ -289,7 +325,10 @@ function ConfiguracoesPage() {
                     id="companyPhone"
                     inputMode="tel"
                     {...register("companyPhone", {
-                      onChange: (e) => setValue("companyPhone", formatPhoneBR(e.target.value), { shouldValidate: false }),
+                      onChange: (e) =>
+                        setValue("companyPhone", formatPhoneBR(e.target.value), {
+                          shouldValidate: false,
+                        }),
                     })}
                   />
                 </div>
@@ -327,8 +366,14 @@ function ConfiguracoesPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="representativeQualification">Qualificação do representante (cargo, nacionalidade…)</Label>
-                <Input id="representativeQualification" placeholder="Ex.: brasileiro, casado, administrador, RG 1234567 SSP/SP" {...register("representativeQualification")} />
+                <Label htmlFor="representativeQualification">
+                  Qualificação do representante (cargo, nacionalidade…)
+                </Label>
+                <Input
+                  id="representativeQualification"
+                  placeholder="Ex.: brasileiro, casado, administrador, RG 1234567 SSP/SP"
+                  {...register("representativeQualification")}
+                />
               </div>
 
               <div className="space-y-2">
@@ -341,7 +386,9 @@ function ConfiguracoesPage() {
                 <Input
                   id="defaultMarginPct"
                   type="number"
-                  min={0} max={99} step="1"
+                  min={0}
+                  max={99}
+                  step="1"
                   {...register("defaultMarginPct", { valueAsNumber: true })}
                 />
               </div>

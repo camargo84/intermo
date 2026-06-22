@@ -1,4 +1,11 @@
-import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage, type PDFImage } from "pdf-lib";
+import {
+  PDFDocument,
+  StandardFonts,
+  rgb,
+  type PDFFont,
+  type PDFPage,
+  type PDFImage,
+} from "pdf-lib";
 import { brl, valorPorExtenso } from "./validators";
 
 export interface TenantSnapshot {
@@ -87,9 +94,10 @@ export async function renderContractPdf(args: RenderContractArgs): Promise<Uint8
   let logoImage: PDFImage | null = null;
   if (args.logoBytes && args.logoBytes.length > 0) {
     try {
-      logoImage = args.logoMime === "image/jpeg"
-        ? await pdf.embedJpg(args.logoBytes)
-        : await pdf.embedPng(args.logoBytes);
+      logoImage =
+        args.logoMime === "image/jpeg"
+          ? await pdf.embedJpg(args.logoBytes)
+          : await pdf.embedPng(args.logoBytes);
     } catch {
       logoImage = null;
     }
@@ -113,7 +121,10 @@ export async function renderContractPdf(args: RenderContractArgs): Promise<Uint8
   const wrap = (text: string, size: number, f: PDFFont): string[] => {
     const lines: string[] = [];
     for (const paragraph of text.split(/\n/)) {
-      if (paragraph.trim() === "") { lines.push(""); continue; }
+      if (paragraph.trim() === "") {
+        lines.push("");
+        continue;
+      }
       const words = paragraph.split(/\s+/);
       let line = "";
       for (const word of words) {
@@ -145,7 +156,9 @@ export async function renderContractPdf(args: RenderContractArgs): Promise<Uint8
     y -= 2;
   };
 
-  const gap = (n = 8) => { y -= n; };
+  const gap = (n = 8) => {
+    y -= n;
+  };
 
   // Título
   drawText("CONTRATO DE COMPRA E VENDA DE BENS MÓVEIS", 14, bold);
@@ -161,7 +174,15 @@ export async function renderContractPdf(args: RenderContractArgs): Promise<Uint8
   gap();
 
   const clienteDoc = formatDoc(c.cpf, c.cnpj);
-  const clienteEnd = [c.endereco, c.complemento, c.bairro, c.cidade && c.uf ? `${c.cidade}/${c.uf}` : c.cidade ?? c.uf, c.cep ? `CEP ${formatCep(c.cep)}` : ""].filter(Boolean).join(", ");
+  const clienteEnd = [
+    c.endereco,
+    c.complemento,
+    c.bairro,
+    c.cidade && c.uf ? `${c.cidade}/${c.uf}` : (c.cidade ?? c.uf),
+    c.cep ? `CEP ${formatCep(c.cep)}` : "",
+  ]
+    .filter(Boolean)
+    .join(", ");
   const qualif = c.is_pj
     ? `pessoa jurídica de direito privado, inscrita no CNPJ sob nº ${clienteDoc}`
     : `${c.nacionalidade ?? "brasileiro(a)"}, ${c.estado_civil ?? "—"}, portador(a) do RG nº ${c.rg ?? "—"} e inscrito(a) no CPF sob nº ${clienteDoc}`;
@@ -169,17 +190,29 @@ export async function renderContractPdf(args: RenderContractArgs): Promise<Uint8
   drawText(clienteLine, 11);
   gap();
 
-  drawText("As partes acima identificadas têm, entre si, justo e acertado o presente Contrato de Compra e Venda de Bens Móveis, que se regerá pelas cláusulas seguintes e pelas condições descritas no presente.", 11);
+  drawText(
+    "As partes acima identificadas têm, entre si, justo e acertado o presente Contrato de Compra e Venda de Bens Móveis, que se regerá pelas cláusulas seguintes e pelas condições descritas no presente.",
+    11,
+  );
 
   // Cláusulas
   heading("CLÁUSULA 1ª — DO OBJETO");
-  const itens = args.produtos.map((p, i) =>
-    `${i + 1}. ${p.descricao} — Quantidade: ${p.quantidade} — Preço unitário: ${brl(p.preco_unit_cents)}`
-  ).join("\n");
-  drawText(`O presente contrato tem como objeto a venda, pela VENDEDORA ao(à) COMPRADOR(A), dos seguintes bens móveis:\n${itens}`, 11);
+  const itens = args.produtos
+    .map(
+      (p, i) =>
+        `${i + 1}. ${p.descricao} — Quantidade: ${p.quantidade} — Preço unitário: ${brl(p.preco_unit_cents)}`,
+    )
+    .join("\n");
+  drawText(
+    `O presente contrato tem como objeto a venda, pela VENDEDORA ao(à) COMPRADOR(A), dos seguintes bens móveis:\n${itens}`,
+    11,
+  );
 
   heading("CLÁUSULA 2ª — DO PREÇO");
-  drawText(`O valor total do presente contrato é de ${brl(args.valor_cents)} (${valorPorExtenso(args.valor_cents)}).`, 11);
+  drawText(
+    `O valor total do presente contrato é de ${brl(args.valor_cents)} (${valorPorExtenso(args.valor_cents)}).`,
+    11,
+  );
 
   heading("CLÁUSULA 3ª — DA FORMA DE PAGAMENTO");
   let pgto = "";
@@ -198,25 +231,46 @@ export async function renderContractPdf(args: RenderContractArgs): Promise<Uint8
   drawText(pgto, 11);
 
   heading("CLÁUSULA 4ª — DA ENTREGA");
-  drawText("A entrega do(s) bem(ns) ocorrerá após a confirmação do pagamento (ou da entrada, nas modalidades parcelada e mista), em prazo e local previamente acordado entre as partes, sendo de responsabilidade do(a) COMPRADOR(A) a conferência do(s) item(ns) no momento do recebimento.", 11);
+  drawText(
+    "A entrega do(s) bem(ns) ocorrerá após a confirmação do pagamento (ou da entrada, nas modalidades parcelada e mista), em prazo e local previamente acordado entre as partes, sendo de responsabilidade do(a) COMPRADOR(A) a conferência do(s) item(ns) no momento do recebimento.",
+    11,
+  );
 
   heading("CLÁUSULA 5ª — DA GARANTIA");
-  drawText("Os bens objeto deste contrato possuem a garantia legal prevista no Código de Defesa do Consumidor (Lei nº 8.078/1990), bem como eventual garantia contratual oferecida pelo fabricante, nos termos da respectiva documentação que acompanha o produto. A VENDEDORA não se responsabiliza por danos decorrentes de uso indevido, acidente ou alteração não autorizada do bem.", 11);
+  drawText(
+    "Os bens objeto deste contrato possuem a garantia legal prevista no Código de Defesa do Consumidor (Lei nº 8.078/1990), bem como eventual garantia contratual oferecida pelo fabricante, nos termos da respectiva documentação que acompanha o produto. A VENDEDORA não se responsabiliza por danos decorrentes de uso indevido, acidente ou alteração não autorizada do bem.",
+    11,
+  );
 
   heading("CLÁUSULA 6ª — DA TRANSFERÊNCIA DE PROPRIEDADE E RISCO");
-  drawText("A propriedade do(s) bem(ns) somente se transfere ao(à) COMPRADOR(A) após o pagamento integral do preço ajustado. A partir da entrega, contudo, os riscos pela perda ou deterioração do(s) bem(ns) passam ao(à) COMPRADOR(A).", 11);
+  drawText(
+    "A propriedade do(s) bem(ns) somente se transfere ao(à) COMPRADOR(A) após o pagamento integral do preço ajustado. A partir da entrega, contudo, os riscos pela perda ou deterioração do(s) bem(ns) passam ao(à) COMPRADOR(A).",
+    11,
+  );
 
   heading("CLÁUSULA 7ª — DA RESCISÃO");
-  drawText("O presente contrato poderá ser rescindido em caso de descumprimento de qualquer de suas cláusulas, mediante notificação prévia à parte inadimplente, sem prejuízo das perdas e danos cabíveis. Em caso de inadimplência do(a) COMPRADOR(A) após o recebimento do(s) bem(ns), a VENDEDORA poderá cobrar o saldo devedor pelos meios legais cabíveis.", 11);
+  drawText(
+    "O presente contrato poderá ser rescindido em caso de descumprimento de qualquer de suas cláusulas, mediante notificação prévia à parte inadimplente, sem prejuízo das perdas e danos cabíveis. Em caso de inadimplência do(a) COMPRADOR(A) após o recebimento do(s) bem(ns), a VENDEDORA poderá cobrar o saldo devedor pelos meios legais cabíveis.",
+    11,
+  );
 
   heading("CLÁUSULA 8ª — DA VALIDADE JURÍDICA E DA ASSINATURA ELETRÔNICA");
-  drawText("As partes reconhecem expressamente a validade jurídica deste contrato celebrado eletronicamente, nos termos da Medida Provisória nº 2.200-2/2001, que institui a Infraestrutura de Chaves Públicas Brasileira – ICP-Brasil, e admite outras formas de comprovação de autoria e integridade dos documentos em forma eletrônica desde que aceitas pelas partes.", 11);
+  drawText(
+    "As partes reconhecem expressamente a validade jurídica deste contrato celebrado eletronicamente, nos termos da Medida Provisória nº 2.200-2/2001, que institui a Infraestrutura de Chaves Públicas Brasileira – ICP-Brasil, e admite outras formas de comprovação de autoria e integridade dos documentos em forma eletrônica desde que aceitas pelas partes.",
+    11,
+  );
 
   heading("CLÁUSULA 9ª — DO FORO");
-  drawText(`Fica eleito o foro da Comarca de ${t.comarca ?? "—"} para dirimir quaisquer questões oriundas do presente contrato, com renúncia expressa a qualquer outro, por mais privilegiado que seja.`, 11);
+  drawText(
+    `Fica eleito o foro da Comarca de ${t.comarca ?? "—"} para dirimir quaisquer questões oriundas do presente contrato, com renúncia expressa a qualquer outro, por mais privilegiado que seja.`,
+    11,
+  );
 
   gap(18);
-  drawText(`E, por estarem assim justas e contratadas, as partes assinam o presente eletronicamente.`, 11);
+  drawText(
+    `E, por estarem assim justas e contratadas, as partes assinam o presente eletronicamente.`,
+    11,
+  );
   gap(4);
   const emitido = (args.emitidoEm ?? new Date()).toLocaleDateString("pt-BR");
   drawText(`Local e data: ${t.company_city ?? "—"}/${t.company_uf ?? "—"}, ${emitido}.`, 11);
@@ -230,7 +284,10 @@ export async function renderContractPdf(args: RenderContractArgs): Promise<Uint8
       const ratio = logoImage.width / logoImage.height;
       let h = maxH;
       let w = h * ratio;
-      if (w > maxW) { w = maxW; h = w / ratio; }
+      if (w > maxW) {
+        w = maxW;
+        h = w / ratio;
+      }
       p.drawImage(logoImage, {
         x: pageWidth - margin - w,
         y: pageHeight - margin - h + 8,

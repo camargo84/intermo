@@ -17,9 +17,7 @@ export const Route = createFileRoute("/api/public/sign/$token")({
         const token = (params.token ?? "").trim();
         if (!token) return json({ error: "token ausente" }, 400);
 
-        const { supabaseAdmin } = await import(
-          "@/integrations/supabase/client.server"
-        );
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
         const { data: tk, error } = await supabaseAdmin
           .from("signature_tokens")
@@ -104,9 +102,7 @@ export const Route = createFileRoute("/api/public/sign/$token")({
         }
         const pngBytes = Buffer.from(m[1], "base64");
 
-        const { supabaseAdmin } = await import(
-          "@/integrations/supabase/client.server"
-        );
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
         // Revalida o token server-side (estado pode ter mudado desde o GET).
         const { data: tk } = await supabaseAdmin
@@ -157,9 +153,7 @@ export const Route = createFileRoute("/api/public/sign/$token")({
         if (upErr) return json({ error: "Falha ao salvar assinatura." }, 500);
 
         const ip =
-          (request.headers.get("x-forwarded-for") ?? "")
-            .split(",")[0]
-            .trim() ||
+          (request.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() ||
           request.headers.get("x-real-ip") ||
           null;
         const userAgent = request.headers.get("user-agent");

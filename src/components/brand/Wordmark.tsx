@@ -14,8 +14,14 @@ export function Wordmark({ className, variant = "default" }: WordmarkProps) {
         className,
       )}
     >
-      <span className={variant === "mono" ? "text-current" : "text-[color:var(--color-chalk)]"}>in</span>
-      <span className={variant === "mono" ? "text-current" : "text-[color:var(--color-signal-mint)]"}>Termo</span>
+      <span className={variant === "mono" ? "text-current" : "text-[color:var(--color-chalk)]"}>
+        in
+      </span>
+      <span
+        className={variant === "mono" ? "text-current" : "text-[color:var(--color-signal-mint)]"}
+      >
+        Termo
+      </span>
     </span>
   );
 }

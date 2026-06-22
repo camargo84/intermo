@@ -23,8 +23,18 @@ export const Route = createFileRoute("/_authenticated/financeiro")({
 });
 
 const MONTHS = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
 ];
 
 function FinanceiroPage() {
@@ -58,9 +68,8 @@ function FinanceiroPage() {
   const consolidated = rows.filter((r) => r.consolidated).length;
 
   const yearOptions = useMemo(() => {
-    const y = now.getFullYear();
-    return [y - 2, y - 1, y, y + 1];
-  }, [now]);
+    return [year - 2, year - 1, year, year + 1];
+  }, [year]);
 
   async function handleExport() {
     if (exporting) return;
@@ -100,23 +109,35 @@ function FinanceiroPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Select value={String(month)} onValueChange={(v) => setMonth(Number(v))}>
-            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               {MONTHS.map((m, i) => (
-                <SelectItem key={i + 1} value={String(i + 1)}>{m}</SelectItem>
+                <SelectItem key={i + 1} value={String(i + 1)}>
+                  {m}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
           <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
-            <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-28">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               {yearOptions.map((y) => (
-                <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                <SelectItem key={y} value={String(y)}>
+                  {y}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
           <Button onClick={handleExport} disabled={exporting || rows.length === 0}>
-            {exporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+            {exporting ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="mr-2 h-4 w-4" />
+            )}
             Exportar XLSX
           </Button>
         </div>
@@ -125,33 +146,43 @@ function FinanceiroPage() {
       <section className="grid gap-4 sm:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Receita do mês</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Receita do mês
+            </CardTitle>
             <Wallet className="h-4 w-4 text-accent" />
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-semibold tabular-nums">
               {isLoading ? "—" : brl(monthRevenue)}
             </p>
-            <p className="mt-1 text-xs text-muted-foreground">{signed.length} contratos assinados</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {signed.length} contratos assinados
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Margem estimada</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Margem estimada
+            </CardTitle>
             <TrendingUp className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-semibold tabular-nums text-success">
               {isLoading ? "—" : brl(monthMargin)}
             </p>
-            <p className="mt-1 text-xs text-muted-foreground">{marginPct.toFixed(0)}% sobre receita</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {marginPct.toFixed(0)}% sobre receita
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Consolidadas</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Consolidadas
+            </CardTitle>
             <FileSignature className="h-4 w-4 text-info" />
           </CardHeader>
           <CardContent>
@@ -173,9 +204,7 @@ function FinanceiroPage() {
           {isLoading ? (
             <p className="text-sm text-muted-foreground">Carregando…</p>
           ) : rows.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Nenhuma transação neste mês.
-            </p>
+            <p className="text-sm text-muted-foreground">Nenhuma transação neste mês.</p>
           ) : (
             <ul className="divide-y divide-border">
               {rows.map((c) => (

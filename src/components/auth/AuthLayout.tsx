@@ -38,9 +38,7 @@ export function AuthLayout({ title, subtitle, children, footer }: AuthLayoutProp
 
             <div className="mt-8">{children}</div>
 
-            {footer ? (
-              <div className="mt-6 text-sm text-muted-foreground">{footer}</div>
-            ) : null}
+            {footer ? <div className="mt-6 text-sm text-muted-foreground">{footer}</div> : null}
           </div>
         </section>
 

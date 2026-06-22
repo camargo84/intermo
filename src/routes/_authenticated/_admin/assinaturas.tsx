@@ -54,7 +54,9 @@ function AdminSubscriptionsPage() {
                   {s.last_payment_at ? new Date(s.last_payment_at).toLocaleString("pt-BR") : "—"}
                 </td>
                 <td className="px-3 py-2 text-xs text-muted-foreground">
-                  {s.current_period_end ? new Date(s.current_period_end).toLocaleString("pt-BR") : "—"}
+                  {s.current_period_end
+                    ? new Date(s.current_period_end).toLocaleString("pt-BR")
+                    : "—"}
                 </td>
               </tr>
             ))}

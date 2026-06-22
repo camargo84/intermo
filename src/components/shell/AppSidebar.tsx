@@ -42,7 +42,11 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="h-16 px-3 py-3">
         {collapsed ? (
-          <Link to="/dashboard" aria-label="inTermo" className="flex h-full items-center justify-center">
+          <Link
+            to="/dashboard"
+            aria-label="inTermo"
+            className="flex h-full items-center justify-center"
+          >
             <IntermoMark variant="tile" className="h-8 w-8" />
           </Link>
         ) : (

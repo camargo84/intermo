@@ -17,15 +17,7 @@ import {
 } from "@/components/ui/select";
 import { listContracts } from "@/lib/contracts.functions";
 
-const statusValues = [
-  "all",
-  "draft",
-  "sent",
-  "signed",
-  "rejected",
-  "expired",
-  "error",
-] as const;
+const statusValues = ["all", "draft", "sent", "signed", "rejected", "expired", "error"] as const;
 
 const searchSchema = z.object({
   status: fallback(z.enum(statusValues), "all").default("all"),
@@ -56,7 +48,7 @@ function ContratosPage() {
     queryFn: () => fetchFn(),
   });
 
-  const contracts = data?.contracts ?? [];
+  const contracts = useMemo(() => data?.contracts ?? [], [data]);
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -134,22 +126,14 @@ function ContratosPage() {
         </Select>
       </div>
 
-      {isLoading && (
-        <p className="text-sm text-muted-foreground">Carregando…</p>
-      )}
-      {error && (
-        <p className="text-sm text-destructive">
-          Não foi possível carregar os contratos.
-        </p>
-      )}
+      {isLoading && <p className="text-sm text-muted-foreground">Carregando…</p>}
+      {error && <p className="text-sm text-destructive">Não foi possível carregar os contratos.</p>}
 
       {!isLoading && filtered.length === 0 && (
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-center">
           <FileText className="mb-3 h-8 w-8 text-muted-foreground" />
           <p className="font-medium">
-            {contracts.length === 0
-              ? "Nenhum contrato ainda"
-              : "Nenhum contrato com esses filtros"}
+            {contracts.length === 0 ? "Nenhum contrato ainda" : "Nenhum contrato com esses filtros"}
           </p>
           <p className="text-sm text-muted-foreground">
             {contracts.length === 0
@@ -183,11 +167,7 @@ function ContratosPage() {
                     <p className="truncate text-sm text-muted-foreground">
                       {c.client_name} • {c.client_email}
                     </p>
-                    {signedAt && (
-                      <p className="text-xs text-green-600">
-                        Assinado em {signedAt}
-                      </p>
-                    )}
+                    {signedAt && <p className="text-xs text-green-600">Assinado em {signedAt}</p>}
                     {c.last_error && (
                       <p className="flex items-center gap-1 text-xs text-destructive">
                         <AlertCircle className="h-3 w-3" />
@@ -195,9 +175,7 @@ function ContratosPage() {
                       </p>
                     )}
                   </div>
-                  <Badge variant="secondary">
-                    {statusLabel[c.status] ?? c.status}
-                  </Badge>
+                  <Badge variant="secondary">{statusLabel[c.status] ?? c.status}</Badge>
                 </Link>
               </li>
             );

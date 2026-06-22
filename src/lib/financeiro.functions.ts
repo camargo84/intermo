@@ -70,13 +70,21 @@ export const exportFinanceiroXlsx = createServerFn({ method: "POST" })
     headerRow.alignment = { vertical: "middle", wrapText: true };
 
     const fmtDate = (s: string | null) => (s ? new Date(s).toLocaleDateString("pt-BR") : "");
-    const montarEndereco = (c: {
-      endereco?: string | null; complemento?: string | null; bairro?: string | null;
-      cidade?: string | null; uf?: string | null; cep?: string | null;
-    } | null) => {
+    const montarEndereco = (
+      c: {
+        endereco?: string | null;
+        complemento?: string | null;
+        bairro?: string | null;
+        cidade?: string | null;
+        uf?: string | null;
+        cep?: string | null;
+      } | null,
+    ) => {
       if (!c) return "";
       const linha1 = [c.endereco, c.complemento].filter(Boolean).join(", ");
-      const linha2 = [c.bairro, [c.cidade, c.uf].filter(Boolean).join("/")].filter(Boolean).join(" - ");
+      const linha2 = [c.bairro, [c.cidade, c.uf].filter(Boolean).join("/")]
+        .filter(Boolean)
+        .join(" - ");
       return [linha1, linha2, c.cep].filter(Boolean).join(" — ");
     };
 
@@ -93,7 +101,9 @@ export const exportFinanceiroXlsx = createServerFn({ method: "POST" })
         frete: ((r.freight_paid_amount_cents as number | null) ?? 0) / 100,
         margem: ((r.margin_cents as number | null) ?? 0) / 100,
         descricao: `Serviço de intermediação na aquisição de ${produto || "produto"} para ${r.client_name}.`,
-        dataEmissao: fmtDate((r.consolidated_at as string | null) ?? (r.signed_at as string | null)),
+        dataEmissao: fmtDate(
+          (r.consolidated_at as string | null) ?? (r.signed_at as string | null),
+        ),
       });
       row.font = ARIAL;
       row.alignment = { vertical: "top", wrapText: true };

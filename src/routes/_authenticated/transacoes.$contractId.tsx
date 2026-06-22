@@ -13,12 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { getContract, resendContract } from "@/lib/contracts.functions";
 
@@ -57,10 +52,7 @@ const statusLabel: Record<string, string> = {
   error: "Erro",
 };
 
-const statusVariant: Record<
-  string,
-  "default" | "secondary" | "destructive" | "outline"
-> = {
+const statusVariant: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   signed: "default",
   sent: "secondary",
   draft: "outline",
@@ -150,9 +142,7 @@ function ContractDetailsPage() {
         </Button>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="truncate text-2xl font-semibold tracking-tight">
-              {contract.title}
-            </h1>
+            <h1 className="truncate text-2xl font-semibold tracking-tight">{contract.title}</h1>
             <p className="text-sm text-muted-foreground">
               {contract.client_name} • {contract.client_email}
             </p>
@@ -172,14 +162,9 @@ function ContractDetailsPage() {
           <Info label="Enviado em" value={formatDate(contract.sent_at)} />
           <Info label="Assinado em" value={formatDate(contract.signed_at)} />
           {value && <Info label="Valor" value={value} />}
-          {contract.client_doc && (
-            <Info label="Documento" value={contract.client_doc} />
-          )}
+          {contract.client_doc && <Info label="Documento" value={contract.client_doc} />}
           {contract.autentique_document_id && (
-            <Info
-              label="ID Autentique"
-              value={contract.autentique_document_id}
-            />
+            <Info label="ID Autentique" value={contract.autentique_document_id} />
           )}
         </CardContent>
       </Card>
@@ -194,14 +179,9 @@ function ContractDetailsPage() {
           <CardContent className="space-y-3 text-sm">
             <p className="text-destructive">{contract.last_error}</p>
             {contract.status === "error" && (
-              <Button
-                onClick={() => resendMut.mutate()}
-                disabled={resendMut.isPending}
-              >
+              <Button onClick={() => resendMut.mutate()} disabled={resendMut.isPending}>
                 <RefreshCw
-                  className={`mr-2 h-4 w-4 ${
-                    resendMut.isPending ? "animate-spin" : ""
-                  }`}
+                  className={`mr-2 h-4 w-4 ${resendMut.isPending ? "animate-spin" : ""}`}
                 />
                 {resendMut.isPending ? "Reenviando…" : "Reenviar pra Autentique"}
               </Button>
@@ -227,18 +207,10 @@ function ContractDetailsPage() {
                   className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="min-w-0">
-                    <p className="truncate font-medium">
-                      {s.name ?? s.email ?? "Signatário"}
-                    </p>
-                    {s.email && (
-                      <p className="truncate text-xs text-muted-foreground">
-                        {s.email}
-                      </p>
-                    )}
+                    <p className="truncate font-medium">{s.name ?? s.email ?? "Signatário"}</p>
+                    {s.email && <p className="truncate text-xs text-muted-foreground">{s.email}</p>}
                     {s.signed_at && (
-                      <p className="text-xs text-green-600">
-                        Assinou em {formatDate(s.signed_at)}
-                      </p>
+                      <p className="text-xs text-green-600">Assinou em {formatDate(s.signed_at)}</p>
                     )}
                     {s.rejected_at && (
                       <p className="text-xs text-destructive">
@@ -266,26 +238,20 @@ function ContractDetailsPage() {
         </CardHeader>
         <CardContent>
           {events.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Nenhum evento registrado ainda.
-            </p>
+            <p className="text-sm text-muted-foreground">Nenhum evento registrado ainda.</p>
           ) : (
             <ol className="space-y-3">
               {events.map((ev, i) => (
                 <li key={ev.id} className="flex gap-3">
                   <EventIcon type={ev.event_type} status={ev.status} />
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium">
-                      {humanizeEvent(ev.event_type)}
-                    </p>
+                    <p className="text-sm font-medium">{humanizeEvent(ev.event_type)}</p>
                     <p className="text-xs text-muted-foreground">
                       {formatDate(ev.created_at)}
                       {ev.signer_email ? ` • ${ev.signer_email}` : ""}
                     </p>
                     {ev.message && (
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {ev.message}
-                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">{ev.message}</p>
                     )}
                   </div>
                   {i < events.length - 1 && <Separator className="hidden" />}
@@ -299,39 +265,24 @@ function ContractDetailsPage() {
   );
 }
 
-function Info({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | null | undefined;
-}) {
+function Info({ label, value }: { label: string; value: string | null | undefined }) {
   if (!value) return null;
   return (
     <div>
-      <p className="text-xs uppercase tracking-wide text-muted-foreground">
-        {label}
-      </p>
+      <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className="break-all">{value}</p>
     </div>
   );
 }
 
-function EventIcon({
-  type,
-  status,
-}: {
-  type: string;
-  status: string | null;
-}) {
+function EventIcon({ type, status }: { type: string; status: string | null }) {
   const t = type.toLowerCase();
   const cls = "mt-0.5 h-4 w-4 shrink-0";
   if (t.includes("signed") || status === "signed")
     return <CheckCircle2 className={`${cls} text-green-600`} />;
   if (t.includes("rejected") || t.includes("failed") || status === "error")
     return <XCircle className={`${cls} text-destructive`} />;
-  if (t.includes("expired"))
-    return <AlertCircle className={`${cls} text-amber-600`} />;
+  if (t.includes("expired")) return <AlertCircle className={`${cls} text-amber-600`} />;
   return <Clock className={`${cls} text-muted-foreground`} />;
 }
 

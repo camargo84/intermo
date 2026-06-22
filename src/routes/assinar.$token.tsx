@@ -162,8 +162,7 @@ function SignPage() {
     return null;
   };
 
-  const canSubmit =
-    consent && (hasDrawing || typedName.trim().length >= 2) && !submitting;
+  const canSubmit = consent && (hasDrawing || typedName.trim().length >= 2) && !submitting;
 
   const submit = async () => {
     setSubmitError(null);
@@ -236,9 +235,7 @@ function SignPage() {
         {!loading && data && !done && !alreadySigned && (
           <div className="space-y-6">
             <div className="space-y-1 text-center">
-              <h1 className="font-serif text-2xl text-primary">
-                Assinatura de contrato
-              </h1>
+              <h1 className="font-serif text-2xl text-primary">Assinatura de contrato</h1>
               <p className="text-sm text-muted-foreground">
                 {data.lojista} convidou você para assinar este contrato.
               </p>
@@ -329,8 +326,8 @@ function SignPage() {
                     id="consent-desc"
                     className="text-sm font-normal leading-snug text-muted-foreground"
                   >
-                    Concordo em assinar eletronicamente este contrato e declaro que
-                    a assinatura acima é minha (MP 2.200-2/2001).
+                    Concordo em assinar eletronicamente este contrato e declaro que a assinatura
+                    acima é minha (MP 2.200-2/2001).
                   </Label>
                 </div>
 
@@ -341,12 +338,7 @@ function SignPage() {
                   </p>
                 )}
 
-                <Button
-                  type="button"
-                  className="w-full"
-                  disabled={!canSubmit}
-                  onClick={submit}
-                >
+                <Button type="button" className="w-full" disabled={!canSubmit} onClick={submit}>
                   {submitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />

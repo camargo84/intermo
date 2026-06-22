@@ -2,7 +2,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-
 // Cria um contrato "draft" mínimo e retorna o id (para abrir uma thread nova de chat)
 export const createDraftContractForChat = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -45,12 +44,18 @@ export const getChatThread = createServerFn({ method: "POST" })
     let clientPhone: string | null = null;
     if (contract.client_id) {
       const { data: cli } = await context.supabase
-        .from("clients").select("phone").eq("id", contract.client_id).maybeSingle();
+        .from("clients")
+        .select("phone")
+        .eq("id", contract.client_id)
+        .maybeSingle();
       clientPhone = (cli?.phone as string | null) ?? null;
     }
 
     const { data: thread } = await context.supabase
-      .from("chat_threads").select("messages").eq("contract_id", data.contractId).maybeSingle();
+      .from("chat_threads")
+      .select("messages")
+      .eq("contract_id", data.contractId)
+      .maybeSingle();
 
     return {
       messagesJson: JSON.stringify((thread?.messages as unknown) ?? []),
@@ -73,30 +78,35 @@ export const consolidateTransaction = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-
 export const saveChatThread = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) =>
-    z.object({
-      contractId: z.string().uuid(),
-      messages: z.array(z.unknown()),
-    }).parse(i),
+    z
+      .object({
+        contractId: z.string().uuid(),
+        messages: z.array(z.unknown()),
+      })
+      .parse(i),
   )
   .handler(async ({ data, context }) => {
     // upsert
     const { data: existing } = await context.supabase
-      .from("chat_threads").select("id").eq("contract_id", data.contractId).maybeSingle();
+      .from("chat_threads")
+      .select("id")
+      .eq("contract_id", data.contractId)
+      .maybeSingle();
     if (existing) {
       const { error } = await context.supabase
-        .from("chat_threads").update({ messages: data.messages as never }).eq("id", existing.id);
+        .from("chat_threads")
+        .update({ messages: data.messages as never })
+        .eq("id", existing.id);
       if (error) throw new Error(error.message);
     } else {
-      const { error } = await context.supabase
-        .from("chat_threads").insert({
-          contract_id: data.contractId,
-          user_id: context.userId,
-          messages: data.messages as never,
-        } as never);
+      const { error } = await context.supabase.from("chat_threads").insert({
+        contract_id: data.contractId,
+        user_id: context.userId,
+        messages: data.messages as never,
+      } as never);
       if (error) throw new Error(error.message);
     }
     return { ok: true };

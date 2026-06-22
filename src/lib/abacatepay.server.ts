@@ -13,7 +13,10 @@ export const ABACATEPAY_PRODUCT_PRICE_CENTS = 11900;
 
 type AbacateResponse<T> = { data: T | null; success?: boolean; error?: string | null };
 
-async function abacateFetch<T>(path: string, init: RequestInit & { json?: unknown } = {}): Promise<T> {
+async function abacateFetch<T>(
+  path: string,
+  init: RequestInit & { json?: unknown } = {},
+): Promise<T> {
   const apiKey = process.env.ABACATEPAY_API_KEY;
   if (!apiKey) throw new Error("ABACATEPAY_API_KEY não configurado.");
   const { json, headers, ...rest } = init;
@@ -134,7 +137,10 @@ export async function cancelAbacateSubscription(subscriptionId: string): Promise
 }
 
 // Valida a assinatura HMAC do header X-Webhook-Signature contra o corpo cru.
-export async function verifyWebhookSignature(rawBody: string, signature: string | null): Promise<boolean> {
+export async function verifyWebhookSignature(
+  rawBody: string,
+  signature: string | null,
+): Promise<boolean> {
   if (!signature) return false;
   const { createHmac, timingSafeEqual } = await import("node:crypto");
   const expected = createHmac("sha256", ABACATEPAY_PUBLIC_HMAC_KEY)

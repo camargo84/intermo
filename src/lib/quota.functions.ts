@@ -5,8 +5,9 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 export const getMyMonthlyQuota = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data: count, error: countErr } = await context.supabase
-      .rpc("current_month_transaction_count");
+    const { data: count, error: countErr } = await context.supabase.rpc(
+      "current_month_transaction_count",
+    );
     if (countErr) throw new Error(countErr.message);
 
     const { data: sub } = await context.supabase

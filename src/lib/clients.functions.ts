@@ -52,12 +52,20 @@ export const upsertClient = createServerFn({ method: "POST" })
     let existingId: string | null = null;
     if (cpf) {
       const { data: r } = await context.supabase
-        .from("clients").select("id").eq("user_id", context.userId).eq("cpf", cpf).maybeSingle();
+        .from("clients")
+        .select("id")
+        .eq("user_id", context.userId)
+        .eq("cpf", cpf)
+        .maybeSingle();
       if (r) existingId = r.id;
     }
     if (!existingId && cnpj) {
       const { data: r } = await context.supabase
-        .from("clients").select("id").eq("user_id", context.userId).eq("cnpj", cnpj).maybeSingle();
+        .from("clients")
+        .select("id")
+        .eq("user_id", context.userId)
+        .eq("cnpj", cnpj)
+        .maybeSingle();
       if (r) existingId = r.id;
     }
 
@@ -87,7 +95,10 @@ export const upsertClient = createServerFn({ method: "POST" })
       return { id: existingId, created: false };
     }
     const { data: ins, error } = await context.supabase
-      .from("clients").insert(payload).select("id").single();
+      .from("clients")
+      .insert(payload)
+      .select("id")
+      .single();
     if (error) throw new Error(error.message);
     return { id: ins.id as string, created: true };
   });
@@ -96,8 +107,10 @@ export const listMyClients = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
-      .from("clients").select("id,name,cpf,cnpj,email,phone,cidade,uf,created_at")
-      .order("created_at", { ascending: false }).limit(200);
+      .from("clients")
+      .select("id,name,cpf,cnpj,email,phone,cidade,uf,created_at")
+      .order("created_at", { ascending: false })
+      .limit(200);
     if (error) throw new Error(error.message);
     return { clients: data ?? [] };
   });

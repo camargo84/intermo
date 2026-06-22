@@ -118,11 +118,11 @@
   --ring: 146 73% 57%;
 
   --border-subtle: rgba(0, 0, 0, 0.06);
-  --border-hairline: rgba(0, 0, 0, 0.10);
+  --border-hairline: rgba(0, 0, 0, 0.1);
   --border-strong: rgba(0, 0, 0, 0.16);
 
-  --shadow-deep: 0 1px 0 rgba(0,0,0,0.04), 0 8px 24px -12px rgba(15,23,42,0.10);
-  --shadow-glass: 0 1px 0 rgba(255,255,255,0.6) inset, 0 8px 24px -12px rgba(15,23,42,0.10);
+  --shadow-deep: 0 1px 0 rgba(0, 0, 0, 0.04), 0 8px 24px -12px rgba(15, 23, 42, 0.1);
+  --shadow-glass: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 8px 24px -12px rgba(15, 23, 42, 0.1);
 
   --chart-1: 146 73% 57%;
   --chart-2: 0 0% 60%;
@@ -179,8 +179,8 @@
   --border-hairline: #222222;
   --border-strong: #2c2c2c;
 
-  --shadow-deep: rgba(0,0,0,0.4) 0px 2px 3px 0px;
-  --shadow-glass: rgba(0,0,0,0.4) 0px 2px 3px 0px;
+  --shadow-deep: rgba(0, 0, 0, 0.4) 0px 2px 3px 0px;
+  --shadow-glass: rgba(0, 0, 0, 0.4) 0px 2px 3px 0px;
 
   --chart-1: 146 73% 57%;
   --chart-2: 0 0% 60%;
@@ -217,7 +217,10 @@
     letter-spacing: normal;
   }
 
-  h1, h2, h3, h4 {
+  h1,
+  h2,
+  h3,
+  h4 {
     font-family: var(--font-sans);
     font-weight: 500;
     letter-spacing: normal;
@@ -250,8 +253,13 @@
     color: var(--color-abyss);
   }
 
-  ::-webkit-scrollbar { width: 10px; height: 10px; }
-  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
   ::-webkit-scrollbar-thumb {
     background: hsl(var(--surface-3));
     border-radius: 999px;

@@ -40,14 +40,12 @@ export const Route = createFileRoute("/api/public/abacate-webhook")({
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
         // Idempotência: registra ou aborta se já visto.
-        const { error: dupErr } = await supabaseAdmin
-          .from("webhook_events")
-          .insert({
-            provider: "abacatepay",
-            event_id: event.id,
-            event_type: event.event,
-            payload: event as never,
-          });
+        const { error: dupErr } = await supabaseAdmin.from("webhook_events").insert({
+          provider: "abacatepay",
+          event_id: event.id,
+          event_type: event.event,
+          payload: event as never,
+        });
         if (dupErr && dupErr.code === "23505") {
           return new Response("ok (duplicate)", { status: 200 });
         }
@@ -59,7 +57,9 @@ export const Route = createFileRoute("/api/public/abacate-webhook")({
   },
 });
 
-type AdminSupabase = Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"];
+type AdminSupabase = Awaited<
+  typeof import("@/integrations/supabase/client.server")
+>["supabaseAdmin"];
 
 interface SubscriptionPayload {
   id?: string;

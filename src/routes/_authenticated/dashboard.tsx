@@ -1,13 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import {
-  FileText,
-  AlertCircle,
-  TrendingUp,
-  PieChart,
-  CreditCard,
-} from "lucide-react";
+import { FileText, AlertCircle, TrendingUp, PieChart, CreditCard } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { brl } from "@/lib/format";
@@ -40,18 +34,45 @@ function DashboardPage() {
   const awaiting = contracts.filter((c) => c.status === "sent").length;
   const signedThisMonth = monthContracts.filter((c) => c.status === "signed");
   const revenueCents = signedThisMonth.reduce(
-    (acc, c) => acc + (typeof (c as { value_cents?: number }).value_cents === "number" ? ((c as { value_cents?: number }).value_cents ?? 0) : 0),
+    (acc, c) =>
+      acc +
+      (typeof (c as { value_cents?: number }).value_cents === "number"
+        ? ((c as { value_cents?: number }).value_cents ?? 0)
+        : 0),
     0,
   );
 
   const quotaUsed = quotaData?.used ?? monthContracts.length;
 
-
   const stats = [
-    { icon: FileText, label: "Contratos no mês", value: String(monthContracts.length), hint: "Inclui rascunhos", tone: "text-foreground" as const },
-    { icon: AlertCircle, label: "Aguardando assinatura", value: String(awaiting), hint: "Acompanhe em Contratos", tone: "text-warning" as const },
-    { icon: TrendingUp, label: "Receita do mês", value: brl(revenueCents / 100), hint: "Contratos assinados", tone: "text-success" as const },
-    { icon: CreditCard, label: "Plano", value: quotaData?.hasActiveSubscription ? "Ativo" : "Inativo", hint: "R$ 119/mês", tone: "text-info" as const },
+    {
+      icon: FileText,
+      label: "Contratos no mês",
+      value: String(monthContracts.length),
+      hint: "Inclui rascunhos",
+      tone: "text-foreground" as const,
+    },
+    {
+      icon: AlertCircle,
+      label: "Aguardando assinatura",
+      value: String(awaiting),
+      hint: "Acompanhe em Contratos",
+      tone: "text-warning" as const,
+    },
+    {
+      icon: TrendingUp,
+      label: "Receita do mês",
+      value: brl(revenueCents / 100),
+      hint: "Contratos assinados",
+      tone: "text-success" as const,
+    },
+    {
+      icon: CreditCard,
+      label: "Plano",
+      value: quotaData?.hasActiveSubscription ? "Ativo" : "Inativo",
+      hint: "R$ 119/mês",
+      tone: "text-info" as const,
+    },
   ];
 
   return (
@@ -97,7 +118,6 @@ function DashboardPage() {
         </Card>
       </section>
 
-
       <section aria-label="Próximos passos" className="grid gap-4 lg:grid-cols-2">
         <Card className="shadow-card">
           <CardHeader>
@@ -121,7 +141,9 @@ function DashboardPage() {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Contratos assinados</span>
-              <span className="font-medium tabular-nums text-success">{signedThisMonth.length}</span>
+              <span className="font-medium tabular-nums text-success">
+                {signedThisMonth.length}
+              </span>
             </div>
             <div className="pt-2">
               <Link to="/financeiro" className="text-accent hover:underline">

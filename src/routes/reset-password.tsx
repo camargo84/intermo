@@ -16,9 +16,17 @@ export const Route = createFileRoute("/reset-password")({
   head: () => ({
     meta: [
       { title: "Recuperar senha — inTermo" },
-      { name: "description", content: "Recupere o acesso à sua conta inTermo: enviamos um link seguro para você criar uma nova senha." },
+      {
+        name: "description",
+        content:
+          "Recupere o acesso à sua conta inTermo: enviamos um link seguro para você criar uma nova senha.",
+      },
       { property: "og:title", content: "Recuperar senha — inTermo" },
-      { property: "og:description", content: "Recupere o acesso à sua conta inTermo: enviamos um link seguro para você criar uma nova senha." },
+      {
+        property: "og:description",
+        content:
+          "Recupere o acesso à sua conta inTermo: enviamos um link seguro para você criar uma nova senha.",
+      },
       { name: "robots", content: "noindex,follow" },
     ],
     links: [{ rel: "canonical", href: "https://intermo.com.br/reset-password" }],
@@ -36,7 +44,10 @@ const updateSchema = z
       .regex(/[0-9]/, "Inclua ao menos um número."),
     confirm: z.string(),
   })
-  .refine((v) => v.password === v.confirm, { message: "As senhas não coincidem.", path: ["confirm"] });
+  .refine((v) => v.password === v.confirm, {
+    message: "As senhas não coincidem.",
+    path: ["confirm"],
+  });
 
 type RequestData = z.infer<typeof requestSchema>;
 type UpdateData = z.infer<typeof updateSchema>;
@@ -51,7 +62,11 @@ function ResetPasswordPage() {
     if (hash.get("type") === "recovery") setMode("update");
   }, []);
 
-  return mode === "update" ? <UpdateForm onDone={() => navigate({ to: "/login" })} /> : <RequestForm />;
+  return mode === "update" ? (
+    <UpdateForm onDone={() => navigate({ to: "/login" })} />
+  ) : (
+    <RequestForm />
+  );
 }
 
 function RequestForm() {
@@ -83,16 +98,21 @@ function RequestForm() {
       footer={
         <>
           Lembrou agora?{" "}
-          <Link to="/login" className="font-medium text-accent hover:underline">Voltar para o login</Link>
+          <Link to="/login" className="font-medium text-accent hover:underline">
+            Voltar para o login
+          </Link>
         </>
       }
     >
       {sent ? (
         <div className="space-y-3 text-center">
           <p className="text-sm">
-            Pronto! Se houver uma conta com esse e-mail, você vai receber um link para redefinir a senha em alguns instantes.
+            Pronto! Se houver uma conta com esse e-mail, você vai receber um link para redefinir a
+            senha em alguns instantes.
           </p>
-          <p className="text-xs text-muted-foreground">Confira sua caixa de spam se não encontrar.</p>
+          <p className="text-xs text-muted-foreground">
+            Confira sua caixa de spam se não encontrar.
+          </p>
         </div>
       ) : (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
@@ -136,12 +156,22 @@ function UpdateForm({ onDone }: { onDone: () => void }) {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
         <div className="space-y-2">
           <Label htmlFor="password">Nova senha</Label>
-          <Input id="password" type="password" autoComplete="new-password" {...register("password")} />
+          <Input
+            id="password"
+            type="password"
+            autoComplete="new-password"
+            {...register("password")}
+          />
           {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
         </div>
         <div className="space-y-2">
           <Label htmlFor="confirm">Confirme a nova senha</Label>
-          <Input id="confirm" type="password" autoComplete="new-password" {...register("confirm")} />
+          <Input
+            id="confirm"
+            type="password"
+            autoComplete="new-password"
+            {...register("confirm")}
+          />
           {errors.confirm && <p className="text-xs text-destructive">{errors.confirm.message}</p>}
         </div>
         <Button type="submit" className="w-full" disabled={submitting}>

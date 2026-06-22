@@ -17,9 +17,16 @@ export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
       { title: "Entrar — inTermo" },
-      { name: "description", content: "Entre na sua conta inTermo pra gerenciar contratos e clientes." },
+      {
+        name: "description",
+        content: "Entre na sua conta inTermo pra gerenciar contratos e clientes.",
+      },
       { property: "og:title", content: "Entrar — inTermo" },
-      { property: "og:description", content: "Acesse o painel da inTermo para gerenciar contratos, clientes e assinaturas digitais com validade jurídica." },
+      {
+        property: "og:description",
+        content:
+          "Acesse o painel da inTermo para gerenciar contratos, clientes e assinaturas digitais com validade jurídica.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex,follow" },
@@ -52,7 +59,9 @@ export function LoginPage() {
     const { error } = await supabase.auth.signInWithPassword(values);
     setSubmitting(false);
     if (error) {
-      toast.error("Não conseguimos entrar", { description: "Verifique e-mail e senha e tente novamente." });
+      toast.error("Não conseguimos entrar", {
+        description: "Verifique e-mail e senha e tente novamente.",
+      });
       return;
     }
     toast.success("Bem-vindo de volta!");
@@ -113,12 +122,22 @@ export function LoginPage() {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label htmlFor="password">Senha</Label>
-              <Link to="/reset-password" className="text-xs text-muted-foreground hover:text-foreground">
+              <Link
+                to="/reset-password"
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
                 Esqueci minha senha
               </Link>
             </div>
-            <Input id="password" type="password" autoComplete="current-password" {...register("password")} />
-            {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
+            <Input
+              id="password"
+              type="password"
+              autoComplete="current-password"
+              {...register("password")}
+            />
+            {errors.password && (
+              <p className="text-xs text-destructive">{errors.password.message}</p>
+            )}
           </div>
           <Button type="submit" className="w-full" disabled={submitting || googleLoading}>
             {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

@@ -22,12 +22,14 @@ import { useEffect, useState } from "react";
 type Profile = { companyName: string; ownerName: string; ownerEmail: string };
 
 function initialsOf(name: string) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase() ?? "")
-    .join("") || "IN";
+  return (
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((p) => p[0]?.toUpperCase() ?? "")
+      .join("") || "IN"
+  );
 }
 
 export function Topbar() {
@@ -68,14 +70,21 @@ export function Topbar() {
     <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-background/85 px-4 backdrop-blur sm:px-6">
       <SidebarTrigger className="hidden md:inline-flex" />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold leading-none text-foreground">{profile.companyName}</p>
+        <p className="truncate text-sm font-semibold leading-none text-foreground">
+          {profile.companyName}
+        </p>
         <p className="mt-1 hidden text-xs text-muted-foreground sm:block">Painel inTermo</p>
       </div>
       <div className="flex items-center gap-1">
         <ThemeToggle />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="rounded-full" aria-label="Menu do usuário">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full"
+              aria-label="Menu do usuário"
+            >
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="bg-accent/10 text-xs font-medium text-accent">
                   {initialsOf(profile.ownerName)}
@@ -87,7 +96,9 @@ export function Topbar() {
             <DropdownMenuLabel>
               <p className="text-sm font-medium">{profile.ownerName}</p>
               {profile.ownerEmail ? (
-                <p className="truncate text-xs font-normal text-muted-foreground">{profile.ownerEmail}</p>
+                <p className="truncate text-xs font-normal text-muted-foreground">
+                  {profile.ownerEmail}
+                </p>
               ) : null}
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
@@ -96,14 +107,15 @@ export function Topbar() {
               Minha conta
             </DropdownMenuItem>
             {isAdmin && (
-              <DropdownMenuItem
-                onSelect={() => navigate({ to: "/contratos-falha" })}
-              >
+              <DropdownMenuItem onSelect={() => navigate({ to: "/contratos-falha" })}>
                 <Shield className="mr-2 h-4 w-4" />
                 Admin
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem onSelect={handleLogout} className="text-destructive focus:text-destructive">
+            <DropdownMenuItem
+              onSelect={handleLogout}
+              className="text-destructive focus:text-destructive"
+            >
               <LogOut className="mr-2 h-4 w-4" />
               Sair
             </DropdownMenuItem>

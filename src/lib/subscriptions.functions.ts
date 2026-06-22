@@ -24,7 +24,9 @@ export const getMySubscription = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("subscriptions")
-      .select("status,current_period_end,last_payment_at,amount_cents,monthly_contract_quota,provider,cancel_at")
+      .select(
+        "status,current_period_end,last_payment_at,amount_cents,monthly_contract_quota,provider,cancel_at",
+      )
       .eq("user_id", context.userId)
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -90,19 +92,17 @@ export const createAbacateCheckout = createServerFn({ method: "POST" })
     });
 
     // Persiste pendência da assinatura (não sobrescreve uma ativa)
-    await supabaseAdmin
-      .from("subscriptions")
-      .upsert(
-        {
-          user_id: context.userId,
-          provider: "abacatepay",
-          customer_id: customerId!,
-          status: "pending",
-          amount_cents: ABACATEPAY_PRODUCT_PRICE_CENTS,
-          metadata: { last_checkout_id: checkout.id },
-        },
-        { onConflict: "user_id" },
-      );
+    await supabaseAdmin.from("subscriptions").upsert(
+      {
+        user_id: context.userId,
+        provider: "abacatepay",
+        customer_id: customerId!,
+        status: "pending",
+        amount_cents: ABACATEPAY_PRODUCT_PRICE_CENTS,
+        metadata: { last_checkout_id: checkout.id },
+      },
+      { onConflict: "user_id" },
+    );
 
     return { url: checkout.url };
   });

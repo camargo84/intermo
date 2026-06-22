@@ -34,8 +34,9 @@ export const createContract = createServerFn({ method: "POST" })
     }
 
     // 1) Guard de assinatura
-    const { data: hasSub, error: subErr } = await context.supabase
-      .rpc("has_active_subscription", { _user_id: context.userId });
+    const { data: hasSub, error: subErr } = await context.supabase.rpc("has_active_subscription", {
+      _user_id: context.userId,
+    });
     if (subErr) throw new Error(subErr.message);
     if (!hasSub) {
       throw new Error("Sua assinatura não está ativa. Acesse /assinatura para regularizar.");
@@ -62,7 +63,6 @@ export const createContract = createServerFn({ method: "POST" })
     if ((count ?? 0) >= ceil) {
       throw new Error("Uso anormal detectado. Tente novamente mais tarde.");
     }
-
 
     const { data: row, error } = await context.supabase
       .from("transactions")
@@ -97,9 +97,7 @@ export const listContracts = createServerFn({ method: "GET" })
 
 export const getContract = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ contractId: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ contractId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const { data: contract, error } = await context.supabase
       .from("transactions")
@@ -122,12 +120,11 @@ export const getContract = createServerFn({ method: "GET" })
 
 export const sendContractToAutentique = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ contractId: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ contractId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    const { data: hasSub } = await context.supabase
-      .rpc("has_active_subscription", { _user_id: context.userId });
+    const { data: hasSub } = await context.supabase.rpc("has_active_subscription", {
+      _user_id: context.userId,
+    });
     if (!hasSub) throw new Error("Sua assinatura não está ativa.");
 
     const { data: contract, error } = await context.supabase
@@ -144,9 +141,7 @@ export const sendContractToAutentique = createServerFn({ method: "POST" })
 
 export const resendContract = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ contractId: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ contractId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const { data: contract, error } = await context.supabase
       .from("transactions")
@@ -193,8 +188,9 @@ async function dispatchToAutentique(contract: ContractRow, supabase: Supa) {
     throw new Error("Gere o PDF do contrato antes de enviar para assinatura.");
   }
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data: blob, error: dlErr } = await supabaseAdmin
-    .storage.from("contract-pdfs").download(contract.pdf_path);
+  const { data: blob, error: dlErr } = await supabaseAdmin.storage
+    .from("contract-pdfs")
+    .download(contract.pdf_path);
   if (dlErr || !blob) throw new Error("Não foi possível carregar o PDF do contrato.");
   const pdfBytes = new Uint8Array(await blob.arrayBuffer());
 
@@ -298,9 +294,7 @@ async function dispatchToAutentique(contract: ContractRow, supabase: Supa) {
 
   // Organiza o documento na pasta do tenant (best-effort, não quebra o envio).
   try {
-    const { ensureTenantFolder, moveDocumentToFolder } = await import(
-      "@/lib/autentique.server"
-    );
+    const { ensureTenantFolder, moveDocumentToFolder } = await import("@/lib/autentique.server");
     const folderId = await ensureTenantFolder(contract.user_id, supabase);
     if (folderId) await moveDocumentToFolder(doc.id, folderId);
   } catch {

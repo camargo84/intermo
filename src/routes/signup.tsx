@@ -21,7 +21,8 @@ export const Route = createFileRoute("/signup")({
       { title: "Criar conta — inTermo" },
       {
         name: "description",
-        content: "Crie sua conta na inTermo: contratos com validade jurídica em minutos. R$ 119/mês com 7 dias de garantia.",
+        content:
+          "Crie sua conta na inTermo: contratos com validade jurídica em minutos. R$ 119/mês com 7 dias de garantia.",
       },
       { property: "og:title", content: "Criar conta — inTermo" },
       {
@@ -153,13 +154,17 @@ function SignupPage() {
           <div className="space-y-2">
             <Label htmlFor="fantasyName">Nome fantasia</Label>
             <Input id="fantasyName" {...register("fantasyName")} />
-            {errors.fantasyName && <p className="text-xs text-destructive">{errors.fantasyName.message}</p>}
+            {errors.fantasyName && (
+              <p className="text-xs text-destructive">{errors.fantasyName.message}</p>
+            )}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="companyName">Razão social</Label>
             <Input id="companyName" {...register("companyName")} />
-            {errors.companyName && <p className="text-xs text-destructive">{errors.companyName.message}</p>}
+            {errors.companyName && (
+              <p className="text-xs text-destructive">{errors.companyName.message}</p>
+            )}
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -170,7 +175,8 @@ function SignupPage() {
                 inputMode="numeric"
                 placeholder="00.000.000/0000-00"
                 {...register("cnpj", {
-                  onChange: (e) => setValue("cnpj", formatCNPJ(e.target.value), { shouldValidate: false }),
+                  onChange: (e) =>
+                    setValue("cnpj", formatCNPJ(e.target.value), { shouldValidate: false }),
                 })}
               />
               {errors.cnpj && <p className="text-xs text-destructive">{errors.cnpj.message}</p>}
@@ -183,17 +189,23 @@ function SignupPage() {
                 placeholder="(11) 99999-9999"
                 {...register("companyPhone", {
                   onChange: (e) =>
-                    setValue("companyPhone", formatPhoneBR(e.target.value), { shouldValidate: false }),
+                    setValue("companyPhone", formatPhoneBR(e.target.value), {
+                      shouldValidate: false,
+                    }),
                 })}
               />
-              {errors.companyPhone && <p className="text-xs text-destructive">{errors.companyPhone.message}</p>}
+              {errors.companyPhone && (
+                <p className="text-xs text-destructive">{errors.companyPhone.message}</p>
+              )}
             </div>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="companyEmail">E-mail da empresa</Label>
             <Input id="companyEmail" type="email" {...register("companyEmail")} />
-            {errors.companyEmail && <p className="text-xs text-destructive">{errors.companyEmail.message}</p>}
+            {errors.companyEmail && (
+              <p className="text-xs text-destructive">{errors.companyEmail.message}</p>
+            )}
           </div>
         </fieldset>
 
@@ -203,20 +215,33 @@ function SignupPage() {
           <div className="space-y-2">
             <Label htmlFor="ownerName">Seu nome</Label>
             <Input id="ownerName" {...register("ownerName")} />
-            {errors.ownerName && <p className="text-xs text-destructive">{errors.ownerName.message}</p>}
+            {errors.ownerName && (
+              <p className="text-xs text-destructive">{errors.ownerName.message}</p>
+            )}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="ownerEmail">Seu e-mail</Label>
             <Input id="ownerEmail" type="email" autoComplete="email" {...register("ownerEmail")} />
-            {errors.ownerEmail && <p className="text-xs text-destructive">{errors.ownerEmail.message}</p>}
+            {errors.ownerEmail && (
+              <p className="text-xs text-destructive">{errors.ownerEmail.message}</p>
+            )}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="password">Crie uma senha</Label>
-            <Input id="password" type="password" autoComplete="new-password" {...register("password")} />
-            <p className="text-xs text-muted-foreground">Mínimo 8 caracteres, com letra maiúscula e número.</p>
-            {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
+            <Input
+              id="password"
+              type="password"
+              autoComplete="new-password"
+              {...register("password")}
+            />
+            <p className="text-xs text-muted-foreground">
+              Mínimo 8 caracteres, com letra maiúscula e número.
+            </p>
+            {errors.password && (
+              <p className="text-xs text-destructive">{errors.password.message}</p>
+            )}
           </div>
         </fieldset>
 
@@ -224,12 +249,20 @@ function SignupPage() {
           <Checkbox
             id="acceptTerms"
             checked={!!acceptTerms}
-            onCheckedChange={(v) => setValue("acceptTerms", (v === true) as true, { shouldValidate: true })}
+            onCheckedChange={(v) =>
+              setValue("acceptTerms", (v === true) as true, { shouldValidate: true })
+            }
           />
           <Label htmlFor="acceptTerms" className="text-xs leading-relaxed text-muted-foreground">
             Li e aceito os{" "}
-            <Link to="/termos" className="text-accent hover:underline">termos de uso</Link> e a{" "}
-            <Link to="/privacidade" className="text-accent hover:underline">política de privacidade</Link>.
+            <Link to="/termos" className="text-accent hover:underline">
+              termos de uso
+            </Link>{" "}
+            e a{" "}
+            <Link to="/privacidade" className="text-accent hover:underline">
+              política de privacidade
+            </Link>
+            .
           </Label>
         </div>
         {errors.acceptTerms && (

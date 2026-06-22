@@ -31,10 +31,7 @@ function authToken(): string | null {
  *   retorna null SEM lançar — o envio do contrato nunca deve quebrar por causa
  *   da organização em pastas.
  */
-export async function ensureTenantFolder(
-  userId: string,
-  supabase: Supa,
-): Promise<string | null> {
+export async function ensureTenantFolder(userId: string, supabase: Supa): Promise<string | null> {
   const token = authToken();
   if (!token) return null;
 
@@ -83,10 +80,7 @@ export async function ensureTenantFolder(
     const folderId = jsonRes.data?.createFolder?.id ?? null;
     if (!folderId) return null;
 
-    await supabase
-      .from("profiles")
-      .update({ autentique_folder_id: folderId })
-      .eq("id", userId);
+    await supabase.from("profiles").update({ autentique_folder_id: folderId }).eq("id", userId);
 
     return folderId;
   } catch {
@@ -101,10 +95,7 @@ export async function ensureTenantFolder(
  *
  * TODO(autentique-schema): confirmar mutation moveDocumentToFolder(document_id, folder_id).
  */
-export async function moveDocumentToFolder(
-  documentId: string,
-  folderId: string,
-): Promise<void> {
+export async function moveDocumentToFolder(documentId: string, folderId: string): Promise<void> {
   const token = authToken();
   if (!token) return;
   try {
@@ -185,9 +176,7 @@ export async function createDocumentInTenantFolder({
     query: mutation,
     variables: {
       document: { name: contract.title },
-      signers: [
-        { email: contract.client_email, action: "SIGN", name: contract.client_name },
-      ],
+      signers: [{ email: contract.client_email, action: "SIGN", name: contract.client_name }],
       file: null,
     },
   };

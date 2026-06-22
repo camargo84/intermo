@@ -218,7 +218,9 @@ function NavLink({ id, label, active }: { id: SectionId; label: string; active: 
       href={`#${id}`}
       className={cn(
         "relative inline-flex h-10 items-center text-[15px] transition-colors",
-        active ? "text-[color:var(--color-chalk)]" : "text-[color:var(--color-ash)] hover:text-[color:var(--color-chalk)]",
+        active
+          ? "text-[color:var(--color-chalk)]"
+          : "text-[color:var(--color-ash)] hover:text-[color:var(--color-chalk)]",
       )}
     >
       {label}
@@ -270,7 +272,9 @@ function Landing() {
             </div>
             <div className="flex flex-col justify-end md:col-span-5">
               <p className="text-[16px] leading-[1.6] text-[color:var(--color-ash)]">
-                A inTermo formaliza vendas sob encomenda: contrato pronto, assinatura com validade jurídica e gestão das transações no mesmo lugar. Sem improviso, sem esperar a venda esfriar.
+                A inTermo formaliza vendas sob encomenda: contrato pronto, assinatura com validade
+                jurídica e gestão das transações no mesmo lugar. Sem improviso, sem esperar a venda
+                esfriar.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Button asChild>
@@ -293,7 +297,10 @@ function Landing() {
         <section aria-label="Confiança" className="border-b border-[color:var(--color-graphite)]">
           <div className="mx-auto grid max-w-[1200px] grid-cols-2 gap-x-6 gap-y-6 px-6 py-10 sm:grid-cols-4">
             {trustSeals.map((s) => (
-              <div key={s.label} className="flex items-center gap-3 text-[color:var(--color-chalk)]">
+              <div
+                key={s.label}
+                className="flex items-center gap-3 text-[color:var(--color-chalk)]"
+              >
                 <s.icon className="h-4 w-4 stroke-[1.5]" />
                 <span className="text-[14px] whitespace-pre-line">{s.label}</span>
               </div>
@@ -309,21 +316,30 @@ function Landing() {
         </section>
 
         {/* COMO FUNCIONA */}
-        <section id="como-funciona" className="border-b border-[color:var(--color-graphite)] scroll-mt-20">
+        <section
+          id="como-funciona"
+          className="border-b border-[color:var(--color-graphite)] scroll-mt-20"
+        >
           <div className="mx-auto max-w-[1200px] px-6 py-24">
             <div className="max-w-2xl">
               <span className="eyebrow">Como funciona</span>
-              <h2 className="mt-4 text-[36px] leading-[1.1] font-medium">Quatro passos. Você fecha; a inTermo formaliza.</h2>
+              <h2 className="mt-4 text-[36px] leading-[1.1] font-medium">
+                Quatro passos. Você fecha; a inTermo formaliza.
+              </h2>
             </div>
             <div className="mt-12 grid grid-cols-1 gap-4 md:grid-cols-2">
               {steps.map((s) => (
                 <Card key={s.title} className="p-6">
                   <div className="flex items-start justify-between">
                     <s.icon className="h-5 w-5 stroke-[1.5] text-[color:var(--color-chalk)]" />
-                    <span className="text-[12px] tracking-[0.12em] text-[color:var(--color-ash)]">§{s.n}</span>
+                    <span className="text-[12px] tracking-[0.12em] text-[color:var(--color-ash)]">
+                      §{s.n}
+                    </span>
                   </div>
                   <h3 className="mt-6 text-[20px] font-medium leading-tight">{s.title}</h3>
-                  <p className="mt-2 text-[14px] leading-[1.55] text-[color:var(--color-ash)]">{s.desc}</p>
+                  <p className="mt-2 text-[14px] leading-[1.55] text-[color:var(--color-ash)]">
+                    {s.desc}
+                  </p>
                 </Card>
               ))}
             </div>
@@ -335,14 +351,18 @@ function Landing() {
           <div className="mx-auto max-w-[1200px] px-6 py-24">
             <div className="max-w-2xl">
               <span className="eyebrow">Por que inTermo</span>
-              <h2 className="mt-4 text-[36px] leading-[1.1] font-medium">Contrato certo, margem calculada, transações registradas.</h2>
+              <h2 className="mt-4 text-[36px] leading-[1.1] font-medium">
+                Contrato certo, margem calculada, transações registradas.
+              </h2>
             </div>
             <div className="mt-12 grid grid-cols-1 gap-4 md:grid-cols-3">
               {reasons.map((r) => (
                 <Card key={r.title} className="p-6">
                   <r.icon className="h-5 w-5 stroke-[1.5] text-[color:var(--color-chalk)]" />
                   <h3 className="mt-6 text-[20px] font-medium leading-tight">{r.title}</h3>
-                  <p className="mt-2 text-[14px] leading-[1.55] text-[color:var(--color-ash)]">{r.desc}</p>
+                  <p className="mt-2 text-[14px] leading-[1.55] text-[color:var(--color-ash)]">
+                    {r.desc}
+                  </p>
                 </Card>
               ))}
             </div>
@@ -354,14 +374,18 @@ function Landing() {
           <div className="mx-auto max-w-[720px] px-6 py-24">
             <div className="text-center">
               <span className="eyebrow">Plano inTermo</span>
-              <h2 className="mt-4 text-[36px] leading-[1.1] font-medium">Plano mensal. Cancele quando quiser.</h2>
+              <h2 className="mt-4 text-[36px] leading-[1.1] font-medium">
+                Plano mensal. Cancele quando quiser.
+              </h2>
               <p className="mt-3 text-[14px] text-[color:var(--color-ash)]">
                 Tudo o que você precisa para formalizar vendas sob encomenda.
               </p>
             </div>
             <Card className="mt-10 p-10">
               <div className="flex items-baseline justify-center gap-3">
-                <span className="font-display text-[64px] leading-none sm:text-[72px]">{brl(119)}</span>
+                <span className="font-display text-[64px] leading-none sm:text-[72px]">
+                  {brl(119)}
+                </span>
                 <span className="text-[20px] text-[color:var(--color-ash)]">/mês</span>
               </div>
               <ul className="mx-auto mt-10 max-w-md space-y-3">
@@ -376,7 +400,8 @@ function Landing() {
                 <Link to="/signup">Assinar agora</Link>
               </Button>
               <p className="mt-4 text-center text-[14px] text-[color:var(--color-ash)]">
-                Cobrança imediata. 7 dias de garantia. Devolvemos 100% se não gostar. Cancele quando quiser.
+                Cobrança imediata. 7 dias de garantia. Devolvemos 100% se não gostar. Cancele quando
+                quiser.
               </p>
             </Card>
           </div>
@@ -393,7 +418,9 @@ function Landing() {
               {faq.map((item) => (
                 <Card key={item.q} className="p-6">
                   <p className="text-[16px] font-medium">{item.q}</p>
-                  <p className="mt-2 text-[14px] leading-[1.55] text-[color:var(--color-ash)]">{item.a}</p>
+                  <p className="mt-2 text-[14px] leading-[1.55] text-[color:var(--color-ash)]">
+                    {item.a}
+                  </p>
                 </Card>
               ))}
             </div>
@@ -407,10 +434,22 @@ function Landing() {
             <Wordmark className="text-[16px]" />
             <span>© {new Date().getFullYear()} inTermo</span>
           </div>
-          <nav className="flex items-center gap-6 text-[14px] text-[color:var(--color-ash)]" aria-label="Rodapé">
-            <Link to="/termos" className="transition-colors hover:text-[color:var(--color-chalk)]">Termos</Link>
-            <Link to="/privacidade" className="transition-colors hover:text-[color:var(--color-chalk)]">Privacidade</Link>
-            <Link to="/login" className="transition-colors hover:text-[color:var(--color-chalk)]">Entrar</Link>
+          <nav
+            className="flex items-center gap-6 text-[14px] text-[color:var(--color-ash)]"
+            aria-label="Rodapé"
+          >
+            <Link to="/termos" className="transition-colors hover:text-[color:var(--color-chalk)]">
+              Termos
+            </Link>
+            <Link
+              to="/privacidade"
+              className="transition-colors hover:text-[color:var(--color-chalk)]"
+            >
+              Privacidade
+            </Link>
+            <Link to="/login" className="transition-colors hover:text-[color:var(--color-chalk)]">
+              Entrar
+            </Link>
           </nav>
         </div>
       </footer>

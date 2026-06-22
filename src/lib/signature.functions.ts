@@ -39,16 +39,14 @@ export const createSignatureToken = createServerFn({ method: "POST" })
     const token = randomBytes(32).toString("base64url");
 
     // 3) Persiste o token vinculado à transação.
-    const { error: insErr } = await context.supabase
-      .from("signature_tokens")
-      .insert({
-        token,
-        transaction_id: contract.id,
-        signer_role: data.signerRole,
-        signer_name: contract.client_name,
-        signer_email: contract.client_email,
-        signer_doc: contract.client_doc ?? null,
-      });
+    const { error: insErr } = await context.supabase.from("signature_tokens").insert({
+      token,
+      transaction_id: contract.id,
+      signer_role: data.signerRole,
+      signer_name: contract.client_name,
+      signer_email: contract.client_email,
+      signer_doc: contract.client_doc ?? null,
+    });
     if (insErr) throw new Error(insErr.message);
 
     return { token, url: `/assinar/${token}` };

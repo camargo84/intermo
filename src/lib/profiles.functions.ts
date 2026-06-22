@@ -84,7 +84,9 @@ export const uploadMyLogo = createServerFn({ method: "POST" })
       .upload(path, bytes, { upsert: true, contentType: data.mime });
     if (upErr) throw new Error(upErr.message);
     const { error: updErr } = await context.supabase
-      .from("profiles").update({ logo_path: path }).eq("id", context.userId);
+      .from("profiles")
+      .update({ logo_path: path })
+      .eq("id", context.userId);
     if (updErr) throw new Error(updErr.message);
     return { path };
   });
@@ -93,11 +95,15 @@ export const getMyLogoSignedUrl = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { data: prof } = await context.supabase
-      .from("profiles").select("logo_path").eq("id", context.userId).maybeSingle();
+      .from("profiles")
+      .select("logo_path")
+      .eq("id", context.userId)
+      .maybeSingle();
     if (!prof?.logo_path) return { url: null as string | null };
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data, error } = await supabaseAdmin.storage
-      .from("tenant-logos").createSignedUrl(prof.logo_path, 600);
+      .from("tenant-logos")
+      .createSignedUrl(prof.logo_path, 600);
     if (error) return { url: null };
     return { url: data.signedUrl };
   });

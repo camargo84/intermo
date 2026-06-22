@@ -10,7 +10,9 @@ interface CheckArgs {
   max: number;
 }
 
-export async function checkRateLimit(args: CheckArgs): Promise<{ ok: boolean; retryAfterSec?: number }> {
+export async function checkRateLimit(
+  args: CheckArgs,
+): Promise<{ ok: boolean; retryAfterSec?: number }> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const sinceIso = new Date(Date.now() - args.windowSeconds * 1000).toISOString();
 
@@ -26,9 +28,7 @@ export async function checkRateLimit(args: CheckArgs): Promise<{ ok: boolean; re
     return { ok: false, retryAfterSec: args.windowSeconds };
   }
 
-  await supabaseAdmin
-    .from("rate_limits")
-    .insert({ user_id: args.userId, action: args.action });
+  await supabaseAdmin.from("rate_limits").insert({ user_id: args.userId, action: args.action });
 
   return { ok: true };
 }

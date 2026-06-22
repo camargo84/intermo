@@ -5,7 +5,15 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { Loader2, ArrowUp, FileText, FileSignature, MessageCircle, CheckCircle2, Circle } from "lucide-react";
+import {
+  Loader2,
+  ArrowUp,
+  FileText,
+  FileSignature,
+  MessageCircle,
+  CheckCircle2,
+  Circle,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -14,10 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { getChatThread, consolidateTransaction } from "@/lib/chat.functions";
 import { createSignatureToken } from "@/lib/signature.functions";
-import {
-  getContractPdfSignedUrl,
-  getSignedContractPdfUrl,
-} from "@/lib/agent.functions";
+import { getContractPdfSignedUrl, getSignedContractPdfUrl } from "@/lib/agent.functions";
 
 export const Route = createFileRoute("/_authenticated/chat/$contractId")({
   head: () => ({ meta: [{ title: "Conversa — inTermo" }] }),
@@ -50,7 +55,11 @@ function ChatThreadPage() {
   });
 
   const initialMessages = useMemo<UIMessage[]>(() => {
-    try { return JSON.parse(data?.messagesJson ?? "[]"); } catch { return []; }
+    try {
+      return JSON.parse(data?.messagesJson ?? "[]");
+    } catch {
+      return [];
+    }
   }, [data?.messagesJson]);
 
   const contract = (data?.contract ?? null) as ContractSummary | null;
@@ -144,7 +153,9 @@ function ChatWindow({
     try {
       initial = sessionStorage.getItem(`chat:initial:${contractId}`);
       if (initial) sessionStorage.removeItem(`chat:initial:${contractId}`);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     if (initial) {
       autoSentRef.current = true;
       void sendMessage({ text: initial });
@@ -161,7 +172,10 @@ function ChatWindow({
   }
 
   const fileBase = useMemo(() => {
-    const raw = contract?.title?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const raw = contract?.title
+      ?.toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
     const slug = raw?.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") ?? "contrato";
     return slug.slice(0, 60) || "contrato";
   }, [contract?.title]);
@@ -229,7 +243,12 @@ function ChatWindow({
               <ChecklistItem done={supplierPaid} label="Pagto forn." />
               <ChecklistItem done={freightPaid} label="Frete" optional />
               {allDone && !isConsolidated && (
-                <Button size="sm" variant="outline" onClick={handleConsolidate} disabled={consolidating}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleConsolidate}
+                  disabled={consolidating}
+                >
                   {consolidating ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : null}
                   Consolidar transação
                 </Button>
@@ -247,8 +266,11 @@ function ChatWindow({
       <div ref={scrollRef} className="flex-1 overflow-y-auto py-6">
         {messages.length === 0 && !busy && (
           <p className="text-sm text-muted-foreground">
-            Exemplo: <em className="text-foreground/80">"Quero formalizar um iPhone 15 Pro 256GB
-            para Maria, CPF 123.456.789-09, por R$ 9.000 à vista."</em>
+            Exemplo:{" "}
+            <em className="text-foreground/80">
+              "Quero formalizar um iPhone 15 Pro 256GB para Maria, CPF 123.456.789-09, por R$ 9.000
+              à vista."
+            </em>
           </p>
         )}
         <div className="space-y-6">
@@ -257,8 +279,7 @@ function ChatWindow({
               key={m.id}
               message={m}
               isFirstAssistant={
-                m.role === "assistant" &&
-                idx === messages.findIndex((x) => x.role === "assistant")
+                m.role === "assistant" && idx === messages.findIndex((x) => x.role === "assistant")
               }
             />
           ))}
@@ -292,7 +313,6 @@ function ChatWindow({
         </div>
       </div>
 
-
       <div className="border-t border-border/60 pt-3">
         <div className="rounded-2xl border border-border bg-card/60 p-2 shadow-sm">
           <Textarea
@@ -300,7 +320,10 @@ function ChatWindow({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); }
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                void send();
+              }
             }}
             placeholder="Escreva sua mensagem…"
             rows={2}
@@ -314,7 +337,11 @@ function ChatWindow({
               disabled={busy || !token || !input.trim()}
               className="h-8 w-8 rounded-full"
             >
-              {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowUp className="h-3.5 w-3.5" />}
+              {busy ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <ArrowUp className="h-3.5 w-3.5" />
+              )}
             </Button>
           </div>
         </div>

@@ -60,8 +60,8 @@ function ChatEntryPage() {
           <span className="italic text-[color:var(--color-coral)]">sem fricção.</span>
         </h1>
         <p className="mx-auto mt-4 max-w-xl text-sm text-muted-foreground sm:text-base">
-          Descreva a venda em linguagem natural. O assistente cuida do cadastro, do contrato
-          e da assinatura digital.
+          Descreva a venda em linguagem natural. O assistente cuida do cadastro, do contrato e da
+          assinatura digital.
         </p>
       </div>
 
@@ -83,14 +83,20 @@ function ChatEntryPage() {
             className="resize-none border-0 bg-transparent px-3 py-2 text-base shadow-none focus-visible:ring-0"
           />
           <div className="flex items-center justify-between px-1 pb-1 pt-2">
-            <span className="text-xs text-muted-foreground">Enter envia · Shift+Enter quebra linha</span>
+            <span className="text-xs text-muted-foreground">
+              Enter envia · Shift+Enter quebra linha
+            </span>
             <Button
               size="sm"
               onClick={() => void start(input)}
               disabled={busy || !input.trim()}
               className="gap-1"
             >
-              {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowRight className="h-3.5 w-3.5" />}
+              {busy ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <ArrowRight className="h-3.5 w-3.5" />
+              )}
               Nova transação
             </Button>
           </div>
