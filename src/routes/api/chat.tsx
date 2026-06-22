@@ -71,18 +71,29 @@ export const Route = createFileRoute("/api/chat")({
         // -------- Tools --------
         const buscar_cliente = tool({
           description:
-            "Busca cliente do vendedor por nome ou documento (CPF/CNPJ). Use antes de pedir dados de cadastro.",
-          inputSchema: z.object({ query: z.string().min(2) }),
-          execute: async ({ query }) => {
-            const digits = onlyDigits(query);
-            let q = supabase
+            "Busca cliente do vendedor APENAS por documento (CPF ou CNPJ). Nunca aceita busca por nome — dois clientes podem ter o mesmo nome. Sempre peça CPF/CNPJ ao vendedor antes de chamar.",
+          inputSchema: z.object({
+            documento: z
+              .string()
+              .min(11)
+              .describe("CPF (11 dígitos) ou CNPJ (14 dígitos). Pontuação é ignorada."),
+          }),
+          execute: async ({ documento }) => {
+            const digits = onlyDigits(documento);
+            const isCpf = digits.length === 11;
+            const isCnpj = digits.length === 14;
+            if (!isCpf && !isCnpj) {
+              return { error: "Informe CPF (11 dígitos) ou CNPJ (14 dígitos). Busca por nome não é permitida." };
+            }
+            if (isCpf && !validateCPF(digits)) return { error: "CPF inválido." };
+            if (isCnpj && !validateCNPJ(digits)) return { error: "CNPJ inválido." };
+            const column = isCpf ? "cpf" : "cnpj";
+            const { data, error } = await supabase
               .from("clients")
               .select("id,name,cpf,cnpj,email,phone,cidade,uf")
               .eq("user_id", userId)
-              .limit(5);
-            if (digits.length >= 11) q = q.or(`cpf.eq.${digits},cnpj.eq.${digits}`);
-            else q = q.ilike("name", `%${query}%`);
-            const { data, error } = await q;
+              .eq(column, digits)
+              .limit(1);
             if (error) return { error: error.message };
             return { clientes: data ?? [] };
           },
