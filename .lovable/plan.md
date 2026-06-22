@@ -1,93 +1,81 @@
-## 1) GC de rascunhos — versão global p/ pg_cron
+## Resumo da investigação
 
-Hoje `garbageCollectMyDrafts` exige sessão (`requireSupabaseAuth`) e filtra `user_id = auth.uid()` — não roda em cron. Além disso, o critério atual usa `updated_at` + heurística em `client_name` (`""`, `—`, `-`), o que diverge do que você pediu.
+Verifiquei o estado real antes de planejar:
 
-### Plano
+- **Banco**: não há nenhum cliente com CPF inválido. Os 2 clientes existentes (`52998224725` João, `12345678909` Maria) passam DV. A regra `validateCPF` já rejeita sequências repetidas (`/^(\d)\1{10}$/`). Validação CPF/CNPJ já roda ANTES do `INSERT` tanto em `src/lib/clients.functions.ts:46-48` (`upsertClient`) quanto em `src/routes/api/chat.tsx:131-133` (tool `upsert_cliente`).
+- **Perfil**: completo e válido. `representative_cpf` está preenchido, `comarca` ok. Portanto `checkProfileReadiness` retorna `ready=true`.
+- **Botão "Enviar para assinatura"**: a razão real do disabled é `client_email` vazio. `contractInsertCore` em `src/routes/api/chat.tsx:413` insere `client_email: ""` hard-coded e `transacoes.$contractId.tsx:233` exige email não vazio. O e-mail está no `clients.email` mas nunca é copiado para a transação.
+- **Topbar**: lê `user_metadata` (signup), não a tabela `profiles`. Edições em `/configuracoes` não refletem.
+- **Duplicação no chat**: o cliente cria draft via `createDraftContractForChat`, mas `contractInsertCore` faz um `INSERT` novo em vez de promover o `contractId` da thread atual. Dedupe atual (2min, mesmo client) só pega rajadas.
+- **Primeira mensagem**: `chat.index.tsx` grava em `sessionStorage("chat:initial:<id>")`. Precisa confirmar que `chat.$contractId.tsx` lê e dispara como primeiro `sendMessage` real (não como placeholder).
 
-a. **Não usar HTTP/cron chamando server fn.** O endpoint exigiria autenticação ou um secret novo. Mais simples e auditável: agendar **SQL puro** via `pg_cron` chamando uma função SQL `SECURITY DEFINER`, sem rede.
+## Plano (Parte A — corrigir)
 
-b. **Criar `public.gc_orphan_drafts(_dry_run boolean default true)`** (via migration), `SECURITY DEFINER`, `search_path = public`, retornando `bigint` (linhas afetadas/contadas). WHERE final travado:
+### 1. CPF/CNPJ validado antes do INSERT (item 1)
+Já está correto em ambos os pontos de entrada. **Sem mudança de código**. Vou reportar no fim com `arquivo:linha` da validação.
 
+### 2. Cleanup do registro sujo (item 2)
+Query confirma **0 linhas inválidas** hoje. Antes de qualquer DELETE eu rodo:
 ```sql
-WHERE status = 'draft'
-  AND client_id IS NULL
-  AND pdf_path IS NULL
-  AND created_at < (now() - interval '30 days')
+SELECT id, user_id, name, cpf, cnpj FROM public.clients
+WHERE (cpf IS NOT NULL AND (length(cpf) <> 11 OR cpf ~ '^(\d)\1{10}$'))
+   OR (cnpj IS NOT NULL AND (length(cnpj) <> 14 OR cnpj ~ '^(\d)\1{13}$'));
 ```
+e listo para você. **Só aplico migration de DELETE se a lista vier não-vazia e você confirmar.** Independente disso, adiciono migration defensiva com CHECK constraint via trigger (não CHECK, porque o validador usa lógica de DV) — opcional: pulo se preferir manter só a validação na app.
 
-- `_dry_run = true` (default) → roda `SELECT count(*)` com esse WHERE e retorna o número. **Não apaga nada.**
-- `_dry_run = false` → `DELETE ... WHERE <mesmo WHERE>` e retorna `ROW_COUNT`.
-- Grants: `REVOKE ALL ... FROM PUBLIC, anon, authenticated;` (só `postgres`/`service_role` executam). Sem exposição via PostgREST.
+### 3. Primeira mensagem do chat (item 3)
+Auditar `chat.$contractId.tsx`: ler `sessionStorage("chat:initial:<id>")` no mount, fazer `sendMessage({ text })` UMA vez, e limpar a chave. Hoje o STARTER_PROMPT do botão sobrescreve a redação real do usuário. Garantir que `start(input)` em `chat.index.tsx` sempre passa o texto digitado (já passa), e que o handler do ChatView consome `chat:initial` em vez de injetar placeholder.
 
-c. **Atualizar `garbageCollectMyDrafts` (server fn do usuário)** para usar o mesmo WHERE canônico (`client_id IS NULL` + `pdf_path IS NULL` + `status='draft'` + `created_at < now()-30d`), removendo a heurística de `client_name`. Mantém escopo `user_id = auth.uid()` (é o GC manual do próprio usuário). Assim os dois caminhos compartilham o critério.
+### 4. Promover rascunho em vez de duplicar (item 4)
+Em `src/routes/api/chat.tsx`:
+- O tool `criar_contrato` recebe o `contractId` da thread (já vem em `body.contractId`).
+- Reescrever `contractInsertCore` para: se `body.contractId` aponta para um draft do usuário SEM `client_id`, fazer `UPDATE` (preencher `client_id`, `title`, `content`, `produtos`, `value_cents`, `forma_pagamento`, `entrada_cents`, `tenant_snapshot`, `client_name`, `client_email`) em vez de `INSERT`.
+- Se já tiver `client_id` ou não for draft, manter dedupe atual.
+- Remover dedupe por 2min (vira redundante).
 
-d. **Primeira execução = dry-run obrigatório.** Antes de qualquer agendamento de DELETE, eu rodo:
+### 5. Botão habilitar com perfil completo (item 5)
+Causa raiz: `transactions.client_email = ""`. Fix em duas pontas:
+- `contractInsertCore` (chat) e `criarContrato` (`src/lib/agent.functions.ts`): popular `client_email` e `client_doc` a partir da tabela `clients` (`cli.email`, `cli.cpf ?? cli.cnpj`) no momento do insert/update.
+- Em `transacoes.$contractId.tsx`, derivar `clientEmail` do `clients.email` via join no `getChatThread`/`getContract` se a transação ainda estiver vazia (fallback defensivo, retroativo às transações já criadas).
 
-```sql
-SELECT public.gc_orphan_drafts(true) AS would_delete;
--- e um detalhamento auxiliar:
-SELECT count(*) FILTER (WHERE created_at < now() - interval '30 days') AS antigos,
-       count(*) AS draft_sem_cliente_sem_pdf
-  FROM public.transactions
- WHERE status = 'draft' AND client_id IS NULL AND pdf_path IS NULL;
-```
+### 6. Tooltip acessível (item 6)
+O `<Tooltip>` já mostra `sendDisabledReason`. Falta a11y: adicionar `aria-describedby` no `<Button>` apontando para um `<span id sr-only>` com `sendDisabledReason`, e `title={sendDisabledReason}` como fallback nativo. Manter o `<TooltipContent>` existente.
 
-Reporto o número exato pra você. **Só depois** agendamos o DELETE.
+### 7. Header com nome correto (item 7)
+`Topbar` deve consultar `profiles` em vez de `user_metadata`. Trocar o `useEffect` por `useQuery` chamando uma serverFn nova (ou reaproveitar `getMyProfile` se existir) que retorna `{ company_fantasy_name, company_legal_name, owner_name, email }`. Fallback para `user_metadata` só se profile estiver vazio. Invalida no `onAuthStateChange` (já wired).
 
-e. **Schedule em America/Sao_Paulo.** `pg_cron` interpreta a expressão no TZ do cluster (UTC no Supabase). Pra rodar **diariamente às 04:00 BRT** = **07:00 UTC**:
+## Plano (Parte B — investigar e reportar, sem fix automático)
 
-```sql
-SELECT cron.schedule(
-  'gc-orphan-drafts-daily',
-  '0 7 * * *',                              -- 04:00 America/Sao_Paulo
-  $$ SELECT public.gc_orphan_drafts(false); $$
-);
-```
+### 8. Export financeiro XLSX
+Vou ler `exportFinanceiroXlsx` (`src/lib/financeiro.functions.ts`) por completo e verificar:
+- Cálculo da margem: hoje usa `r.margin_cents` direto da row (calculado no banco). Conferir se é receita-custo-frete e se UI bate.
+- Divisão por zero: ver se há razão margem/receita em algum agregado.
+- Join: já usa `client:clients(...)` — confirmar se o filtro `consolidated=true` mais a fix do item 4 elimina duplicidade.
 
-(Documentado no SQL como "04:00 BRT = 07:00 UTC, BRT sem DST desde 2019".)
+### 9. Markdown / máscara de CPF
+Já há `sanitizeMarkdown` em `src/lib/markdown.ts` com regex `/[\d*_./-]+/g` que escapa `*`/`_` quando a run tem dígitos. Vou:
+- Confirmar uso em todas as renderizações de mensagem do assistente (`chat.$contractId.tsx`).
+- Conferir caso `**Cliente:** João` (palavras puras, sem dígito) — deve passar intacto.
+- Adicionar 1-2 testes em `src/lib/markdown.test.ts` se ainda não cobrem `***.***.123-45` e `**Cliente:**` no mesmo texto.
 
-f. **Sequência de execução (gates):**
-   1. Migration cria `gc_orphan_drafts` + atualiza `garbageCollectMyDrafts`.
-   2. Eu rodo o dry-run e te mostro a contagem.
-   3. Você confirma → eu agendo o cron com `_dry_run=false`.
+### 10. Validators CPF/CNPJ (módulo)
+Auditar `src/lib/validators.ts` (já lido):
+- DV inválido: coberto.
+- Sequências repetidas: coberto.
+- Tamanho errado: coberto (`length !== 11/14`).
+- Resto 10/11 mod 11: coberto (`r === 10 ? 0 : r` e `r < 2 ? 0 : 11 - r`).
+Vou rodar `src/lib/validators-documentos.test.ts` e reportar; se faltar caso de resto=10, adiciono teste (sem alterar lógica).
 
-## 2) `/transacoes/novo` — unificar com o fluxo do chat
+## Migrations / SQL a confirmar antes de aplicar
 
-Hoje a rota usa `createContract` (`src/lib/contracts.functions.ts`), que tem schema **divergente** do agente (`criarContrato` em `src/lib/agent.functions.ts`):
+1. **(condicional)** `DELETE FROM clients WHERE <regras de inválido>` — só se o SELECT do item 2 retornar linhas.
 
-| Campo | `/transacoes/novo` (createContract) | Chat (`criarContrato`) |
-| --- | --- | --- |
-| Cliente | string livre (`clientName`, `clientEmail`) | `client_id` (FK p/ `clients`, valida posse) |
-| CPF/CNPJ | `clientDoc` string até 40, **sem validação** | normalizado/validado em `clients.functions.ts` |
-| Valor | `valueCents` opcional | `valor_cents` obrigatório + regra `misto` |
-| Produtos/forma_pagamento | inexistente | obrigatório |
-| Telefone/CEP/UF | inexistente | normalizado em `upsertClient` |
-| Conteúdo | textarea livre | montado a partir de `produtos` + snapshot do tenant |
+Nenhuma alteração de schema; sem novas tabelas/políticas.
 
-São fluxos com regras diferentes. Manter os dois é exatamente o que você não quer.
+## Não vou tocar (lista travada)
 
-### Plano
+Máscara de CPF na exibição; conversão monetária (cents); criação lazy; action bar; financeiro Assinadas/Em aberto; redirect `/transactions`; URL assinada do PDF (~10min).
 
-**Refazer `/transacoes/novo` como formulário "manual" que reaproveita as MESMAS server fns do chat**, sem schema próprio:
+## Entregável final
 
-- Cliente: `<ClientPicker>` que chama `searchClients` / `upsertClient` (mesma normalização CPF/CNPJ/CEP/telefone/UF maiúscula, mesmos `validateCPF`/`validateCNPJ` de `src/lib/validators.ts`).
-- Produtos: lista `{descricao, quantidade}` (mesmo shape de `criarContrato`).
-- Valor: parser BRL → cents central (extraído pra `src/lib/format.ts` se ainda não estiver, e usado também pelo chat) → entrega `valor_cents` inteiro.
-- Forma de pagamento: select `pix|boleto|cartao|misto` com `entrada_cents` quando `misto` (mesma validação que o agente).
-- Submit chama **`criarContrato`** + **`gerarPdfContrato`** + **`sendContractToAutentique`** — mesmas fns que o chat usa.
-- **Remover** `createContract` (a server fn divergente) ou marcá-la `@deprecated` e migrar `chat.$contractId` / qualquer outro chamador. Confirmo zero referências antes de remover.
-
-Resultado: um único schema canônico (`agent.functions.ts` + `clients.functions.ts` + `validators.ts`). `/transacoes/novo` vira só uma UI alternativa do mesmo motor.
-
-## Detalhes técnicos
-
-- Migration nova: `gc_orphan_drafts(boolean)` SECURITY DEFINER + revogação de grants. Sem alterar tabela.
-- Edit em `src/lib/gc.functions.ts`: WHERE canônico; remover heurística `client_name`.
-- Edit em `src/routes/_authenticated/transacoes.novo.tsx`: trocar form/handlers para usar `criarContrato`/`gerarPdfContrato`/`sendContractToAutentique`.
-- Edit em `src/lib/contracts.functions.ts`: remover `createContract` (ou `@deprecated` + throw) após varredura `rg "createContract\\b"`.
-- Cron agendado via `supabase--insert` (não migration) só **após** o dry-run aprovado por você.
-
-## Perguntas antes de eu codar
-
-1. **Horário do cron**: 04:00 BRT (07:00 UTC) está bom, ou prefere outro?
-2. **`/transacoes/novo` ainda faz sentido como UI** ou prefere remover de vez e deixar só o chat? (Eu recomendo manter como "modo avançado" unificado — mas é decisão sua.)
+Relatório item-a-item: o que mudou, `arquivo:linha`, e resultado da investigação 8–10 (com diffs propostos ou "nada a corrigir").
