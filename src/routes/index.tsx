@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Wordmark } from "@/components/brand/Wordmark";
+import { Logo } from "@/components/brand/Logo";
 import { LivePanel } from "@/components/landing/LivePanel";
 import { brl } from "@/lib/format";
 import { cn } from "@/lib/utils";
