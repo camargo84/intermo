@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { brl } from "@/lib/format";
 import { listContracts } from "@/lib/contracts.functions";
 import { getMyMonthlyQuota } from "@/lib/quota.functions";
+import { IntermoMark } from "@/components/brand/IntermoMark";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — inTermo" }] }),
