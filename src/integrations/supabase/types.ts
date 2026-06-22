@@ -329,9 +329,13 @@ export type Database = {
           current_period_end: string | null
           customer_id: string | null
           id: string
+          last_amount_cents: number | null
           last_payment_at: string | null
           metadata: Json | null
           monthly_contract_quota: number
+          plan: string
+          plan_change_scheduled_at: string | null
+          promo_cycles_remaining: number | null
           provider: string
           status: Database["public"]["Enums"]["subscription_status"]
           subscription_id: string | null
@@ -346,9 +350,13 @@ export type Database = {
           current_period_end?: string | null
           customer_id?: string | null
           id?: string
+          last_amount_cents?: number | null
           last_payment_at?: string | null
           metadata?: Json | null
           monthly_contract_quota?: number
+          plan?: string
+          plan_change_scheduled_at?: string | null
+          promo_cycles_remaining?: number | null
           provider?: string
           status?: Database["public"]["Enums"]["subscription_status"]
           subscription_id?: string | null
@@ -363,9 +371,13 @@ export type Database = {
           current_period_end?: string | null
           customer_id?: string | null
           id?: string
+          last_amount_cents?: number | null
           last_payment_at?: string | null
           metadata?: Json | null
           monthly_contract_quota?: number
+          plan?: string
+          plan_change_scheduled_at?: string | null
+          promo_cycles_remaining?: number | null
           provider?: string
           status?: Database["public"]["Enums"]["subscription_status"]
           subscription_id?: string | null

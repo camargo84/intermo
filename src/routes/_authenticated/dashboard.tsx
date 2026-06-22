@@ -70,7 +70,7 @@ function DashboardPage() {
       icon: CreditCard,
       label: "Plano",
       value: quotaData?.hasActiveSubscription ? "Ativo" : "Inativo",
-      hint: "R$ 119/mês",
+      hint: "R$ 119/mês (promo) · R$ 149 depois",
       tone: "text-info" as const,
     },
   ];

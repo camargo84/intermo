@@ -2,10 +2,11 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
   ensureCustomer,
-  ensureSubscriptionProduct,
+  ensurePromoProduct,
   createSubscriptionCheckout,
   cancelAbacateSubscription,
-  ABACATEPAY_PRODUCT_PRICE_CENTS,
+  ABACATEPAY_PROMO_PRODUCT_PRICE_CENTS,
+  PROMO_CYCLES,
 } from "@/lib/abacatepay.server";
 import { checkRateLimit } from "@/lib/rate-limit.server";
 
@@ -25,7 +26,7 @@ export const getMySubscription = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("subscriptions")
       .select(
-        "status,current_period_end,last_payment_at,amount_cents,monthly_contract_quota,provider,cancel_at",
+        "status,current_period_end,last_payment_at,amount_cents,monthly_contract_quota,provider,cancel_at,plan,promo_cycles_remaining,last_amount_cents",
       )
       .eq("user_id", context.userId)
       .maybeSingle();
@@ -80,7 +81,7 @@ export const createAbacateCheckout = createServerFn({ method: "POST" })
       customerId = customer.id;
     }
 
-    const product = await ensureSubscriptionProduct();
+    const product = await ensurePromoProduct();
 
     const origin = getOrigin();
     const checkout = await createSubscriptionCheckout({
@@ -91,14 +92,18 @@ export const createAbacateCheckout = createServerFn({ method: "POST" })
       returnUrl: `${origin}/assinatura?status=cancel`,
     });
 
-    // Persiste pendência da assinatura (não sobrescreve uma ativa)
+    // Persiste pendência da assinatura (não sobrescreve uma ativa).
+    // Inicia no plano promo: 6 ciclos a R$119, depois sobe pra R$149 via change-plan.
     await supabaseAdmin.from("subscriptions").upsert(
       {
         user_id: context.userId,
         provider: "abacatepay",
         customer_id: customerId!,
         status: "pending",
-        amount_cents: ABACATEPAY_PRODUCT_PRICE_CENTS,
+        amount_cents: ABACATEPAY_PROMO_PRODUCT_PRICE_CENTS,
+        plan: "promo",
+        promo_cycles_remaining: PROMO_CYCLES,
+        plan_change_scheduled_at: null,
         metadata: { last_checkout_id: checkout.id },
       },
       { onConflict: "user_id" },

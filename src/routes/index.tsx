@@ -383,11 +383,18 @@ function Landing() {
             </div>
             <Card className="mt-10 p-10">
               <div className="flex items-baseline justify-center gap-3">
+                <span className="text-[20px] text-[color:var(--color-ash)] line-through">
+                  {brl(149)}
+                </span>
                 <span className="font-display text-[64px] leading-none sm:text-[72px]">
                   {brl(119)}
                 </span>
                 <span className="text-[20px] text-[color:var(--color-ash)]">/mês</span>
               </div>
+              <p className="mt-3 text-center text-[13px] text-[color:var(--color-ash)]">
+                Oferta de boas-vindas · 20% off nos 6 primeiros meses · depois {brl(149)}/mês no
+                mesmo cartão. Cancele quando quiser.
+              </p>
               <ul className="mx-auto mt-10 max-w-md space-y-3">
                 {planFeatures.map((f) => (
                   <li key={f} className="flex items-start gap-3 text-[15px]">

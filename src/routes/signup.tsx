@@ -22,12 +22,13 @@ export const Route = createFileRoute("/signup")({
       {
         name: "description",
         content:
-          "Crie sua conta na inTermo: contratos com validade jurídica em minutos. R$ 119/mês com 7 dias de garantia.",
+          "Crie sua conta na inTermo: contratos com validade jurídica em minutos. R$ 119/mês nos 6 primeiros meses (depois R$ 149/mês). 7 dias de garantia.",
       },
       { property: "og:title", content: "Criar conta — inTermo" },
       {
         property: "og:description",
-        content: "Contratos com validade jurídica em minutos. R$ 119/mês com garantia de 7 dias.",
+        content:
+          "Contratos com validade jurídica em minutos. R$ 119/mês nos 6 primeiros meses, depois R$ 149/mês. Garantia de 7 dias.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

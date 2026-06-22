@@ -8,13 +8,13 @@ export const Route = createFileRoute("/termos")({
       {
         name: "description",
         content:
-          "Termos de uso da inTermo: condições do serviço, plano de R$ 119/mês com contratos ilimitados e regras anti-abuso.",
+          "Termos de uso da inTermo: condições do serviço, plano de R$ 149/mês (R$ 119/mês nos 6 primeiros meses) com contratos ilimitados e regras anti-abuso.",
       },
       { property: "og:title", content: "Termos de uso — inTermo" },
       {
         property: "og:description",
         content:
-          "Termos de uso da inTermo: condições do serviço, plano de R$ 119/mês com contratos ilimitados e regras anti-abuso.",
+          "Termos de uso da inTermo: condições do serviço, plano de R$ 149/mês (R$ 119/mês nos 6 primeiros meses) com contratos ilimitados e regras anti-abuso.",
       },
       { property: "og:type", content: "article" },
       { name: "twitter:card", content: "summary" },
@@ -60,8 +60,12 @@ function TermsPage() {
 
           <h2 className="text-lg font-semibold">3. Plano e cobrança</h2>
           <p>
-            O plano vigente é de <strong>R$ 119,00/mês</strong>, com uso <strong>ilimitado</strong>{" "}
-            de contratos para a operação normal do vendedor.
+            O plano vigente é de <strong>R$ 149,00/mês</strong>, com uso{" "}
+            <strong>ilimitado</strong> de contratos para a operação normal do vendedor. Novas
+            assinaturas contam com <strong>oferta de boas-vindas</strong> de{" "}
+            <strong>R$ 119,00/mês nos 6 primeiros meses</strong> (20% de desconto), com migração
+            automática para o valor cheio a partir do 7º mês no mesmo cartão. A cobrança é
+            recorrente e o cancelamento pode ser feito a qualquer momento pelo painel.
           </p>
 
           <h2 className="text-lg font-semibold">4. Uso aceitável e medidas anti-abuso</h2>
