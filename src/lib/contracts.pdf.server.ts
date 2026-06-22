@@ -6,7 +6,7 @@ import {
   type PDFPage,
   type PDFImage,
 } from "@cantoo/pdf-lib";
-import { brl, valorPorExtenso } from "./validators";
+import { brlFromCents, valorPorExtenso } from "./validators";
 
 export interface TenantSnapshot {
   company_legal_name?: string | null;
@@ -200,7 +200,7 @@ export async function renderContractPdf(args: RenderContractArgs): Promise<Uint8
   const itens = args.produtos
     .map(
       (p, i) =>
-        `${i + 1}. ${p.descricao} — Quantidade: ${p.quantidade} — Preço unitário: ${brl(p.preco_unit_cents)}`,
+        `${i + 1}. ${p.descricao} — Quantidade: ${p.quantidade} — Preço unitário: ${brlFromCents(p.preco_unit_cents)}`,
     )
     .join("\n");
   drawText(
@@ -210,23 +210,23 @@ export async function renderContractPdf(args: RenderContractArgs): Promise<Uint8
 
   heading("CLÁUSULA 2ª — DO PREÇO");
   drawText(
-    `O valor total do presente contrato é de ${brl(args.valor_cents)} (${valorPorExtenso(args.valor_cents)}).`,
+    `O valor total do presente contrato é de ${brlFromCents(args.valor_cents)} (${valorPorExtenso(args.valor_cents)}).`,
     11,
   );
 
   heading("CLÁUSULA 3ª — DA FORMA DE PAGAMENTO");
   let pgto = "";
   if (args.forma_pagamento === "avista") {
-    pgto = `O pagamento será realizado à vista, no ato da celebração deste contrato, no valor integral de ${brl(args.valor_cents)}.`;
+    pgto = `O pagamento será realizado à vista, no ato da celebração deste contrato, no valor integral de ${brlFromCents(args.valor_cents)}.`;
   } else if (args.forma_pagamento === "parcelado") {
     const n = args.parcelas ?? 1;
     const parcela = Math.round(args.valor_cents / n);
-    pgto = `O pagamento será realizado de forma parcelada em ${n} parcela(s) de aproximadamente ${brl(parcela)}, conforme combinado entre as partes.`;
+    pgto = `O pagamento será realizado de forma parcelada em ${n} parcela(s) de aproximadamente ${brlFromCents(parcela)}, conforme combinado entre as partes.`;
   } else {
     const saldo = args.valor_cents - args.entrada_cents;
     const n = args.parcelas ?? 1;
     const parcela = Math.round(saldo / n);
-    pgto = `O pagamento será realizado da seguinte forma: entrada de ${brl(args.entrada_cents)} (${valorPorExtenso(args.entrada_cents)}) no ato, e o saldo remanescente de ${brl(saldo)} em ${n} parcela(s) de aproximadamente ${brl(parcela)}.`;
+    pgto = `O pagamento será realizado da seguinte forma: entrada de ${brlFromCents(args.entrada_cents)} (${valorPorExtenso(args.entrada_cents)}) no ato, e o saldo remanescente de ${brlFromCents(saldo)} em ${n} parcela(s) de aproximadamente ${brlFromCents(parcela)}.`;
   }
   drawText(pgto, 11);
 
