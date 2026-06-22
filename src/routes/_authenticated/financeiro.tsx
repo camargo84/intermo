@@ -58,11 +58,13 @@ function FinanceiroPage() {
 
   const rows = data?.rows ?? [];
   const signed = rows.filter((r) => r.status === "signed");
+  const open = rows.filter((r) => r.status !== "signed");
 
   const sumCents = (arr: typeof rows, key: keyof (typeof rows)[number]) =>
     arr.reduce((acc, r) => acc + ((r[key] as number | null) ?? 0), 0);
 
   const monthRevenue = sumCents(signed, "value_cents") / 100;
+  const openTotal = sumCents(open, "value_cents") / 100;
   const marginPct = Number(profileData?.profile?.default_margin_pct ?? 30);
   const monthMargin = (monthRevenue * marginPct) / 100;
   const consolidated = rows.filter((r) => r.consolidated).length;
@@ -197,22 +199,27 @@ function FinanceiroPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">
-            Transações de {MONTHS[month - 1]}/{year}
+            Assinadas em {MONTHS[month - 1]}/{year}
           </CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Compõem a receita do mês. Total: {brl(monthRevenue)}.
+          </p>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <p className="text-sm text-muted-foreground">Carregando…</p>
-          ) : rows.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhuma transação neste mês.</p>
+          ) : signed.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Nenhuma transação assinada neste mês.
+            </p>
           ) : (
             <ul className="divide-y divide-border">
-              {rows.map((c) => (
+              {signed.map((c) => (
                 <li key={c.id} className="flex items-center justify-between py-3 text-sm">
                   <div className="min-w-0">
                     <p className="truncate font-medium">{c.title}</p>
                     <p className="text-xs text-muted-foreground">
-                      {c.client_name} · {c.status}
+                      {c.client_name} · Assinada
                       {c.consolidated ? " · consolidada" : ""}
                     </p>
                   </div>
@@ -221,6 +228,56 @@ function FinanceiroPage() {
                   </span>
                 </li>
               ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">
+            Em aberto em {MONTHS[month - 1]}/{year}
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Rascunhos e enviadas — não entram na receita. Potencial: {brl(openTotal)}.
+          </p>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <p className="text-sm text-muted-foreground">Carregando…</p>
+          ) : open.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Nenhuma transação em aberto neste mês.
+            </p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {open.map((c) => {
+                const statusPt =
+                  c.status === "draft"
+                    ? "Rascunho"
+                    : c.status === "sent"
+                      ? "Enviada"
+                      : c.status === "error"
+                        ? "Erro"
+                        : c.status === "rejected"
+                          ? "Recusada"
+                          : c.status === "expired"
+                            ? "Expirada"
+                            : c.status;
+                return (
+                  <li key={c.id} className="flex items-center justify-between py-3 text-sm">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">{c.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {c.client_name} · {statusPt}
+                      </p>
+                    </div>
+                    <span className="tabular-nums text-muted-foreground">
+                      {brl(((c.value_cents as number | null) ?? 0) / 100)}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </CardContent>

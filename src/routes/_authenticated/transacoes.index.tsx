@@ -25,7 +25,7 @@ const searchSchema = z.object({
 });
 
 export const Route = createFileRoute("/_authenticated/transacoes/")({
-  head: () => ({ meta: [{ title: "Contratos — inTermo" }] }),
+  head: () => ({ meta: [{ title: "Transações — inTermo" }] }),
   validateSearch: zodValidator(searchSchema),
   component: ContratosPage,
 });
@@ -67,14 +67,14 @@ function ContratosPage() {
     <div className="mx-auto w-full max-w-4xl p-6">
       <header className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Contratos</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Transações</h1>
           <p className="text-sm text-muted-foreground">
-            Acompanhe os contratos enviados pra assinatura.
+            Acompanhe as transações enviadas pra assinatura.
           </p>
         </div>
         <Button asChild>
-          <Link to="/transacoes/novo">
-            <Plus className="mr-2 h-4 w-4" /> Novo contrato
+          <Link to="/chat">
+            <Plus className="mr-2 h-4 w-4" /> Nova transação
           </Link>
         </Button>
       </header>
@@ -133,11 +133,11 @@ function ContratosPage() {
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-center">
           <FileText className="mb-3 h-8 w-8 text-muted-foreground" />
           <p className="font-medium">
-            {contracts.length === 0 ? "Nenhum contrato ainda" : "Nenhum contrato com esses filtros"}
+            {contracts.length === 0 ? "Nenhuma transação ainda" : "Nenhuma transação com esses filtros"}
           </p>
           <p className="text-sm text-muted-foreground">
             {contracts.length === 0
-              ? "Crie o primeiro e envie pra assinatura em minutos."
+              ? "Crie a primeira pelo chat e envie pra assinatura em minutos."
               : "Tente outro status ou termo de busca."}
           </p>
         </div>
