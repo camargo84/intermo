@@ -36,7 +36,7 @@ const SECONDARY = [
 ] as const;
 
 const FOOTER_ITEMS = [
-  { title: "Assinatura", url: "/assinatura", icon: CreditCard },
+  { title: "Plano/Cobrança", url: "/assinatura", icon: CreditCard },
   { title: "Configurações", url: "/configuracoes", icon: Settings },
 ] as const;
 

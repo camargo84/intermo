@@ -43,6 +43,23 @@ function DashboardPage() {
     0,
   );
 
+  // Margem realizada: só conta linhas com AMBOS custos informados (não-nulos).
+  // Quando o custo é NULL não dá pra calcular margem realizada — exibir receita cheia seria mentira.
+  type CostRow = {
+    value_cents?: number | null;
+    supplier_paid_amount_cents?: number | null;
+    freight_paid_amount_cents?: number | null;
+  };
+  const realizedRows = signedThisMonth.filter((c) => {
+    const r = c as CostRow;
+    return r.supplier_paid_amount_cents != null && r.freight_paid_amount_cents != null;
+  });
+  const realizedMarginCents = realizedRows.reduce((acc, c) => {
+    const r = c as CostRow;
+    return acc + ((r.value_cents ?? 0) - (r.supplier_paid_amount_cents ?? 0) - (r.freight_paid_amount_cents ?? 0));
+  }, 0);
+  const showRealizedMargin = realizedRows.length > 0;
+
   const quotaUsed = quotaData?.used ?? monthContracts.length;
 
   const stats = [
@@ -67,6 +84,17 @@ function DashboardPage() {
       hint: "Contratos assinados",
       tone: "text-success" as const,
     },
+    ...(showRealizedMargin
+      ? [
+          {
+            icon: TrendingUp,
+            label: "Margem realizada (mês)",
+            value: brl(realizedMarginCents / 100),
+            hint: `${realizedRows.length} ${realizedRows.length === 1 ? "transação com custo informado" : "transações com custo informado"}`,
+            tone: "text-success" as const,
+          },
+        ]
+      : []),
     {
       icon: CreditCard,
       label: "Plano",

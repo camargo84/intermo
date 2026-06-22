@@ -60,7 +60,8 @@ export const exportFinanceiroXlsx = createServerFn({ method: "POST" })
       { header: "VALOR DA REMUNERAÇÃO", key: "remuneracao", width: 20, style: { numFmt: money } },
       { header: "CUSTO", key: "custo", width: 16, style: { numFmt: money } },
       { header: "CUSTO FRETE", key: "frete", width: 16, style: { numFmt: money } },
-      { header: "VALOR NFS (MARGEM)", key: "margem", width: 18, style: { numFmt: money } },
+      { header: "Margem estimada (30%)", key: "margemEstimada", width: 22, style: { numFmt: money } },
+      { header: "Margem realizada", key: "margemRealizada", width: 22, style: { numFmt: money } },
       { header: "DESCRIÇÃO DO SERVIÇO", key: "descricao", width: 50 },
       { header: "DATA PARA EMISSÃO", key: "dataEmissao", width: 18 },
     ];
@@ -91,15 +92,25 @@ export const exportFinanceiroXlsx = createServerFn({ method: "POST" })
     for (const r of rows ?? []) {
       const client = (r as { client?: Parameters<typeof montarEndereco>[0] }).client ?? null;
       const produto = (r.title ?? "").replace(/^Contrato\s*—\s*/i, "").trim() || (r.content ?? "");
+      const valueCents = (r.value_cents as number | null) ?? 0;
+      const supplierCents = r.supplier_paid_amount_cents as number | null;
+      const freightCents = r.freight_paid_amount_cents as number | null;
+      // Margem realizada SÓ existe quando AMBOS os custos foram informados.
+      // NULL em qualquer um => célula vazia (não cair para "receita cheia").
+      const margemRealizada =
+        supplierCents != null && freightCents != null
+          ? (valueCents - supplierCents - freightCents) / 100
+          : null;
       const row = ws.addRow({
         cpf: r.client_doc ?? "",
         nome: r.client_name,
         endereco: montarEndereco(client),
         produto,
-        remuneracao: ((r.value_cents as number | null) ?? 0) / 100,
-        custo: ((r.supplier_paid_amount_cents as number | null) ?? 0) / 100,
-        frete: ((r.freight_paid_amount_cents as number | null) ?? 0) / 100,
-        margem: ((r.margin_cents as number | null) ?? 0) / 100,
+        remuneracao: valueCents / 100,
+        custo: supplierCents != null ? supplierCents / 100 : null,
+        frete: freightCents != null ? freightCents / 100 : null,
+        margemEstimada: (valueCents * 0.3) / 100,
+        margemRealizada,
         descricao: `Serviço de intermediação na aquisição de ${produto || "produto"} para ${r.client_name}.`,
         dataEmissao: fmtDate(
           (r.consolidated_at as string | null) ?? (r.signed_at as string | null),
@@ -112,15 +123,21 @@ export const exportFinanceiroXlsx = createServerFn({ method: "POST" })
     const last = ws.lastRow?.number ?? 1;
     if (last > 1) {
       ws.addRow({});
-      const totalRow = ws.addRow({
-        descricao: "TOTAL MARGEM (BASE NFS)",
-        margem: { formula: `SUM(H2:H${last})` },
+      // Coluna H = margem estimada, Coluna I = margem realizada (SUM ignora células vazias).
+      const totalEstimadaRow = ws.addRow({
+        descricao: "TOTAL MARGEM ESTIMADA (30%)",
+        margemEstimada: { formula: `SUM(H2:H${last})` },
       });
-      totalRow.font = { ...ARIAL, bold: true };
-      const totalRowNum = totalRow.number;
+      totalEstimadaRow.font = { ...ARIAL, bold: true };
+      const totalEstimadaRowNum = totalEstimadaRow.number;
+      const totalRealizadaRow = ws.addRow({
+        descricao: "TOTAL MARGEM REALIZADA",
+        margemRealizada: { formula: `SUM(I2:I${last})` },
+      });
+      totalRealizadaRow.font = { ...ARIAL, bold: true };
       const impostoRow = ws.addRow({
-        descricao: "IMPOSTO ESTIMADO – DAS Simples Nacional (6%)",
-        margem: { formula: `H${totalRowNum}*0.06` },
+        descricao: "IMPOSTO ESTIMADO – DAS Simples Nacional (6%) sobre margem estimada",
+        margemEstimada: { formula: `H${totalEstimadaRowNum}*0.06` },
       });
       impostoRow.font = { ...ARIAL, bold: true };
     }

@@ -29,7 +29,7 @@ export const NAV_ITEMS = [
   { title: "Nova transação", url: "/transacoes/novo", icon: MessageSquarePlus },
   { title: "Transações", url: "/transacoes", icon: FileText },
   { title: "Financeiro", url: "/financeiro", icon: Wallet },
-  { title: "Assinatura", url: "/assinatura", icon: CreditCard },
+  { title: "Plano/Cobrança", url: "/assinatura", icon: CreditCard },
   { title: "Configurações", url: "/configuracoes", icon: Settings },
 ] as const;
 
