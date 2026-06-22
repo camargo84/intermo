@@ -177,6 +177,52 @@ export const resendContract = createServerFn({ method: "POST" })
     return await dispatchToAutentique(fresh, context.supabase);
   });
 
+// Apaga uma transação do usuário (apenas rascunhos ou erros — não apaga já enviados/assinados).
+export const deleteTransaction = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ contractId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: contract, error: fetchErr } = await context.supabase
+      .from("transactions")
+      .select("id,status,user_id")
+      .eq("id", data.contractId)
+      .maybeSingle();
+    if (fetchErr) throw new Error(fetchErr.message);
+    if (!contract) throw new Error("Transação não encontrada.");
+    if (contract.user_id !== context.userId) throw new Error("Acesso negado.");
+    if (!["draft", "error"].includes(contract.status)) {
+      throw new Error("Só é possível excluir transações em rascunho ou com erro.");
+    }
+    const { error: delErr } = await context.supabase
+      .from("transactions")
+      .delete()
+      .eq("id", contract.id);
+    if (delErr) throw new Error(delErr.message);
+    return { ok: true as const };
+  });
+
+// Verifica se o perfil do usuário tem os dados essenciais para gerar contrato/PDF.
+export const checkProfileReadiness = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: p } = await context.supabase
+      .from("profiles")
+      .select(
+        "company_legal_name,company_cnpj,company_address,company_city,company_uf,representative_name,representative_cpf,comarca",
+      )
+      .eq("id", context.userId)
+      .maybeSingle();
+    const missing: string[] = [];
+    if (!p?.company_legal_name) missing.push("razão social");
+    if (!p?.company_cnpj) missing.push("CNPJ");
+    if (!p?.company_address) missing.push("endereço");
+    if (!p?.company_city || !p?.company_uf) missing.push("cidade/UF");
+    if (!p?.representative_name) missing.push("representante legal");
+    if (!p?.representative_cpf) missing.push("CPF do representante");
+    if (!p?.comarca) missing.push("comarca");
+    return { ready: missing.length === 0, missing };
+  });
+
 // ----- helper compartilhado -----
 
 async function dispatchToAutentique(contract: ContractRow, supabase: Supa) {
