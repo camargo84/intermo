@@ -5,7 +5,7 @@ import {
   type PDFFont,
   type PDFPage,
   type PDFImage,
-} from "pdf-lib";
+} from "@cantoo/pdf-lib";
 import { brl, valorPorExtenso } from "./validators";
 
 export interface TenantSnapshot {
