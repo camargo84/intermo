@@ -91,27 +91,45 @@ function ChatPreviewMock() {
 
         <div className="flex justify-end">
           <div className="max-w-[80%] rounded-2xl bg-[color:var(--color-signal-mint)] px-3 py-2 text-[13px] text-[color:var(--color-abyss)]">
-            RG 12.345.678-9, brasileira, casada, 15/03/1990, CEP 01415-001
+            RG 12.345.678-9, brasileira, casada, 15/03/1990, CEP 01415-001, nº 220
           </div>
         </div>
 
         <div className="text-white/60 text-[11px] flex items-center gap-1.5">
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-[color:var(--color-signal-mint)]" />
-          Consultando CEP… Rua Oscar Freire, Jardins, São Paulo/SP
+          Consultando CEP no ViaCEP… Rua Oscar Freire, Jardins, São Paulo/SP
         </div>
 
         <div className="text-white/85">
-          Endereço autocompletado. Cadastro salvo. Agora os produtos: descrição, quantidade e preço unitário.
+          Endereço preenchido. Confirma <span className="text-white">Rua Oscar Freire, 220 — Jardins, São Paulo/SP</span>? Se for CEP geral, me diga o logradouro.
         </div>
 
         <div className="flex justify-end">
           <div className="max-w-[80%] rounded-2xl bg-[color:var(--color-signal-mint)] px-3 py-2 text-[13px] text-[color:var(--color-abyss)]">
-            iPhone 15 Pro 256GB preto, 1 unidade, R$ 9.000 à vista
+            Confirmado. E-mail maria@exemplo.com, (11) 98888-7777
           </div>
         </div>
 
         <div className="text-white/85">
-          Resumo: Maria Oliveira, iPhone 15 Pro 256GB preto, R$ 9.000,00 à vista. Confirma para gerar o contrato?
+          Cadastro salvo. Agora os produtos e a forma de pagamento.
+        </div>
+
+        <div className="flex justify-end">
+          <div className="max-w-[80%] rounded-2xl bg-[color:var(--color-signal-mint)] px-3 py-2 text-[13px] text-[color:var(--color-abyss)]">
+            iPhone 15 Pro 256GB preto, 1 un, R$ 9.000 — PIX à vista
+          </div>
+        </div>
+
+        <div className="text-white/85">
+          <div className="mb-1 font-medium text-white">Resumo para conferência</div>
+          <ul className="space-y-0.5 text-white/80">
+            <li><span className="text-white/55">Cliente:</span> Maria Oliveira · CPF 123.456.789-09</li>
+            <li><span className="text-white/55">Endereço:</span> Rua Oscar Freire, 220 — Jardins, São Paulo/SP</li>
+            <li><span className="text-white/55">Produto:</span> iPhone 15 Pro 256GB preto · 1 un</li>
+            <li><span className="text-white/55">Valor:</span> R$ 9.000,00</li>
+            <li><span className="text-white/55">Pagamento:</span> PIX à vista</li>
+          </ul>
+          <div className="mt-1.5">Confirma para gerar o contrato?</div>
         </div>
 
         <div className="flex justify-end">
