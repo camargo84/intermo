@@ -122,6 +122,7 @@ export type Database = {
         Row: {
           contract_id: string
           created_at: string
+          event_fingerprint: string | null
           event_type: string
           id: string
           message: string | null
@@ -132,6 +133,7 @@ export type Database = {
         Insert: {
           contract_id: string
           created_at?: string
+          event_fingerprint?: string | null
           event_type: string
           id?: string
           message?: string | null
@@ -142,6 +144,7 @@ export type Database = {
         Update: {
           contract_id?: string
           created_at?: string
+          event_fingerprint?: string | null
           event_type?: string
           id?: string
           message?: string | null
