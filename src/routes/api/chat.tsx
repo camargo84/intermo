@@ -137,6 +137,7 @@ export const Route = createFileRoute("/api/chat")({
               const { data: r } = await supabase
                 .from("clients")
                 .select("id")
+                .eq("user_id", userId)
                 .eq("cpf", cpf)
                 .maybeSingle();
               if (r) existingId = r.id;
@@ -145,6 +146,7 @@ export const Route = createFileRoute("/api/chat")({
               const { data: r } = await supabase
                 .from("clients")
                 .select("id")
+                .eq("user_id", userId)
                 .eq("cnpj", cnpj)
                 .maybeSingle();
               if (r) existingId = r.id;
