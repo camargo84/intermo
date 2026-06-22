@@ -60,8 +60,12 @@ function TermsPage() {
 
           <h2 className="text-lg font-semibold">3. Plano e cobrança</h2>
           <p>
-            O plano vigente é de <strong>R$ 119,00/mês</strong>, com uso <strong>ilimitado</strong>{" "}
-            de contratos para a operação normal do vendedor.
+            O plano vigente é de <strong>R$ 149,00/mês</strong>, com uso{" "}
+            <strong>ilimitado</strong> de contratos para a operação normal do vendedor. Novas
+            assinaturas contam com <strong>oferta de boas-vindas</strong> de{" "}
+            <strong>R$ 119,00/mês nos 6 primeiros meses</strong> (20% de desconto), com migração
+            automática para o valor cheio a partir do 7º mês no mesmo cartão. A cobrança é
+            recorrente e o cancelamento pode ser feito a qualquer momento pelo painel.
           </p>
 
           <h2 className="text-lg font-semibold">4. Uso aceitável e medidas anti-abuso</h2>

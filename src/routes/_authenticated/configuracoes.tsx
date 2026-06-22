@@ -194,7 +194,9 @@ function ConfiguracoesPage() {
         <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
           <div>
             <CardTitle className="text-base">Assinatura</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">R$ 119/mês — uso ilimitado.</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              R$ 119/mês nos 6 primeiros meses, depois R$ 149/mês — uso ilimitado.
+            </p>
           </div>
           <Badge variant={subData?.subscription?.status === "active" ? "default" : "outline"}>
             {subData?.subscription?.status ?? "sem assinatura"}
