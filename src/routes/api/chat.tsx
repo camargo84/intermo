@@ -363,7 +363,7 @@ export const Route = createFileRoute("/api/chat")({
 
           const { data: cli } = await supabase
             .from("clients")
-            .select("id,name")
+            .select("id,name,email,cpf,cnpj")
             .eq("id", input.client_id)
             .maybeSingle();
           if (!cli) return { error: "Cliente não encontrado." };
@@ -383,6 +383,48 @@ export const Route = createFileRoute("/api/chat")({
 
           const title = `Contrato — ${cli.name}`;
           const content = input.produtos.map((p) => `${p.quantidade}x ${p.descricao}`).join("; ");
+          const clientDoc = (cli.cpf ?? cli.cnpj ?? null) as string | null;
+          const clientEmail = (cli.email ?? "") as string;
+
+          const basePayload = {
+            client_id: input.client_id,
+            title,
+            content,
+            client_name: cli.name,
+            client_email: clientEmail,
+            client_doc: clientDoc,
+            produtos: input.produtos,
+            value_cents: input.valor_cents,
+            forma_pagamento: input.forma_pagamento,
+            entrada_cents: input.entrada_cents,
+            tenant_snapshot,
+          };
+
+          // Promover o rascunho da própria thread, se existir e ainda for draft sem client.
+          if (body.contractId) {
+            const { data: thread } = await supabase
+              .from("transactions")
+              .select("id,user_id,status,client_id")
+              .eq("id", body.contractId)
+              .maybeSingle();
+            if (
+              thread &&
+              thread.user_id === userId &&
+              thread.status === "draft" &&
+              !thread.client_id
+            ) {
+              const { error: upErr } = await supabase
+                .from("transactions")
+                .update(basePayload as never)
+                .eq("id", thread.id);
+              if (upErr) return { error: upErr.message };
+              return {
+                contract_id: thread.id as string,
+                parcelas: input.parcelas ?? null,
+                promoted: true,
+              };
+            }
+          }
 
           // Idempotência: se já houver um draft recente (< 2 min) para o mesmo
           // cliente deste usuário, devolve o contrato existente em vez de duplicar.
@@ -407,19 +449,7 @@ export const Route = createFileRoute("/api/chat")({
 
           const { data: row, error } = await supabase
             .from("transactions")
-            .insert({
-              user_id: userId,
-              client_id: input.client_id,
-              title,
-              content,
-              client_name: cli.name,
-              client_email: "",
-              produtos: input.produtos,
-              value_cents: input.valor_cents,
-              forma_pagamento: input.forma_pagamento,
-              entrada_cents: input.entrada_cents,
-              tenant_snapshot,
-            } as never)
+            .insert({ user_id: userId, ...basePayload } as never)
             .select("id")
             .single();
           if (error) return { error: error.message };
