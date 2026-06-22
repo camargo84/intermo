@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useRef, useEffect } from "react";
-import { Loader2, ArrowRight, Sparkles } from "lucide-react";
+import { Loader2, ArrowRight, FilePlus2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -14,12 +14,7 @@ export const Route = createFileRoute("/_authenticated/chat/")({
   component: ChatEntryPage,
 });
 
-const STARTER = {
-  icon: Sparkles,
-  title: "Gerar contrato",
-  prompt:
-    "Quero criar um contrato de intermediação para um iPhone 15 Pro 256GB preto, valor R$ 9.000 à vista.",
-} as const;
+const STARTER_PROMPT = "Quero criar uma nova transação.";
 
 function ChatEntryPage() {
   const navigate = useNavigate();
