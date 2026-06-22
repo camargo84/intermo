@@ -78,6 +78,7 @@ export const Route = createFileRoute("/api/chat")({
             let q = supabase
               .from("clients")
               .select("id,name,cpf,cnpj,email,phone,cidade,uf")
+              .eq("user_id", userId)
               .limit(5);
             if (digits.length >= 11) q = q.or(`cpf.eq.${digits},cnpj.eq.${digits}`);
             else q = q.ilike("name", `%${query}%`);
@@ -136,6 +137,7 @@ export const Route = createFileRoute("/api/chat")({
               const { data: r } = await supabase
                 .from("clients")
                 .select("id")
+                .eq("user_id", userId)
                 .eq("cpf", cpf)
                 .maybeSingle();
               if (r) existingId = r.id;
@@ -144,6 +146,7 @@ export const Route = createFileRoute("/api/chat")({
               const { data: r } = await supabase
                 .from("clients")
                 .select("id")
+                .eq("user_id", userId)
                 .eq("cnpj", cnpj)
                 .maybeSingle();
               if (r) existingId = r.id;
