@@ -296,6 +296,17 @@ async function dispatchToAutentique(contract: ContractRow, supabase: Supa) {
     throw new Error("Resposta inválida da Autentique.");
   }
 
+  // Organiza o documento na pasta do tenant (best-effort, não quebra o envio).
+  try {
+    const { ensureTenantFolder, moveDocumentToFolder } = await import(
+      "@/lib/autentique.server"
+    );
+    const folderId = await ensureTenantFolder(contract.user_id, supabase);
+    if (folderId) await moveDocumentToFolder(doc.id, folderId);
+  } catch {
+    // organização em pasta é complementar; ignora falhas
+  }
+
   const signers = (doc.signatures ?? []).map((s) => ({
     public_id: s.public_id ?? null,
     name: s.name ?? null,

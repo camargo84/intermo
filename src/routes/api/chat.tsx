@@ -12,8 +12,14 @@ Fluxo padrão:
 1. Identifique o cliente: peça nome + CPF (ou CNPJ se for pessoa jurídica). Use a ferramenta buscar_cliente para checar se já existe.
 2. Se não existir, peça os dados que faltam: RG, nacionalidade (default: brasileiro/a), estado civil, data de nascimento, CEP (use consultar_cep para autocompletar endereço), número, complemento, e-mail e telefone. Chame upsert_cliente.
 3. Peça produtos (descrição, quantidade, preço unitário em centavos), valor total em centavos e forma de pagamento ("avista", "parcelado" ou "misto"). Para "misto", peça entrada (> 0 e < valor total). Para "parcelado" e "misto", peça quantidade de parcelas.
-4. Confirme o resumo com o vendedor em texto claro. Só depois chame criar_contrato.
+4. Confirme o resumo e só chame criar_contrato com confirmado=true depois que o vendedor responder afirmativamente.
 5. Em seguida chame gerar_pdf_contrato passando o contract_id retornado e o número de parcelas (quando aplicável). Avise que o PDF está pronto para download.
+
+Após o contrato assinado (etapas financeiras da transação):
+- Quando o vendedor informar que o cliente pagou, chame registrar_pagamento_cliente (contract_id, valor_cents, método e data opcionais).
+- Quando informar quanto pagou ao fornecedor pelo produto, chame registrar_pagamento_fornecedor (contract_id, valor_cents, nome e documento do fornecedor opcionais).
+- Quando informar o frete, chame registrar_frete (contract_id, valor_cents, transportadora opcional).
+- Sempre converta valores em reais para centavos antes de chamar a ferramenta (R$ 1.500,00 → 150000). Use o contract_id da transação corrente. Confirme cada registro de forma objetiva.
 
 Regras:
 - Não invente CPF, CNPJ, CEP ou e-mail. Pergunte ao vendedor.
@@ -165,8 +171,12 @@ export const Route = createFileRoute("/api/chat")({
             forma_pagamento: z.enum(["avista", "parcelado", "misto"]),
             entrada_cents: z.number().int().nonnegative().default(0),
             parcelas: z.number().int().positive().max(36).nullable().optional(),
+            confirmado: z.boolean().describe("Defina true SOMENTE após o vendedor confirmar explicitamente o resumo (cliente, produtos, valores, forma de pagamento) em mensagem. Se o vendedor ainda não confirmou, envie false."),
           }),
           execute: async (input) => {
+            if (!input.confirmado) {
+              return { error: "Confirmação pendente: apresente o resumo completo (cliente, produtos, valores, forma de pagamento) e peça ao vendedor que confirme com \"sim\" antes de criar o contrato." };
+            }
             const { criarContrato } = await import("@/lib/agent.functions");
             try {
               // Chamamos a serverFn diretamente — ela usa o bearer pelo middleware.
@@ -192,6 +202,78 @@ export const Route = createFileRoute("/api/chat")({
             } catch (e) {
               return { error: e instanceof Error ? e.message : String(e) };
             }
+          },
+        });
+
+        // -------- Ferramentas de etapas financeiras (pós-contrato) --------
+        const registrar_pagamento_cliente = tool({
+          description:
+            "Registra o pagamento recebido do cliente para uma transação já existente. Use quando o vendedor informar que o cliente pagou.",
+          inputSchema: z.object({
+            contract_id: z.string().uuid(),
+            valor_cents: z.number().int().positive(),
+            metodo: z.string().nullable().optional(),
+            data: z.string().nullable().optional(),
+          }),
+          execute: async ({ contract_id, valor_cents, metodo, data }) => {
+            const { error } = await supabase
+              .from("transactions")
+              .update({
+                client_paid_amount_cents: valor_cents,
+                client_payment_method: metodo ?? null,
+                client_paid_at: data ?? new Date().toISOString(),
+              })
+              .eq("id", contract_id);
+            if (error) return { error: error.message };
+            return { ok: true, client_paid_amount_cents: valor_cents };
+          },
+        });
+
+        const registrar_pagamento_fornecedor = tool({
+          description:
+            "Registra o pagamento feito ao fornecedor (custo do produto) de uma transação. Use quando o vendedor informar quanto pagou ao fornecedor.",
+          inputSchema: z.object({
+            contract_id: z.string().uuid(),
+            valor_cents: z.number().int().positive(),
+            fornecedor: z.string().nullable().optional(),
+            documento: z.string().nullable().optional(),
+            data: z.string().nullable().optional(),
+          }),
+          execute: async ({ contract_id, valor_cents, fornecedor, documento, data }) => {
+            const { error } = await supabase
+              .from("transactions")
+              .update({
+                supplier_paid_amount_cents: valor_cents,
+                supplier_name: fornecedor ?? null,
+                supplier_doc: documento ?? null,
+                supplier_paid_at: data ?? new Date().toISOString(),
+              })
+              .eq("id", contract_id);
+            if (error) return { error: error.message };
+            return { ok: true, supplier_paid_amount_cents: valor_cents };
+          },
+        });
+
+        const registrar_frete = tool({
+          description:
+            "Registra o custo de frete de uma transação. Use quando o vendedor informar o valor do frete e/ou a transportadora.",
+          inputSchema: z.object({
+            contract_id: z.string().uuid(),
+            valor_cents: z.number().int().positive(),
+            transportadora: z.string().nullable().optional(),
+            data: z.string().nullable().optional(),
+          }),
+          execute: async ({ contract_id, valor_cents, transportadora, data }) => {
+            const { error } = await supabase
+              .from("transactions")
+              .update({
+                freight_paid_amount_cents: valor_cents,
+                freight_carrier: transportadora ?? null,
+                freight_paid_at: data ?? new Date().toISOString(),
+              })
+              .eq("id", contract_id);
+            if (error) return { error: error.message };
+            return { ok: true, freight_paid_amount_cents: valor_cents };
           },
         });
 
@@ -249,6 +331,24 @@ export const Route = createFileRoute("/api/chat")({
 
           const title = `Contrato — ${cli.name}`;
           const content = input.produtos.map((p) => `${p.quantidade}x ${p.descricao}`).join("; ");
+
+          // Idempotência: se já houver um draft recente (< 2 min) para o mesmo
+          // cliente deste usuário, devolve o contrato existente em vez de duplicar.
+          const dedupeSince = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+          const { data: recent } = await supabase
+            .from("transactions")
+            .select("id")
+            .eq("user_id", userId)
+            .eq("client_id", input.client_id)
+            .eq("status", "draft")
+            .gte("created_at", dedupeSince)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (recent) {
+            return { contract_id: recent.id as string, parcelas: input.parcelas ?? null, deduped: true };
+          }
+
           const { data: row, error } = await supabase.from("transactions").insert({
             user_id: userId,
             client_id: input.client_id,
@@ -308,7 +408,7 @@ export const Route = createFileRoute("/api/chat")({
           model,
           system: SYSTEM_PROMPT,
           messages: await convertToModelMessages(body.messages),
-          tools: { buscar_cliente, consultar_cep, upsert_cliente, criar_contrato, gerar_pdf_contrato },
+          tools: { buscar_cliente, consultar_cep, upsert_cliente, criar_contrato, gerar_pdf_contrato, registrar_pagamento_cliente, registrar_pagamento_fornecedor, registrar_frete },
           stopWhen: stepCountIs(50),
         });
 

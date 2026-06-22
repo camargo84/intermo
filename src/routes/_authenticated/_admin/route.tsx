@@ -20,14 +20,14 @@ function AdminLayout() {
         <h1 className="text-lg font-semibold">Admin</h1>
         <nav className="flex gap-2 text-sm">
           <Link
-            to="/_admin/contratos-falha"
+            to="/contratos-falha"
             className="rounded-md px-3 py-1 text-muted-foreground hover:bg-accent/10 hover:text-foreground [&.active]:bg-accent/10 [&.active]:text-foreground"
             activeProps={{ className: "active" }}
           >
             Contratos com falha
           </Link>
           <Link
-            to="/_admin/assinaturas"
+            to="/assinaturas"
             className="rounded-md px-3 py-1 text-muted-foreground hover:bg-accent/10 hover:text-foreground [&.active]:bg-accent/10 [&.active]:text-foreground"
             activeProps={{ className: "active" }}
           >

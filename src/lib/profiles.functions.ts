@@ -102,6 +102,27 @@ export const getMyLogoSignedUrl = createServerFn({ method: "GET" })
     return { url: data.signedUrl };
   });
 
+// Etapa 4b: recria a pasta do tenant na Autentique. Caso raro — o lojista
+// renomeou a empresa ou quer uma pasta nova. Zera o folder_id atual e deixa
+// ensureTenantFolder criar uma pasta limpa com o nome corrente do perfil.
+export const reorganizeAutentiqueFolder = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { ensureTenantFolder } = await import("./autentique.server");
+    // Limpa o id antigo para forçar a criação de uma nova pasta.
+    await context.supabase
+      .from("profiles")
+      .update({ autentique_folder_id: null })
+      .eq("id", context.userId);
+    const folderId = await ensureTenantFolder(context.userId, context.supabase);
+    if (!folderId) {
+      throw new Error(
+        "Não foi possível criar a pasta na Autentique. Verifique se a integração está configurada e tente novamente.",
+      );
+    }
+    return { folderId };
+  });
+
 // usado pelo agente / debug: valida CNPJ
 export const validateCnpjFn = createServerFn({ method: "POST" })
   .inputValidator((i: unknown) => z.object({ cnpj: z.string() }).parse(i))

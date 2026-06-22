@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Upload } from "lucide-react";
+import { FolderSync, Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 
@@ -20,6 +20,7 @@ import {
   updateMyProfile,
   uploadMyLogo,
   getMyLogoSignedUrl,
+  reorganizeAutentiqueFolder,
 } from "@/lib/profiles.functions";
 import { getMySubscription } from "@/lib/subscriptions.functions";
 
@@ -53,8 +54,10 @@ function ConfiguracoesPage() {
   const updateProfile = useServerFn(updateMyProfile);
   const uploadLogo = useServerFn(uploadMyLogo);
   const fetchLogoUrl = useServerFn(getMyLogoSignedUrl);
+  const reorganizeFolder = useServerFn(reorganizeAutentiqueFolder);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [reorganizing, setReorganizing] = useState(false);
 
   const { data: profileData, isLoading } = useQuery({
     queryKey: ["my-profile"],
@@ -140,6 +143,23 @@ function ConfiguracoesPage() {
     }
   }
 
+  async function handleReorganize() {
+    setReorganizing(true);
+    try {
+      await reorganizeFolder({ data: undefined });
+      await queryClient.invalidateQueries({ queryKey: ["my-profile"] });
+      toast.success("Pasta da Autentique reorganizada.", {
+        description: "Os próximos contratos enviados vão para a nova pasta.",
+      });
+    } catch (err) {
+      toast.error("Não foi possível reorganizar", {
+        description: err instanceof Error ? err.message : "Tente novamente.",
+      });
+    } finally {
+      setReorganizing(false);
+    }
+  }
+
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
       <header>
@@ -195,6 +215,32 @@ function ConfiguracoesPage() {
           <p className="mt-2 text-xs text-muted-foreground">
             Aparece no canto superior direito de cada página do contrato.
           </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Integração Autentique</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Seus contratos são organizados em uma pasta exclusiva na sua conta
+            Autentique. Use o botão abaixo se você renomeou a empresa ou quer
+            recriar a pasta — os contratos já enviados continuam onde estão.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleReorganize}
+            disabled={reorganizing}
+          >
+            {reorganizing ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <FolderSync className="mr-2 h-4 w-4" />
+            )}
+            Reorganizar no Autentique
+          </Button>
         </CardContent>
       </Card>
 

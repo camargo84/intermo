@@ -97,7 +97,7 @@ export function Topbar() {
             </DropdownMenuItem>
             {isAdmin && (
               <DropdownMenuItem
-                onSelect={() => navigate({ to: "/_admin/contratos-falha" })}
+                onSelect={() => navigate({ to: "/contratos-falha" })}
               >
                 <Shield className="mr-2 h-4 w-4" />
                 Admin

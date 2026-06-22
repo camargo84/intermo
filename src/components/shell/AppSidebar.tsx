@@ -26,8 +26,8 @@ import { IntermoMark } from "@/components/brand/IntermoMark";
 export const NAV_ITEMS = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Chat com IA", url: "/chat", icon: Sparkles },
-  { title: "Novo contrato", url: "/contratos/novo", icon: MessageSquarePlus },
-  { title: "Contratos", url: "/contratos", icon: FileText },
+  { title: "Nova transação", url: "/transacoes/novo", icon: MessageSquarePlus },
+  { title: "Transações", url: "/transacoes", icon: FileText },
   { title: "Financeiro", url: "/financeiro", icon: Wallet },
   { title: "Assinatura", url: "/assinatura", icon: CreditCard },
   { title: "Configurações", url: "/configuracoes", icon: Settings },

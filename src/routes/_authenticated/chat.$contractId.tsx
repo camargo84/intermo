@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { getChatThread, consolidateTransaction } from "@/lib/chat.functions";
+import { createSignatureToken } from "@/lib/signature.functions";
 import {
   getContractPdfSignedUrl,
   getSignedContractPdfUrl,
@@ -166,6 +167,7 @@ function ChatWindow({
   }, [contract?.title]);
 
   const consolidate = useServerFn(consolidateTransaction);
+  const makeSignatureToken = useServerFn(createSignatureToken);
   const [consolidating, setConsolidating] = useState(false);
 
   async function handleConsolidate() {
@@ -184,16 +186,23 @@ function ChatWindow({
     }
   }
 
-  function openWhatsapp() {
+  async function openWhatsapp() {
     const raw = (contract?.client_phone ?? "").replace(/\D/g, "");
     const phone = raw ? (raw.startsWith("55") ? raw : `55${raw}`) : "";
     const firstName = (contract?.client_name ?? "").split(" ")[0] || "tudo bem";
-    const filename = `${fileBase}.pdf`;
-    const text = encodeURIComponent(
-      `Olá ${firstName}! Segue o contrato pra você revisar e assinar: ${filename}. Qualquer dúvida me avisa por aqui.`,
-    );
-    const url = phone ? `https://wa.me/${phone}?text=${text}` : `https://wa.me/?text=${text}`;
-    window.open(url, "_blank");
+    try {
+      const { url: path } = await makeSignatureToken({ data: { contractId } });
+      const link = `${window.location.origin}${path}`;
+      const text = encodeURIComponent(
+        `Olá ${firstName}, seu contrato da inTermo está pronto! Para assinar, é só clicar aqui: ${link}. Qualquer dúvida, é só chamar.`,
+      );
+      const url = phone ? `https://wa.me/${phone}?text=${text}` : `https://wa.me/?text=${text}`;
+      window.open(url, "_blank");
+    } catch (e) {
+      toast.error("Não foi possível gerar o link de assinatura", {
+        description: e instanceof Error ? e.message : "Tente novamente.",
+      });
+    }
   }
 
   const contractSigned = Boolean(contract?.signed_pdf_path) || contract?.status === "signed";

@@ -101,12 +101,12 @@ function DashboardPage() {
       <section aria-label="Próximos passos" className="grid gap-4 lg:grid-cols-2">
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle className="text-base">Comece um novo contrato</CardTitle>
+            <CardTitle className="text-base">Comece uma nova transação</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-muted-foreground">
             <p>Crie e envie em minutos pra assinatura via Autentique.</p>
-            <Link to="/contratos/novo" className="text-accent hover:underline">
-              Criar contrato →
+            <Link to="/transacoes/novo" className="text-accent hover:underline">
+              Criar transação →
             </Link>
           </CardContent>
         </Card>
