@@ -84,7 +84,7 @@ function AssinaturaPage() {
       <header className="space-y-2">
         <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight sm:text-3xl">
           <IntermoMark variant="plain" className="h-6 w-6 text-foreground" />
-          Assinatura inTermo
+          Plano/Cobrança
         </h1>
         <p className="text-sm text-muted-foreground">
           {isActive && plan === "full"

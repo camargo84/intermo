@@ -89,7 +89,7 @@ export function BottomNav() {
                 <DrawerLink
                   to="/assinatura"
                   icon={Receipt}
-                  label="Assinatura"
+                  label="Plano"
                   onSelect={() => setOpen(false)}
                 />
                 <DrawerLink
