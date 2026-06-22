@@ -362,6 +362,32 @@ function splitOpener(text: string): { opener: string | null; rest: string } {
   return { opener: match[1], rest: trimmed.slice(match[0].length) };
 }
 
+const TOOL_LABELS: Record<string, { running: string; done: string }> = {
+  buscar_cliente: { running: "Buscando cliente…", done: "Cliente consultado" },
+  consultar_cep: { running: "Consultando CEP…", done: "Endereço encontrado" },
+  upsert_cliente: { running: "Salvando dados do cliente…", done: "Cliente salvo" },
+  criar_contrato: { running: "Gerando contrato…", done: "Contrato gerado" },
+  validate_cnpj: { running: "Validando CNPJ…", done: "CNPJ validado" },
+};
+
+function toolLabel(name: string, state?: string) {
+  const entry = TOOL_LABELS[name];
+  const isDone = state === "output-available" || state === "result";
+  if (entry) return isDone ? entry.done : entry.running;
+  return isDone ? "Concluído" : "Processando…";
+}
+
+/**
+ * Protege CPF/CNPJ/telefones e outros números pontuados da formatação markdown.
+ * Escapa `*` e `_` quando estão grudados em dígitos para que padrões como
+ * `*123.456*.789-09` não sejam interpretados como ênfase e percam os dígitos.
+ */
+function sanitizeMarkdown(text: string): string {
+  return text
+    .replace(/(\d)([*_])/g, "$1\\$2")
+    .replace(/([*_])(\d)/g, "\\$1$2");
+}
+
 function MessageBlock({
   message,
   isFirstAssistant,
@@ -385,10 +411,11 @@ function MessageBlock({
     <div className="max-w-[95%] text-[15px] leading-relaxed text-foreground">
       {message.parts.map((part, idx) => {
         if (part.type === "text") {
+          const safeText = sanitizeMarkdown(part.text);
           const isFirstTextPart =
             isFirstAssistant && idx === message.parts.findIndex((p) => p.type === "text");
           if (isFirstTextPart) {
-            const { opener, rest } = splitOpener(part.text);
+            const { opener, rest } = splitOpener(safeText);
             if (opener) {
               return (
                 <div
@@ -417,16 +444,26 @@ function MessageBlock({
               key={idx}
               className="prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-headings:font-serif-display"
             >
-              <ReactMarkdown>{part.text}</ReactMarkdown>
+              <ReactMarkdown>{safeText}</ReactMarkdown>
             </div>
           );
         }
         if (part.type.startsWith("tool-")) {
           const toolName = part.type.replace("tool-", "");
+          const state = (part as { state?: string }).state;
+          const isDone = state === "output-available" || state === "result";
           return (
-            <Badge key={idx} variant="secondary" className="mt-2 mr-1 text-[10px]">
-              ferramenta: {toolName}
-            </Badge>
+            <div
+              key={idx}
+              className="mt-2 inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-[11px] text-muted-foreground"
+            >
+              {isDone ? (
+                <CheckCircle2 className="h-3 w-3 text-[color:var(--color-signal-mint)]" />
+              ) : (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              )}
+              {toolLabel(toolName, state)}
+            </div>
           );
         }
         return null;
