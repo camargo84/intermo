@@ -76,18 +76,57 @@ function ChatPreviewMock() {
           <span className="font-serif-display text-base italic text-[color:var(--color-coral)]">
             Olá.
           </span>{" "}
-          Posso te ajudar a registrar uma venda. Me conta o nome e o CPF do cliente para começar.
+          Me conta o nome ou CPF do cliente para eu buscar no cadastro.
         </div>
 
         <div className="flex justify-end">
           <div className="max-w-[80%] rounded-2xl bg-[color:var(--color-signal-mint)] px-3 py-2 text-[13px] text-[color:var(--color-abyss)]">
-            Cliente novo. Depois te passo os produtos e a forma de pagamento.
+            Maria Oliveira, CPF 123.456.789-09
           </div>
         </div>
 
         <div className="text-white/85">
-          Combinado. Vou pedir os dados em etapas: cadastro do cliente, produtos e valores, e a
-          forma de pagamento. No final eu gero o contrato em PDF para você revisar.
+          Cliente não encontrado. Vou cadastrar. Preciso do RG, nacionalidade, estado civil, data de nascimento, CEP, número, e-mail e telefone.
+        </div>
+
+        <div className="flex justify-end">
+          <div className="max-w-[80%] rounded-2xl bg-[color:var(--color-signal-mint)] px-3 py-2 text-[13px] text-[color:var(--color-abyss)]">
+            RG 12.345.678-9, brasileira, casada, 15/03/1990, CEP 01415-001
+          </div>
+        </div>
+
+        <div className="text-white/60 text-[11px] flex items-center gap-1.5">
+          <span className="inline-block h-1.5 w-1.5 rounded-full bg-[color:var(--color-signal-mint)]" />
+          Consultando CEP… Rua Oscar Freire, Jardins, São Paulo/SP
+        </div>
+
+        <div className="text-white/85">
+          Endereço autocompletado. Cadastro salvo. Agora os produtos: descrição, quantidade e preço unitário.
+        </div>
+
+        <div className="flex justify-end">
+          <div className="max-w-[80%] rounded-2xl bg-[color:var(--color-signal-mint)] px-3 py-2 text-[13px] text-[color:var(--color-abyss)]">
+            iPhone 15 Pro 256GB preto, 1 unidade, R$ 9.000 à vista
+          </div>
+        </div>
+
+        <div className="text-white/85">
+          Resumo: Maria Oliveira, iPhone 15 Pro 256GB preto, R$ 9.000,00 à vista. Confirma para gerar o contrato?
+        </div>
+
+        <div className="flex justify-end">
+          <div className="max-w-[80%] rounded-2xl bg-[color:var(--color-signal-mint)] px-3 py-2 text-[13px] text-[color:var(--color-abyss)]">
+            Sim, gera o contrato
+          </div>
+        </div>
+
+        <div className="text-white/60 text-[11px] flex items-center gap-1.5">
+          <span className="inline-block h-1.5 w-1.5 rounded-full bg-[color:var(--color-signal-mint)]" />
+          Contrato gerado · PDF pronto
+        </div>
+
+        <div className="text-white/90">
+          Contrato gerado com validade jurídica. PDF pronto para download. Quer enviar o link de assinatura digital para o cliente via WhatsApp?
         </div>
       </div>
     </div>
