@@ -9,77 +9,8 @@ const AUTENTIQUE_ENDPOINT = "https://api.autentique.com.br/v2/graphql";
 type Supa = SupabaseClient<Database>;
 type ContractRow = Database["public"]["Tables"]["transactions"]["Row"];
 
-const createContractSchema = z.object({
-  title: z.string().min(2).max(200),
-  content: z.string().min(10).max(20000),
-  clientName: z.string().min(2).max(160),
-  clientEmail: z.string().email().max(200),
-  clientDoc: z.string().max(40).optional().nullable(),
-  valueCents: z.number().int().nonnegative().optional().nullable(),
-});
-
-export const createContract = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => createContractSchema.parse(input))
-  .handler(async ({ data, context }) => {
-    // 0) Termos vigentes aceitos
-    const { TERMS_VERSION } = await import("@/lib/terms");
-    const { data: profile } = await context.supabase
-      .from("profiles")
-      .select("accepted_terms_version")
-      .eq("id", context.userId)
-      .maybeSingle();
-    if (profile?.accepted_terms_version !== TERMS_VERSION) {
-      throw new Error("Aceite os novos termos pra continuar.");
-    }
-
-    // 1) Guard de assinatura
-    const { data: hasSub, error: subErr } = await context.supabase.rpc("has_active_subscription", {
-      _user_id: context.userId,
-    });
-    if (subErr) throw new Error(subErr.message);
-    if (!hasSub) {
-      throw new Error("Sua assinatura não está ativa. Acesse /assinatura para regularizar.");
-    }
-
-    // 2) Rate-limit (10 contratos por minuto por usuário)
-    const { checkRateLimit } = await import("@/lib/rate-limit.server");
-    const rl = await checkRateLimit({
-      userId: context.userId,
-      action: "create_contract",
-      windowSeconds: 60,
-      max: 10,
-    });
-    if (!rl.ok) throw new Error("Muitos contratos em sequência. Aguarde 1 minuto.");
-
-    // 3) Anti-abuso interno (teto alto, não-comercial)
-    const { data: count } = await context.supabase.rpc("current_month_transaction_count");
-    const { data: sub } = await context.supabase
-      .from("subscriptions")
-      .select("monthly_contract_quota")
-      .eq("user_id", context.userId)
-      .maybeSingle();
-    const ceil = sub?.monthly_contract_quota ?? 2000;
-    if ((count ?? 0) >= ceil) {
-      throw new Error("Uso anormal detectado. Tente novamente mais tarde.");
-    }
-
-    const { data: row, error } = await context.supabase
-      .from("transactions")
-      .insert({
-        user_id: context.userId,
-        title: data.title,
-        content: data.content,
-        client_name: data.clientName,
-        client_email: data.clientEmail,
-        client_doc: data.clientDoc ?? null,
-        value_cents: data.valueCents ?? null,
-      })
-      .select("id")
-      .single();
-    if (error) throw new Error(error.message);
-    return { id: row.id as string };
-  });
+// `createContract` foi removido — fluxo unificado via `criarContrato` (agent.functions.ts),
+// que valida cliente, produtos, valor e forma de pagamento com o mesmo schema do chat.
 
 export const listContracts = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
