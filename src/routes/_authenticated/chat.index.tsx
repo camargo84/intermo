@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { createDraftContractForChat } from "@/lib/chat.functions";
+import { IntermoMark } from "@/components/brand/IntermoMark";
 
 export const Route = createFileRoute("/_authenticated/chat/")({
   head: () => ({ meta: [{ title: "Chat com IA — inTermo" }] }),
