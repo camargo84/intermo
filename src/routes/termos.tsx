@@ -8,13 +8,13 @@ export const Route = createFileRoute("/termos")({
       {
         name: "description",
         content:
-          "Termos de uso da inTermo: condições do serviço, plano de R$ 119/mês com contratos ilimitados e regras anti-abuso.",
+          "Termos de uso da inTermo: condições do serviço, plano de R$ 149/mês (R$ 119/mês nos 6 primeiros meses) com contratos ilimitados e regras anti-abuso.",
       },
       { property: "og:title", content: "Termos de uso — inTermo" },
       {
         property: "og:description",
         content:
-          "Termos de uso da inTermo: condições do serviço, plano de R$ 119/mês com contratos ilimitados e regras anti-abuso.",
+          "Termos de uso da inTermo: condições do serviço, plano de R$ 149/mês (R$ 119/mês nos 6 primeiros meses) com contratos ilimitados e regras anti-abuso.",
       },
       { property: "og:type", content: "article" },
       { name: "twitter:card", content: "summary" },
