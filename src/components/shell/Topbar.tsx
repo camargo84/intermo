@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { getMyRoles } from "@/lib/roles.functions";
+import { IntermoMark } from "@/components/brand/IntermoMark";
 import { useEffect, useState } from "react";
 
 type Profile = { companyName: string; ownerName: string; ownerEmail: string };
