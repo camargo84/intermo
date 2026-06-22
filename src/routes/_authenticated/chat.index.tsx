@@ -14,7 +14,7 @@ export const Route = createFileRoute("/_authenticated/chat/")({
   component: ChatEntryPage,
 });
 
-const STARTER_PROMPT = "Quero criar uma nova transação.";
+
 
 function ChatEntryPage() {
   const navigate = useNavigate();
