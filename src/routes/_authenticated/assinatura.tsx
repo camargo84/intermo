@@ -72,13 +72,20 @@ function AssinaturaPage() {
     }
   }
 
+  const plan = (sub as { plan?: string } | null)?.plan ?? "promo";
+  const remaining = (sub as { promo_cycles_remaining?: number | null } | null)
+    ?.promo_cycles_remaining;
+  const onPromo = isActive && plan === "promo" && remaining != null;
+  const cycleNumber = onPromo ? Math.min(6, 6 - (remaining ?? 0) + 1) : null;
+
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Assinatura inTermo</h1>
         <p className="text-sm text-muted-foreground">
-          R$ 119/mês via AbacatePay (PIX ou cartão). 7 dias de garantia — se não gostar, devolvemos
-          100%.
+          {isActive && plan === "full"
+            ? "R$ 149/mês via AbacatePay (cartão). 7 dias de garantia."
+            : "Oferta de boas-vindas: R$ 119/mês nos 6 primeiros meses, depois R$ 149/mês no mesmo cartão. 7 dias de garantia — se não gostar, devolvemos 100%."}
         </p>
       </header>
 
@@ -89,6 +96,12 @@ function AssinaturaPage() {
             <p className="mt-1 text-sm text-muted-foreground">
               {isLoading ? "Carregando…" : statusDescription(sub?.status)}
             </p>
+            {onPromo && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Oferta de boas-vindas · ciclo {cycleNumber} de 6 · próximas cobranças R$ 119, depois
+                R$ 149/mês.
+              </p>
+            )}
           </div>
           <StatusBadge status={sub?.status} />
         </CardHeader>
@@ -115,14 +128,27 @@ function AssinaturaPage() {
               </Button>
             </div>
           ) : (
-            <Button size="lg" onClick={handleStart} disabled={busy} className="w-full sm:w-auto">
-              {busy ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Sparkles className="mr-2 h-4 w-4" />
-              )}
-              {sub?.status === "pending" ? "Continuar pagamento" : "Assinar por R$ 119/mês"}
-            </Button>
+            <div className="space-y-3">
+              <div className="flex items-baseline gap-3">
+                <span className="text-sm text-muted-foreground line-through">R$ 149</span>
+                <span className="text-3xl font-semibold tracking-tight">R$ 119</span>
+                <span className="text-sm text-muted-foreground">/mês</span>
+                <Badge variant="secondary" className="ml-1">
+                  20% off · 6 primeiros meses
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Depois desse período, R$ 149/mês no mesmo cartão. Cancele quando quiser.
+              </p>
+              <Button size="lg" onClick={handleStart} disabled={busy} className="w-full sm:w-auto">
+                {busy ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-2 h-4 w-4" />
+                )}
+                {sub?.status === "pending" ? "Continuar pagamento" : "Assinar por R$ 119/mês"}
+              </Button>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -151,8 +177,9 @@ function AssinaturaPage() {
             </li>
           </ul>
           <p className="mt-4 text-xs text-muted-foreground">
-            Valor cobrado: {brl(119)} por mês. Para pedir reembolso nos 7 primeiros dias, escreva
-            pra ajuda@intermo.com.br.
+            Oferta de boas-vindas: {brl(119)}/mês nos 6 primeiros meses, depois {brl(149)}/mês no
+            mesmo cartão. Para pedir reembolso nos 7 primeiros dias, escreva pra
+            ajuda@intermo.com.br.
           </p>
         </CardContent>
       </Card>
