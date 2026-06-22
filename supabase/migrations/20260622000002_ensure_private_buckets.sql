@@ -14,5 +14,21 @@
 -- sem policy de escrita, o deny implícito já garante que só o service_role
 -- escreve. Adicionar policy de escrita abriria acesso desnecessário.
 
-UPDATE storage.buckets SET public = false WHERE id = 'contract-pdfs';
-UPDATE storage.buckets SET public = false WHERE id = 'tenant-logos';
+-- Idempotente e seguro para `supabase db push`:
+--   * Se o bucket não existir (ambiente novo), cria já PRIVADO.
+--   * Se existir, força public = false.
+--   * Alguns runners de migration (ex.: a tool do Lovable) bloqueiam escrita
+--     direta em storage.buckets. Nesses casos o bloco captura insufficient_
+--     privilege e emite NOTICE em vez de derrubar o push inteiro — o estado
+--     privado é então garantido pela storage API. Em `supabase db push` via CLI
+--     (role owner) a escrita ocorre normalmente.
+DO $$
+BEGIN
+  INSERT INTO storage.buckets (id, name, public)
+  VALUES ('contract-pdfs', 'contract-pdfs', false),
+         ('tenant-logos',  'tenant-logos',  false)
+  ON CONFLICT (id) DO UPDATE SET public = false;
+EXCEPTION
+  WHEN insufficient_privilege THEN
+    RAISE NOTICE 'Sem privilégio para escrever em storage.buckets neste runner; garanta os buckets privados via storage API.';
+END $$;
