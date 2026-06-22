@@ -14,6 +14,16 @@ import {
   MessageCircle,
   CheckCircle2,
   Circle,
+  UserPlus,
+  UserSearch,
+  Package,
+  Wallet,
+  ScrollText,
+  Send,
+  Download,
+  BadgeCheck,
+  Truck,
+  ClipboardCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 
