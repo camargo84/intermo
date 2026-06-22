@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -47,6 +47,11 @@ export function LoginPage() {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
 
   const {
     register,
@@ -113,7 +118,16 @@ export function LoginPage() {
           ou
           <div className="h-px flex-1 bg-border" />
         </div>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+        <form
+          method="post"
+          action="#"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void handleSubmit(onSubmit)(e);
+          }}
+          className="space-y-5"
+          noValidate
+        >
           <div className="space-y-2">
             <Label htmlFor="email">E-mail</Label>
             <Input id="email" type="email" autoComplete="email" {...register("email")} />
@@ -139,7 +153,11 @@ export function LoginPage() {
               <p className="text-xs text-destructive">{errors.password.message}</p>
             )}
           </div>
-          <Button type="submit" className="w-full" disabled={submitting || googleLoading}>
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={submitting || googleLoading || !isHydrated}
+          >
             {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Entrar
           </Button>

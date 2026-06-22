@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -60,6 +60,12 @@ function SignupPage() {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
 
   async function onGoogle() {
     setGoogleLoading(true);
@@ -148,7 +154,16 @@ function SignupPage() {
           <div className="h-px flex-1 bg-border" />
         </div>
       </div>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
+      <form
+        method="post"
+        action="#"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void handleSubmit(onSubmit)(e);
+        }}
+        className="space-y-6"
+        noValidate
+      >
         <fieldset className="space-y-4">
           <legend className="text-sm font-semibold text-foreground">Sua empresa</legend>
 
@@ -270,7 +285,11 @@ function SignupPage() {
           <p className="-mt-3 text-xs text-destructive">{errors.acceptTerms.message}</p>
         )}
 
-        <Button type="submit" className="w-full bg-brand hover:opacity-90" disabled={submitting}>
+        <Button
+          type="submit"
+          className="w-full bg-brand hover:opacity-90"
+          disabled={submitting || !isHydrated}
+        >
           {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           Criar minha conta
         </Button>

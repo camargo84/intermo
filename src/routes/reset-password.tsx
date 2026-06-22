@@ -72,6 +72,10 @@ function ResetPasswordPage() {
 function RequestForm() {
   const [sent, setSent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
   const {
     register,
     handleSubmit,
@@ -115,13 +119,22 @@ function RequestForm() {
           </p>
         </div>
       ) : (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+        <form
+          method="post"
+          action="#"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void handleSubmit(onSubmit)(e);
+          }}
+          className="space-y-5"
+          noValidate
+        >
           <div className="space-y-2">
             <Label htmlFor="email">E-mail</Label>
             <Input id="email" type="email" autoComplete="email" {...register("email")} />
             {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
           </div>
-          <Button type="submit" className="w-full" disabled={submitting}>
+          <Button type="submit" className="w-full" disabled={submitting || !isHydrated}>
             {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Enviar link de recuperação
           </Button>
@@ -133,6 +146,10 @@ function RequestForm() {
 
 function UpdateForm({ onDone }: { onDone: () => void }) {
   const [submitting, setSubmitting] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
   const {
     register,
     handleSubmit,
@@ -153,7 +170,16 @@ function UpdateForm({ onDone }: { onDone: () => void }) {
 
   return (
     <AuthLayout title="Crie uma nova senha" subtitle="Escolha algo forte e fácil de lembrar.">
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+      <form
+        method="post"
+        action="#"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void handleSubmit(onSubmit)(e);
+        }}
+        className="space-y-5"
+        noValidate
+      >
         <div className="space-y-2">
           <Label htmlFor="password">Nova senha</Label>
           <Input
@@ -174,7 +200,7 @@ function UpdateForm({ onDone }: { onDone: () => void }) {
           />
           {errors.confirm && <p className="text-xs text-destructive">{errors.confirm.message}</p>}
         </div>
-        <Button type="submit" className="w-full" disabled={submitting}>
+        <Button type="submit" className="w-full" disabled={submitting || !isHydrated}>
           {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           Salvar nova senha
         </Button>
