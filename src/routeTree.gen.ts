@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TransactionsRouteImport } from './routes/transactions'
 import { Route as TermosRouteImport } from './routes/termos'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SignupRouteImport } from './routes/signup'
@@ -42,6 +43,11 @@ import { Route as AuthenticatedAdminAssinaturasRouteImport } from './routes/_aut
 import { Route as ApiPublicSignTokenRouteImport } from './routes/api/public/sign.$token'
 import { Route as ApiPublicAutentiqueWebhookSplatRouteImport } from './routes/api/public/autentique-webhook.$'
 
+const TransactionsRoute = TransactionsRouteImport.update({
+  id: '/transactions',
+  path: '/transactions',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TermosRoute = TermosRouteImport.update({
   id: '/termos',
   path: '/termos',
@@ -221,6 +227,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/termos': typeof TermosRoute
+  '/transactions': typeof TransactionsRoute
   '/assinatura': typeof AuthenticatedAssinaturaRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -253,6 +260,7 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/termos': typeof TermosRoute
+  '/transactions': typeof TransactionsRoute
   '/assinatura': typeof AuthenticatedAssinaturaRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -287,6 +295,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/termos': typeof TermosRoute
+  '/transactions': typeof TransactionsRoute
   '/_authenticated/_admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/_authenticated/assinatura': typeof AuthenticatedAssinaturaRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
@@ -322,6 +331,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/sitemap.xml'
     | '/termos'
+    | '/transactions'
     | '/assinatura'
     | '/configuracoes'
     | '/dashboard'
@@ -354,6 +364,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/sitemap.xml'
     | '/termos'
+    | '/transactions'
     | '/assinatura'
     | '/configuracoes'
     | '/dashboard'
@@ -387,6 +398,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/sitemap.xml'
     | '/termos'
+    | '/transactions'
     | '/_authenticated/_admin'
     | '/_authenticated/assinatura'
     | '/_authenticated/configuracoes'
@@ -422,6 +434,7 @@ export interface RootRouteChildren {
   SignupRoute: typeof SignupRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermosRoute: typeof TermosRoute
+  TransactionsRoute: typeof TransactionsRoute
   ApiChatRoute: typeof ApiChatRoute
   AssinarTokenRoute: typeof AssinarTokenRoute
   ApiPublicAbacateWebhookRoute: typeof ApiPublicAbacateWebhookRoute
@@ -433,6 +446,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/transactions': {
+      id: '/transactions'
+      path: '/transactions'
+      fullPath: '/transactions'
+      preLoaderRoute: typeof TransactionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/termos': {
       id: '/termos'
       path: '/termos'
@@ -725,6 +745,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignupRoute: SignupRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermosRoute: TermosRoute,
+  TransactionsRoute: TransactionsRoute,
   ApiChatRoute: ApiChatRoute,
   AssinarTokenRoute: AssinarTokenRoute,
   ApiPublicAbacateWebhookRoute: ApiPublicAbacateWebhookRoute,
