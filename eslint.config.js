@@ -36,5 +36,14 @@ export default tseslint.config(
       "@typescript-eslint/no-unused-vars": "off",
     },
   },
+  {
+    // Componentes shadcn/ui (gerados) co-localizam componente + variantes/constantes
+    // por design. A regra react-refresh só afeta hot-reload em dev e brigaria com
+    // o padrão da biblioteca, então a desativamos apenas neste diretório.
+    files: ["src/components/ui/**/*.{ts,tsx}"],
+    rules: {
+      "react-refresh/only-export-components": "off",
+    },
+  },
   eslintPluginPrettier,
 );
