@@ -35,7 +35,7 @@ export const getChatThread = createServerFn({ method: "POST" })
     const { data: contract } = await context.supabase
       .from("transactions")
       .select(
-        "id,pdf_path,signed_pdf_path,status,title,client_id,client_name,client_email,value_cents,client_paid_at,supplier_paid_at,freight_paid_at,consolidated,consolidated_at",
+        "id,pdf_path,signed_pdf_path,status,title,client_id,client_name,client_email,value_cents,client_paid_at,supplier_paid_at,freight_paid_at,consolidated,consolidated_at,forma_pagamento,produtos",
       )
       .eq("id", data.contractId)
       .maybeSingle();
