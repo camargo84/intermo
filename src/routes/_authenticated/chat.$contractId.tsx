@@ -635,17 +635,7 @@ function SuggestionChips({
   const chips: ChipDef[] = [];
 
   if (!hasClient) {
-    chips.push({
-      label: "Cadastrar cliente",
-      icon: UserPlus,
-      tone: "primary",
-      onClick: () => onSend("Quero cadastrar um novo cliente."),
-    });
-    chips.push({
-      label: "Buscar cliente existente",
-      icon: UserSearch,
-      onClick: () => onSend("Quero buscar um cliente já cadastrado pelo nome ou CPF."),
-    });
+    // Sem starters: o vendedor já chega digitando os dados do cliente.
   } else if (!hasProducts) {
     chips.push({
       label: "Adicionar produto",
