@@ -181,18 +181,39 @@ export const Route = createFileRoute("/api/chat")({
               phone: input.phone ? onlyDigits(input.phone) : null,
               is_pj: input.is_pj ?? Boolean(cnpj && !cpf),
             };
+            let resultClientId: string;
+            let created: boolean;
             if (existingId) {
               const { error } = await supabase.from("clients").update(payload).eq("id", existingId);
               if (error) return { error: error.message };
-              return { client_id: existingId, created: false };
+              resultClientId = existingId;
+              created = false;
+            } else {
+              const { data, error } = await supabase
+                .from("clients")
+                .insert(payload)
+                .select("id")
+                .single();
+              if (error) return { error: error.message };
+              resultClientId = data.id;
+              created = true;
             }
-            const { data, error } = await supabase
-              .from("clients")
-              .insert(payload)
-              .select("id")
-              .single();
-            if (error) return { error: error.message };
-            return { client_id: data.id, created: true };
+            // Vincula o cliente à transação corrente se ainda for um rascunho sem cliente,
+            // para que a sidebar (e o resumo) reflitam o nome do cliente imediatamente.
+            if (body.contractId) {
+              const { data: tx } = await supabase
+                .from("transactions")
+                .select("id,status,client_id")
+                .eq("id", body.contractId)
+                .maybeSingle();
+              if (tx && tx.status === "draft" && !tx.client_id) {
+                await supabase
+                  .from("transactions")
+                  .update({ client_id: resultClientId, client_name: input.name } as never)
+                  .eq("id", body.contractId);
+              }
+            }
+            return { client_id: resultClientId, created };
           },
         });
 
