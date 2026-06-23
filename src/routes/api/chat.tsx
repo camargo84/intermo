@@ -579,8 +579,16 @@ export const Route = createFileRoute("/api/chat")({
                 .from("transactions")
                 .update(basePayload as never)
                 .eq("id", thread.id);
-              if (upErr) return { error: upErr.message };
+              if (upErr) {
+                console.error("[chat] criar_contrato promote error", upErr);
+                return {
+                  ok: false,
+                  error_code: "DB_ERROR",
+                  message_pt: "Não consegui salvar o contrato. Tente novamente.",
+                };
+              }
               return {
+                ok: true,
                 contract_id: thread.id as string,
                 parcelas: input.parcelas ?? null,
                 promoted: true,
