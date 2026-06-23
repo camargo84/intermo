@@ -156,9 +156,9 @@ export const listMyChatThreads = createServerFn({ method: "POST" })
     if (data.cursor) q = q.lt("updated_at", data.cursor);
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
-    const threads = rows ?? [];
+    const threads = (rows ?? []) as unknown as SidebarThreadRow[];
     const nextCursor =
-      threads.length === limit ? (threads[threads.length - 1]?.updated_at as string) : null;
+      threads.length === limit ? threads[threads.length - 1]?.updated_at : null;
     return { threads, nextCursor };
   });
 
