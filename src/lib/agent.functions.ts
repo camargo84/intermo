@@ -159,8 +159,15 @@ export const gerarPdfContrato = createServerFn({ method: "POST" })
       .maybeSingle();
     if (cliErr || !cliente) throw new Error("Cliente não encontrado.");
 
-    const tenant = contract.tenant_snapshot as unknown as TenantSnapshot;
-    if (!tenant) throw new Error("Snapshot do tenant ausente.");
+    let tenant = contract.tenant_snapshot as unknown as TenantSnapshot | null;
+    const { profileMissingFields } = await import("./contract-requirements");
+    if (profileMissingFields(tenant).length > 0) {
+      tenant = await buildTenantSnapshot(context.supabase, context.userId);
+      await context.supabase
+        .from("transactions")
+        .update({ tenant_snapshot: tenant as unknown as Record<string, unknown> } as never)
+        .eq("id", contract.id);
+    }
 
     // logo (download privado)
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
