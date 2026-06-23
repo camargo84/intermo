@@ -12,7 +12,7 @@ async function buildTenantSnapshot(supabase: Supa, userId: string): Promise<Tena
   const { data: p, error } = await supabase
     .from("profiles")
     .select(
-      "company_legal_name,company_fantasy_name,company_cnpj,company_address,company_city,company_uf,company_cep,representative_name,representative_qualification,comarca,logo_path",
+      "company_legal_name,company_fantasy_name,company_cnpj,company_address,company_city,company_uf,company_cep,company_email,company_phone,representative_name,representative_cpf,representative_qualification,comarca,logo_path",
     )
     .eq("id", userId)
     .maybeSingle();
@@ -31,7 +31,10 @@ async function buildTenantSnapshot(supabase: Supa, userId: string): Promise<Tena
     company_city: p.company_city,
     company_uf: p.company_uf,
     company_cep: p.company_cep,
+    company_email: p.company_email,
+    company_phone: p.company_phone,
     representative_name: p.representative_name,
+    representative_cpf: p.representative_cpf,
     representative_qualification: p.representative_qualification,
     comarca: p.comarca,
   };
