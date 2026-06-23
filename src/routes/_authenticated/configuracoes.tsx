@@ -137,12 +137,19 @@ function ConfiguracoesPage() {
   }, [profileData, reset]);
 
   async function onSubmit(values: FormData) {
+    const newCnpj = onlyDigits(values.companyCnpj);
+    if (hadCnpj && newCnpj && newCnpj !== currentCnpjDigits) {
+      const ok = window.confirm(
+        "Você está alterando o CNPJ da empresa. Contratos e transações já gerados continuam com os dados originais (snapshot). A alteração valerá apenas para novos contratos.\n\nConfirmar a alteração?",
+      );
+      if (!ok) return;
+    }
     setSaving(true);
     try {
       // Normaliza documentos: salvamos apenas dígitos. Formatação fica na exibição.
       const normalized = {
         ...values,
-        companyCnpj: onlyDigits(values.companyCnpj),
+        companyCnpj: newCnpj,
         companyPhone: onlyDigits(values.companyPhone),
         companyCep: onlyDigits(values.companyCep),
         representativeCpf: onlyDigits(values.representativeCpf),
