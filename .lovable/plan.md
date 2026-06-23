@@ -1,66 +1,97 @@
-# Terceira leva — plano
 
-## D1 — fechar: match só por documento
+Duas frentes independentes: **(1) Sidebar de conversas** e **(2) Upload da logo com recorte**. Sem mudança de regra de negócio — só UX e apresentação.
 
-**Achado (src/routes/api/chat.tsx:72–89, ferramenta `buscar_cliente`)**
-- Linha 83: se `onlyDigits(query).length >= 11` → filtra por `cpf.eq` OR `cnpj.eq`. ✅
-- Linha 84 (else): cai em `ilike("name", "%query%")`. ❌ É exatamente o cenário "dois João da Silva" que você quer evitar. A persistência (`upsert_cliente`, linhas 135–153) já é chaveada por CPF/CNPJ, então o risco real é o agente trazer um cliente errado pelo nome e o vendedor confirmar sem perceber.
+---
 
-**Fix proposto**
-- Em `buscar_cliente`:
-  - Trocar o input para deixar explícito: `z.object({ documento: z.string().min(11) })` (aceita CPF ou CNPJ; normaliza com `onlyDigits`).
-  - Remover o branch de `ilike(name)`. Se vier sem 11+ dígitos válidos, retornar `{ error: "Informe CPF ou CNPJ — busca por nome não é permitida." }`.
-  - Validar com `validateCPF`/`validateCNPJ` antes da query (mesmas regras do `upsert_cliente`, "validar antes de persistir/consultar").
-- Atualizar o system prompt (chat.tsx:12) para instruir o modelo a sempre pedir CPF/CNPJ antes de chamar `buscar_cliente` (já praticamente faz isso, mas reforçar).
-- Não mexer em `upsert_cliente` — já está chaveado por documento.
+## 1. Sidebar — quando atualizar e o que mostrar
 
-**Aceite**: `buscar_cliente` recusa qualquer match por nome isolado; só reconhece "cliente existente" via CPF/CNPJ validado.
+### 1.1 Quando o label atualiza (jornada)
 
-## D2 — XLSX duas colunas + trava NULL + card dashboard
+Cascata de gatilhos, do mais barato pro mais informativo:
 
-**Mudanças em `src/lib/financeiro.functions.ts`**
-- Renomear coluna `margem` (H) para `margemEstimada` com header **"Margem estimada (30%)"**, fórmula por linha = `remuneracao * 0.30` (ou `value_cents * 0.30 / 100`, calculado em JS p/ não depender do Excel recalcular).
-- Adicionar coluna nova `margemRealizada` (I) com header **"Margem realizada"**:
-  - Se `supplier_paid_amount_cents IS NULL` OR `freight_paid_amount_cents IS NULL` → célula vazia (`null` no exceljs, vira "—" na UI).
-  - Caso contrário → `(value_cents - supplier_paid_amount_cents - freight_paid_amount_cents) / 100`. Não usar `margin_cents` direto: o campo é GENERATED com COALESCE(...,0), então mascara custo NULL como zero — exatamente o bug que a trava precisa evitar.
-- Linhas de total:
-  - "TOTAL MARGEM ESTIMADA (30%)" → `SUM(H2:H{last})`.
-  - "TOTAL MARGEM REALIZADA" → `SUM(I2:I{last})` (Excel ignora células vazias naturalmente).
-  - Imposto 6% passa a incidir sobre **margem estimada** (mantém comportamento de hoje p/ DAS) — confirmar se você prefere sobre realizada; default mantém estimada.
+1. Criou a thread → `Rascunho · 23/abr 14:32`
+2. Agente extrai/confirma o **produto** → `Rascunho | {Produto} · 23/abr 14:32`
+3. Cliente cadastrado/linkado → `{Cliente abreviado} | {Produto} · 23/abr 14:32`
+4. Consolidado → mesma label, com ponto verde no ícone
 
-**Dashboard (`src/routes/_authenticated/dashboard.tsx`)**
-- Adicionar card "Margem realizada (mês)" que só renderiza quando existir pelo menos uma transação do mês com AMBOS `supplier_paid_amount_cents` e `freight_paid_amount_cents` não-nulos. Soma `(value - supplier - freight)` dessas linhas. Se nenhuma linha qualificar, o card não aparece (não mostra zero, não mostra receita).
-- Precisa de uma `listDashboardMonth` (ou estender a que já existe) para retornar essas duas colunas de custo — vou checar o que já existe ao implementar.
+**Abreviação do nome** — helper em `src/lib/format.ts`:
+- "Thales Carlos Gomes Silva" → `Thales C. G. Silva`
+- "Thales Gomes Silva" → `Thales G. Silva`
+- "Maria Silva" → `Maria Silva` (só 2 partes)
+- "de/da/do/dos/das" ignorados
 
-**Aceite**: nenhuma célula/agregação de "Margem realizada" cai para receita cheia quando custo é NULL.
+**Formato final** (separador `|` confirmado):
+```
+Thales C. G. Silva | Persiana Rolô · 23/abr 14:32
+```
+- Data/hora: relativa quando ≤ 7 dias (`hoje 14:32`, `ontem 09:10`, `qua 16:40`), absoluta depois (`23/abr 14:32`, com ano se diferente).
 
-## C3 — probe Autentique (read-only, sem migration)
+**Efeito letreiro (marquee)**: só no hover *e somente se* o texto está realmente truncado (mede `scrollWidth > clientWidth`). CSS puro, 1 ciclo 6–8s, pausa em `prefers-reduced-motion`.
 
-- Rodar via shell um script único usando `$AUTENTIQUE_API_TOKEN` contra `https://api.autentique.com.br/v2/graphql`:
-  1. Introspection query (`__type(name: "Folder")` e `__schema { mutationType { fields { name args { name type { name ofType { name } } } } } }`) para confirmar:
-     - existe `createFolder` e aceita `parent_id` (subpasta aninhada)
-     - existe `moveDocumentToFolder` (ou equivalente) e quais argumentos
-  2. Listar pastas existentes (`folders(limit:5){data{id name parent_id}}`) — só leitura, zero efeito colateral.
-- Relatar resultado bruto (campos + tipos) aqui, com o trecho do schema. Só depois disso volto pra propor (ou descartar) a migration `clients.autentique_folder_id` + `ensureClientFolder`.
-- Nada de schema/código de produto nesse passo.
+### 1.2 Busca na sidebar (títulos + conteúdo)
 
-**Aceite**: zero mudança em schema/código de produto antes do retorno do probe.
+- Campo de busca fixo abaixo de "Nova transação" (ícone `Search`, atalho `⌘K` / `Ctrl+K`).
+- Novo server fn `searchMyChatThreads({ q, limit })` com `ilike` em `transactions.client_name`, `transactions.title` e `chat_threads.messages::text`. Escopo por `user_id` via RLS.
+- Migration de índices: `GIN (to_tsvector('portuguese', messages::text))` em `chat_threads`; trigram em `transactions.client_name`.
+- Pré-carregamento: prefetch da query com `q=""` ao montar (warm cache/planner). Busca acontece no servidor com debounce 250ms.
+- Cobre **todas** as transações do usuário, independente do que está na lista visível. Resultados num painel sobreposto enquanto o input está focado.
 
-## Rename — "Assinatura" → "Plano/Cobrança"
+### 1.3 Scroll infinito
 
-- Trocar label `"Assinatura"` por `"Plano/Cobrança"` em:
-  - `src/components/shell/AppSidebar.tsx:32`
-  - `src/components/shell/ClaudeSidebar.tsx:39`
-  - `src/components/shell/BottomNav.tsx` (entrada `/assinatura`)
-  - Header da página `src/routes/_authenticated/assinatura.tsx:87` ("Assinatura inTermo" → "Plano/Cobrança").
-- **Não** renomear a rota `/assinatura` (evita quebrar deep links, webhooks, e-mails). Só o rótulo visível muda.
+- `useInfiniteQuery`, páginas de 30, ordem `updated_at desc`.
+- Sentinela com `IntersectionObserver`.
+- Virtualização (`@tanstack/react-virtual`) só se passar de ~200 itens.
 
-**Aceite**: navegação mostra "Plano/Cobrança"; URL `/assinatura` continua funcionando.
+### 1.4 Largura redimensionável + persistência
 
-## Ordem de execução
+- Handle de drag na borda direita do `<Sidebar>` (8px hit area), livre entre **220px** e **440px**.
+- Atalhos `Ctrl/⌘ + [` e `Ctrl/⌘ + ]` para −10% / +10%.
+- Persistir em `localStorage` (`intermo.sidebar.width`), leitura síncrona via inline script no `__root.tsx` pra evitar flash. Fallback 280px.
+- Collapsed/expanded continua no cookie do shadcn-sidebar (não mexer).
 
-1. D1 + Rename (PR pequeno, dois arquivos do chat + 4 do shell/header).
-2. D2 (financeiro.functions.ts + dashboard).
-3. C3 probe (script shell, sem commit) → relato.
+---
 
-Nenhum desses passos toca schema do banco.
+## 2. Upload de logo com recorte
+
+Tela `configuracoes.tsx` ganha modal `Recortar logo` no fluxo do upload atual:
+
+- `react-easy-crop` para drag/zoom (mouse + pinch).
+- Botão **"Recortar automaticamente"**: no cliente, varre alpha > 0 (ou luminância < 250 sobre branco) e ajusta o bounding box. Cobre logo com fundo branco/transparente.
+- Razão livre, com preset "ajustar pro cabeçalho" (~4:1).
+- "Confirmar" gera PNG ≤ 800px no maior lado e manda via `uploadMyLogo` (server fn intacta).
+
+### 2.1 Linhas do cabeçalho/rodapé do PDF
+
+Confirmar em `contracts.pdf.server.ts` que as linhas usam `rgb(0,0,0)` — se já estão pretas, não mexo; se não, ajusto. Adicionar teste de regressão lendo o PDF e validando uma linha preta no header e outra no footer.
+
+---
+
+## Pedaços técnicos
+
+```
+src/
+  lib/
+    format.ts              + abbreviateName(), formatThreadTimestamp()
+    chat.functions.ts      + searchMyChatThreads({ q, limit, cursor })
+                           ~ listMyChatThreads aceita cursor/limit
+  components/shell/
+    ClaudeSidebar.tsx      ~ busca, infinite scroll, resize handle, label nova
+    SidebarResizer.tsx     + handle de drag + atalhos
+    ThreadLabel.tsx        + label com marquee on hover
+  components/profile/
+    LogoCropDialog.tsx     + recorte/zoom/auto-crop
+  routes/_authenticated/
+    configuracoes.tsx      ~ integra LogoCropDialog
+supabase migration:
+  - idx GIN sobre to_tsvector('portuguese', chat_threads.messages::text)
+  - idx trigram em transactions.client_name
+```
+
+Dependência nova: `react-easy-crop` (~15kB). `@tanstack/react-virtual` só se virarmos a chave.
+
+---
+
+## Fora deste PR
+
+- Não vamos materializar a label na coluna `transactions` — derivação fica só na UI.
+- Sem ranking estilo Algolia; `ilike` + `tsvector` resolve no volume atual.
