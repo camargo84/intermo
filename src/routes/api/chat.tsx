@@ -144,7 +144,7 @@ export const Route = createFileRoute("/api/chat")({
             const { data: prof } = await supabase
               .from("profiles")
               .select(
-              "company_legal_name,company_cnpj,company_address,company_city,company_uf,company_cep,company_email,company_phone,representative_name,representative_cpf,representative_qualification,comarca",
+                "company_legal_name,company_cnpj,company_address,company_city,company_uf,company_cep,company_email,company_phone,representative_name,representative_cpf,representative_qualification,comarca",
               )
               .eq("id", userId)
               .maybeSingle();
@@ -892,7 +892,7 @@ export const Route = createFileRoute("/api/chat")({
             return { ok: false, error_code: "CONTRACT_INCOMPLETE", message_pt: "Contrato sem cliente." };
           }
           // Preflight: validar snapshot do vendedor antes de renderizar.
-          // Drafst antigos podem ter sido criados antes de salvar o snapshot; se o perfil atual
+          // Drafts antigos podem ter sido criados antes de salvar o snapshot; se o perfil atual
           // já estiver completo, reconstruímos o snapshot em vez de bloquear o usuário.
           let tenant = (contract.tenant_snapshot ?? null) as TenantSnapshot | null;
           let missingProfile = profileMissingFields(tenant);
