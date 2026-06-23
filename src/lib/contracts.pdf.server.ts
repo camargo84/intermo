@@ -312,11 +312,11 @@ export async function renderContractPdf(args: RenderContractArgs): Promise<Uint8
     pgto = `5.1. O pagamento será realizado à vista (dinheiro / transferência / PIX), referente ao valor total de ${brlFromCents(args.valor_cents)} mencionado no item 4.1.`;
   } else if (args.forma_pagamento === "parcelado") {
     const n = args.parcelas ?? 1;
-    pgto = `5.1. O pagamento será realizado mediante parcelamento no cartão em ${n} (${valorPorExtenso(n * 100).replace(/\sreais$/, "")}) vezes, sendo os juros conforme simulação previamente apresentada à parte CONTRATANTE.`;
+    pgto = `5.1. O pagamento será realizado mediante parcelamento no cartão em ${n} vezes, sendo os juros conforme simulação previamente apresentada à parte CONTRATANTE.`;
   } else {
     const saldo = args.valor_cents - args.entrada_cents;
     const n = args.parcelas ?? 1;
-    pgto = `5.1. O pagamento será realizado da seguinte forma: entrada de ${brlFromCents(args.entrada_cents)} (${valorPorExtenso(args.entrada_cents)}) no ato, em dinheiro / transferência / PIX, e o saldo remanescente de ${brlFromCents(saldo)} mediante parcelamento no cartão em ${n} (${valorPorExtenso(n * 100).replace(/\sreais$/, "")}) vezes, sendo os juros conforme simulação previamente apresentada à parte CONTRATANTE.`;
+    pgto = `5.1. O pagamento será realizado da seguinte forma: entrada de ${brlFromCents(args.entrada_cents)} (${valorPorExtenso(args.entrada_cents)}) no ato, em dinheiro / transferência / PIX, e o saldo remanescente de ${brlFromCents(saldo)} mediante parcelamento no cartão em ${n} vezes, sendo os juros conforme simulação previamente apresentada à parte CONTRATANTE.`;
   }
   drawText(pgto, 11);
 
