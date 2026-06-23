@@ -7,7 +7,6 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -59,28 +58,11 @@ function SignupPage() {
   const navigate = useNavigate();
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
     setIsHydrated(true);
   }, []);
-
-
-  async function onGoogle() {
-    setGoogleLoading(true);
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    if (result.error) {
-      setGoogleLoading(false);
-      toast.error("Falha ao entrar com Google", { description: result.error.message });
-      return;
-    }
-    if (result.redirected) return;
-    await router.invalidate();
-    navigate({ to: "/assinatura" });
-  }
 
   const {
     register,
@@ -97,11 +79,11 @@ function SignupPage() {
 
   async function onSubmit(values: FormData) {
     setSubmitting(true);
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email: values.ownerEmail,
       password: values.password,
       options: {
-        emailRedirectTo: `${window.location.origin}/dashboard`,
+        emailRedirectTo: `${window.location.origin}/login?confirmed=1`,
         data: {
           owner_name: values.ownerName,
           company_fantasy_name: values.fantasyName,
@@ -117,9 +99,15 @@ function SignupPage() {
       toast.error("Não foi possível criar a conta", { description: error.message });
       return;
     }
-    toast.success("Conta criada!", {
-      description: "Bem-vindo à inTermo. Confirme seu e-mail se solicitado.",
-    });
+    // Sem sessão = precisa confirmar e-mail
+    if (!data.session) {
+      toast.success("Conta criada!", {
+        description: "Enviamos um e-mail de confirmação. Abra-o para ativar seu acesso.",
+      });
+      navigate({ to: "/login" });
+      return;
+    }
+    toast.success("Conta criada!", { description: "Bem-vindo à inTermo." });
     await router.invalidate();
     navigate({ to: "/assinatura" });
   }
