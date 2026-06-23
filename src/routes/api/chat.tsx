@@ -611,6 +611,7 @@ export const Route = createFileRoute("/api/chat")({
             .maybeSingle();
           if (recent) {
             return {
+              ok: true,
               contract_id: recent.id as string,
               parcelas: input.parcelas ?? null,
               deduped: true,
@@ -622,8 +623,15 @@ export const Route = createFileRoute("/api/chat")({
             .insert({ user_id: userId, ...basePayload } as never)
             .select("id")
             .single();
-          if (error) return { error: error.message };
-          return { contract_id: row.id as string, parcelas: input.parcelas ?? null };
+          if (error) {
+            console.error("[chat] criar_contrato insert error", error);
+            return {
+              ok: false,
+              error_code: "DB_ERROR",
+              message_pt: "Não consegui salvar o contrato. Tente novamente.",
+            };
+          }
+          return { ok: true, contract_id: row.id as string, parcelas: input.parcelas ?? null };
         }
 
         async function pdfCore(contract_id: string, parcelas: number | null) {
