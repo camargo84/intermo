@@ -2,6 +2,12 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+export type SidebarThreadProduto = {
+  descricao?: string | null;
+  quantidade?: number | null;
+  preco_unit_cents?: number | null;
+};
+
 export type SidebarThreadRow = {
   contract_id: string;
   updated_at: string;
@@ -10,7 +16,7 @@ export type SidebarThreadRow = {
     title: string | null;
     client_name: string | null;
     status: string | null;
-    produtos: unknown;
+    produtos: SidebarThreadProduto[] | null;
     created_at: string;
     consolidated: boolean | null;
   } | null;
