@@ -640,14 +640,42 @@ export const Route = createFileRoute("/api/chat")({
             .select("*")
             .eq("id", contract_id)
             .maybeSingle();
-          if (!contract) return { error: "Contrato não encontrado." };
-          if (!contract.client_id) return { error: "Contrato sem cliente." };
+          if (!contract) {
+            return { ok: false, error_code: "CONTRACT_NOT_FOUND", message_pt: "Contrato não encontrado." };
+          }
+          if (!contract.client_id) {
+            return { ok: false, error_code: "CONTRACT_INCOMPLETE", message_pt: "Contrato sem cliente." };
+          }
+          // Preflight: validar snapshot do vendedor antes de renderizar.
+          const tenantSnap = (contract.tenant_snapshot ?? null) as
+            | Parameters<typeof profileMissingFields>[0]
+            | null;
+          const missingProfile = profileMissingFields(tenantSnap);
+          if (missingProfile.length) {
+            return {
+              ok: false,
+              error_code: "PROFILE_INCOMPLETE",
+              missing_fields: missingProfile,
+              message_pt: `Faltam dados do seu perfil: ${missingProfile.join(", ")}. Abra Configurações para completar e tente novamente.`,
+            };
+          }
           const { data: cliente } = await supabase
             .from("clients")
             .select("*")
             .eq("id", contract.client_id)
             .maybeSingle();
-          if (!cliente) return { error: "Cliente não encontrado." };
+          if (!cliente) {
+            return { ok: false, error_code: "CLIENT_NOT_FOUND", message_pt: "Cliente não encontrado." };
+          }
+          const missingClient = clientMissingFields(cliente);
+          if (missingClient.length) {
+            return {
+              ok: false,
+              error_code: "CLIENT_INCOMPLETE",
+              missing_fields: missingClient,
+              message_pt: `Faltam dados do cliente: ${missingClient.join(", ")}.`,
+            };
+          }
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
           const { data: prof } = await supabase
             .from("profiles")
@@ -670,20 +698,30 @@ export const Route = createFileRoute("/api/chat")({
           }
           const { renderContractPdf } = await import("@/lib/contracts.pdf.server");
           const tenant = contract.tenant_snapshot as never;
-          const pdfBytes = await renderContractPdf({
-            tenant,
-            cliente: cliente as never,
-            produtos: (contract.produtos as never) ?? [],
-            valor_cents: contract.value_cents ?? 0,
-            forma_pagamento: (contract.forma_pagamento ?? "avista") as
-              | "avista"
-              | "parcelado"
-              | "misto",
-            entrada_cents: contract.entrada_cents ?? 0,
-            parcelas,
-            logoBytes,
-            logoMime,
-          });
+          let pdfBytes: Uint8Array;
+          try {
+            pdfBytes = await renderContractPdf({
+              tenant,
+              cliente: cliente as never,
+              produtos: (contract.produtos as never) ?? [],
+              valor_cents: contract.value_cents ?? 0,
+              forma_pagamento: (contract.forma_pagamento ?? "avista") as
+                | "avista"
+                | "parcelado"
+                | "misto",
+              entrada_cents: contract.entrada_cents ?? 0,
+              parcelas,
+              logoBytes,
+              logoMime,
+            });
+          } catch (e) {
+            console.error("[chat] renderContractPdf failed", e);
+            return {
+              ok: false,
+              error_code: "PDF_RENDER_FAILED",
+              message_pt: "Não foi possível gerar o PDF. Tente novamente em instantes.",
+            };
+          }
           const path = `${userId}/${contract.id}.pdf`;
           const { error: upErr } = await supabaseAdmin.storage
             .from("contract-pdfs")
@@ -691,13 +729,21 @@ export const Route = createFileRoute("/api/chat")({
               upsert: true,
               contentType: "application/pdf",
             });
-          if (upErr) return { error: upErr.message };
+          if (upErr) {
+            console.error("[chat] pdf upload failed", upErr);
+            return {
+              ok: false,
+              error_code: "PDF_UPLOAD_FAILED",
+              message_pt: "Não consegui salvar o PDF. Tente novamente.",
+            };
+          }
           await supabase.from("transactions").update({ pdf_path: path }).eq("id", contract.id);
           const { data: s } = await supabaseAdmin.storage
             .from("contract-pdfs")
             .createSignedUrl(path, 600);
-          return { pdf_path: path, signed_url: s?.signedUrl ?? null };
+          return { ok: true, pdf_path: path, signed_url: s?.signedUrl ?? null };
         }
+
 
         const result = streamText({
           model,
