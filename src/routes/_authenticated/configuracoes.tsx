@@ -160,22 +160,31 @@ function ConfiguracoesPage() {
     }
   }
 
-  async function handleLogoFile(file: File) {
+  function handleLogoPick(file: File) {
     if (!["image/png", "image/jpeg"].includes(file.type)) {
       toast.error("Use PNG ou JPG.");
       return;
     }
-    if (file.size > 2_000_000) {
-      toast.error("Arquivo acima de 2MB.");
+    if (file.size > 8_000_000) {
+      toast.error("Arquivo acima de 8MB.");
+      return;
+    }
+    setPendingLogoFile(file);
+    setCropOpen(true);
+  }
+
+  async function handleCroppedLogo(blob: Blob) {
+    if (blob.size > 2_000_000) {
+      toast.error("Recorte ficou acima de 2MB. Reduza o tamanho.");
       return;
     }
     setUploading(true);
     try {
-      const buf = new Uint8Array(await file.arrayBuffer());
+      const buf = new Uint8Array(await blob.arrayBuffer());
       let bin = "";
       for (let i = 0; i < buf.byteLength; i++) bin += String.fromCharCode(buf[i]);
       const base64 = btoa(bin);
-      await uploadLogo({ data: { base64, mime: file.type as "image/png" | "image/jpeg" } });
+      await uploadLogo({ data: { base64, mime: "image/png" } });
       await refetchLogo();
       toast.success("Logo atualizado.");
     } catch (err) {
