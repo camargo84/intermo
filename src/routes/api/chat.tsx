@@ -808,9 +808,75 @@ export const Route = createFileRoute("/api/chat")({
         }
 
 
+        // Monta um bloco de CONTEXTO com o estado atual da transação para que o
+        // modelo nunca peça novamente algo que já foi informado/persistido.
+        let contextBlock = "\n\nCONTEXTO DA CONVERSA:\n- (sem transação ativa)";
+        if (body.contractId) {
+          const { data: tx } = await supabase
+            .from("transactions")
+            .select(
+              "id,status,client_id,client_name,client_doc,produtos,value_cents,forma_pagamento,entrada_cents",
+            )
+            .eq("id", body.contractId)
+            .maybeSingle();
+          const lines: string[] = [`- transaction_id: ${body.contractId}`];
+          if (tx?.status) lines.push(`- status: ${tx.status}`);
+          if (tx?.client_id) {
+            lines.push(`- active_client_id: ${tx.client_id}`);
+            const { data: cli } = await supabase
+              .from("clients")
+              .select(
+                "name,cpf,cnpj,rg,nacionalidade,estado_civil,data_nascimento,cep,endereco,complemento,bairro,cidade,uf,email,phone",
+              )
+              .eq("id", tx.client_id)
+              .maybeSingle();
+            if (cli) {
+              const mask = (d: string | null) =>
+                d ? `***.***.${d.slice(-5, -2)}-${d.slice(-2)}` : "(não informado)";
+              lines.push(`- cliente: ${cli.name ?? "(sem nome)"}`);
+              lines.push(`- documento: ${mask(cli.cpf ?? cli.cnpj ?? null)} (já cadastrado — NÃO peça de novo)`);
+              const camposPresentes: string[] = [];
+              const camposFaltando: string[] = [];
+              const checkField = (label: string, val: unknown) => {
+                if (val != null && String(val).trim() !== "") camposPresentes.push(label);
+                else camposFaltando.push(label);
+              };
+              checkField("rg", cli.rg);
+              checkField("nacionalidade", cli.nacionalidade);
+              checkField("estado_civil", cli.estado_civil);
+              checkField("data_nascimento", cli.data_nascimento);
+              checkField("cep", cli.cep);
+              checkField("endereco", cli.endereco);
+              checkField("bairro", cli.bairro);
+              checkField("cidade", cli.cidade);
+              checkField("uf", cli.uf);
+              checkField("email", cli.email);
+              checkField("phone", cli.phone);
+              if (camposPresentes.length)
+                lines.push(`- cliente_campos_preenchidos: ${camposPresentes.join(", ")}`);
+              if (camposFaltando.length)
+                lines.push(`- cliente_campos_faltando: ${camposFaltando.join(", ")}`);
+            }
+          }
+          if (tx?.produtos) {
+            try {
+              const arr = Array.isArray(tx.produtos) ? tx.produtos : JSON.parse(String(tx.produtos));
+              if (Array.isArray(arr) && arr.length) {
+                lines.push(`- produtos: ${arr.map((p) => `${p.quantidade ?? "?"}x ${p.descricao ?? "?"}`).join("; ")}`);
+              }
+            } catch {
+              // ignora parse
+            }
+          }
+          if (tx?.value_cents) lines.push(`- valor_cents: ${tx.value_cents}`);
+          if (tx?.forma_pagamento) lines.push(`- forma_pagamento: ${tx.forma_pagamento}`);
+          if (tx?.entrada_cents) lines.push(`- entrada_cents: ${tx.entrada_cents}`);
+          contextBlock = `\n\nCONTEXTO DA CONVERSA:\n${lines.join("\n")}`;
+        }
+
         const result = streamText({
           model,
-          system: SYSTEM_PROMPT,
+          system: BASE_SYSTEM_PROMPT + contextBlock,
           messages: await convertToModelMessages(body.messages),
           tools: {
             buscar_cliente,
