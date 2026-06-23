@@ -295,12 +295,20 @@ export async function renderContractPdf(args: RenderContractArgs): Promise<Uint8
         height: h,
       });
     }
-    // separador do header
+    // separador do header (preto)
+    const black = rgb(0, 0, 0);
     p.drawLine({
       start: { x: margin, y: pageHeight - margin - headerH + 22 },
       end: { x: pageWidth - margin, y: pageHeight - margin - headerH + 22 },
-      thickness: 0.4,
-      color: muted,
+      thickness: 0.6,
+      color: black,
+    });
+    // separador do rodapé (preto)
+    p.drawLine({
+      start: { x: margin, y: margin + footerH - 12 },
+      end: { x: pageWidth - margin, y: margin + footerH - 12 },
+      thickness: 0.6,
+      color: black,
     });
     // rodapé
     const label = `Página ${idx + 1} de ${total}`;
