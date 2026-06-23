@@ -130,158 +130,143 @@ export function ClaudeSidebar() {
   }
 
   return (
-    <div ref={rootRef} className="contents">
-      <Sidebar collapsible="icon">
-        <SidebarHeader className="h-16 px-3 py-3">
-          {collapsed ? (
-            <Link
-              to="/chat"
-              aria-label="inTermo"
-              className="flex h-full items-center justify-center"
-            >
-              <IntermoMark variant="tile" className="h-8 w-8" />
-            </Link>
-          ) : (
-            <Link to="/chat" aria-label="inTermo" className="flex h-full items-center px-1">
-              <Logo />
-            </Link>
-          )}
-        </SidebarHeader>
+    <Sidebar collapsible="icon">
+      <SidebarHeader className="h-16 px-3 py-3">
+        {collapsed ? (
+          <Link
+            to="/chat"
+            aria-label="inTermo"
+            className="flex h-full items-center justify-center"
+          >
+            <IntermoMark variant="tile" className="h-8 w-8" />
+          </Link>
+        ) : (
+          <Link to="/chat" aria-label="inTermo" className="flex h-full items-center px-1">
+            <Logo />
+          </Link>
+        )}
+      </SidebarHeader>
 
-        <SidebarContent className="gap-1">
-          {/* Nova transação */}
-          <SidebarGroup className="pb-0">
+      <SidebarContent className="gap-1">
+        {/* Nova transação */}
+        <SidebarGroup className="pb-0">
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={handleNewChat}
+                  tooltip="Nova transação"
+                  className="bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span className="font-medium">Nova transação</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Busca */}
+        {!collapsed && (
+          <SidebarGroup className="py-1">
             <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    onClick={handleNewChat}
-                    tooltip="Nova transação"
-                    className="bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary"
+              <div className="relative px-2">
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={rawQ}
+                  onChange={(e) => setRawQ(e.target.value)}
+                  placeholder="Buscar conversas…"
+                  className="h-8 pl-7 pr-7 text-[13px]"
+                />
+                {rawQ && (
+                  <button
+                    type="button"
+                    aria-label="Limpar"
+                    onClick={() => setRawQ("")}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
-                    <Plus className="h-4 w-4" />
-                    <span className="font-medium">Nova transação</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
             </SidebarGroupContent>
           </SidebarGroup>
+        )}
 
-          {/* Busca */}
-          {!collapsed && (
-            <SidebarGroup className="py-1">
-              <SidebarGroupContent>
-                <div className="relative px-2">
-                  <Search className="pointer-events-none absolute left-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    value={rawQ}
-                    onChange={(e) => setRawQ(e.target.value)}
-                    placeholder="Buscar conversas…"
-                    className="h-8 pl-7 pr-7 text-[13px]"
-                  />
-                  {rawQ && (
-                    <button
-                      type="button"
-                      aria-label="Limpar"
-                      onClick={() => setRawQ("")}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </div>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          )}
-
-          {/* Conversas (lista normal OU resultados de busca) */}
-          {!collapsed && (
-            <SidebarGroup>
-              <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground/70">
-                {searchOpen ? "Resultados" : "Conversas"}
-              </SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {searchOpen ? (
-                    <SearchList
-                      loading={searchQuery.isLoading}
-                      results={searchResults}
-                      pathname={pathname}
-                    />
-                  ) : (
-                    <ThreadList
-                      loading={threadsQuery.isLoading}
-                      threads={threads}
-                      pathname={pathname}
-                      sentinelRef={sentinelRef}
-                      fetchingMore={threadsQuery.isFetchingNextPage}
-                      hasMore={Boolean(threadsQuery.hasNextPage)}
-                    />
-                  )}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          )}
-
-          {/* Painel */}
+        {/* Conversas (lista normal OU resultados de busca) */}
+        {!collapsed && (
           <SidebarGroup>
             <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground/70">
-              Painel
+              {searchOpen ? "Resultados" : "Conversas"}
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {SECONDARY.map((item) => {
-                  const active =
-                    pathname === item.url ||
-                    (item.url !== "/dashboard" && pathname.startsWith(item.url));
-                  return (
-                    <SidebarMenuItem key={item.url}>
-                      <SidebarMenuButton asChild isActive={active} tooltip={item.title}>
-                        <Link to={item.url} className="flex items-center gap-2">
-                          <item.icon className="h-4 w-4" />
-                          <span>{item.title}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
+                {searchOpen ? (
+                  <SearchList
+                    loading={searchQuery.isLoading}
+                    results={searchResults}
+                    pathname={pathname}
+                  />
+                ) : (
+                  <ThreadList
+                    loading={threadsQuery.isLoading}
+                    threads={threads}
+                    pathname={pathname}
+                    sentinelRef={sentinelRef}
+                    fetchingMore={threadsQuery.isFetchingNextPage}
+                    hasMore={Boolean(threadsQuery.hasNextPage)}
+                  />
+                )}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
-        </SidebarContent>
+        )}
 
-        <SidebarFooter className="border-t border-sidebar-border">
-          <SidebarMenu>
-            {FOOTER_ITEMS.map((item) => {
-              const active = pathname.startsWith(item.url);
-              return (
-                <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton asChild isActive={active} tooltip={item.title}>
-                    <Link to={item.url} className="flex items-center gap-2">
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              );
-            })}
-          </SidebarMenu>
-        </SidebarFooter>
-      </Sidebar>
+        {/* Painel */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground/70">
+            Painel
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {SECONDARY.map((item) => {
+                const active =
+                  pathname === item.url ||
+                  (item.url !== "/dashboard" && pathname.startsWith(item.url));
+                return (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton asChild isActive={active} tooltip={item.title}>
+                      <Link to={item.url} className="flex items-center gap-2">
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
 
-      {/* Handle de redimensionar — só desktop, oculto quando colapsado */}
-      {!collapsed && (
-        <div
-          aria-label="Redimensionar sidebar"
-          role="separator"
-          aria-orientation="vertical"
-          title="Arraste para redimensionar. Ctrl/⌘ + [ ou ] para ±10%."
-          onPointerDown={startResize}
-          onDoubleClick={() => setWidth(SIDEBAR_WIDTH_DEFAULT)}
-          className="fixed left-[var(--sidebar-width)] top-0 z-20 hidden h-svh w-1 -translate-x-1/2 cursor-col-resize bg-transparent transition-colors hover:bg-primary/40 md:block"
-        />
-      )}
-    </div>
+      <SidebarFooter className="border-t border-sidebar-border">
+        <SidebarMenu>
+          {FOOTER_ITEMS.map((item) => {
+            const active = pathname.startsWith(item.url);
+            return (
+              <SidebarMenuItem key={item.url}>
+                <SidebarMenuButton asChild isActive={active} tooltip={item.title}>
+                  <Link to={item.url} className="flex items-center gap-2">
+                    <item.icon className="h-4 w-4" />
+                    <span>{item.title}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
+        </SidebarMenu>
+      </SidebarFooter>
+    </Sidebar>
   );
 }
 
