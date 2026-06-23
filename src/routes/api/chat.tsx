@@ -4,6 +4,7 @@ import { convertToModelMessages, streamText, tool, stepCountIs, type UIMessage }
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
+import type { TenantSnapshot } from "@/lib/contracts.pdf.server";
 import { onlyDigits, validateCPF, validateCNPJ, lookupCEP } from "@/lib/validators";
 import { profileMissingFields, clientMissingFields } from "@/lib/contract-requirements";
 import {
@@ -143,7 +144,7 @@ export const Route = createFileRoute("/api/chat")({
             const { data: prof } = await supabase
               .from("profiles")
               .select(
-                "company_legal_name,company_cnpj,company_address,company_city,company_uf,representative_name,comarca",
+                "company_legal_name,company_cnpj,company_address,company_city,company_uf,company_cep,company_email,company_phone,representative_name,representative_cpf,representative_qualification,comarca",
               )
               .eq("id", userId)
               .maybeSingle();
@@ -689,7 +690,7 @@ export const Route = createFileRoute("/api/chat")({
           const { data: profile } = await supabase
             .from("profiles")
             .select(
-              "accepted_terms_version,company_legal_name,company_fantasy_name,company_cnpj,company_address,company_city,company_uf,company_cep,representative_name,representative_qualification,comarca",
+              "accepted_terms_version,company_legal_name,company_fantasy_name,company_cnpj,company_address,company_city,company_uf,company_cep,company_email,company_phone,representative_name,representative_cpf,representative_qualification,comarca",
             )
             .eq("id", userId)
             .maybeSingle();
@@ -777,7 +778,10 @@ export const Route = createFileRoute("/api/chat")({
             company_city: profile.company_city,
             company_uf: profile.company_uf,
             company_cep: profile.company_cep,
+            company_email: profile.company_email,
+            company_phone: profile.company_phone,
             representative_name: profile.representative_name,
+            representative_cpf: profile.representative_cpf,
             representative_qualification: profile.representative_qualification,
             comarca: profile.comarca,
           };
@@ -801,7 +805,9 @@ export const Route = createFileRoute("/api/chat")({
             tenant_snapshot,
           };
 
-          // Promover o rascunho da própria thread, se existir e ainda for draft sem client.
+          // Promover o rascunho da própria thread, se existir e ainda for draft.
+          // O upsert_cliente já pode ter vinculado client_id antes da criação do contrato;
+          // nesse caso ainda precisamos gravar produtos, valores e tenant_snapshot no MESMO rascunho.
           if (body.contractId) {
             const { data: thread } = await supabase
               .from("transactions")
@@ -811,8 +817,7 @@ export const Route = createFileRoute("/api/chat")({
             if (
               thread &&
               thread.user_id === userId &&
-              thread.status === "draft" &&
-              !thread.client_id
+              thread.status === "draft"
             ) {
               const { error: upErr } = await supabase
                 .from("transactions")
@@ -844,6 +849,7 @@ export const Route = createFileRoute("/api/chat")({
             .eq("user_id", userId)
             .eq("client_id", input.client_id)
             .eq("status", "draft")
+            .not("tenant_snapshot", "is", null)
             .gte("created_at", dedupeSince)
             .order("created_at", { ascending: false })
             .limit(1)
@@ -886,16 +892,58 @@ export const Route = createFileRoute("/api/chat")({
             return { ok: false, error_code: "CONTRACT_INCOMPLETE", message_pt: "Contrato sem cliente." };
           }
           // Preflight: validar snapshot do vendedor antes de renderizar.
-          const tenantSnap = (contract.tenant_snapshot ?? null) as
-            | Parameters<typeof profileMissingFields>[0]
-            | null;
-          const missingProfile = profileMissingFields(tenantSnap);
+          // Drafts antigos podem ter sido criados antes de salvar o snapshot; se o perfil atual
+          // já estiver completo, reconstruímos o snapshot em vez de bloquear o usuário.
+          let tenant = (contract.tenant_snapshot ?? null) as TenantSnapshot | null;
+          let missingProfile = profileMissingFields(tenant);
+          if (missingProfile.length) {
+            const { data: currentProfile } = await supabase
+              .from("profiles")
+              .select(
+                "company_legal_name,company_fantasy_name,company_cnpj,company_address,company_city,company_uf,company_cep,company_email,company_phone,representative_name,representative_cpf,representative_qualification,comarca",
+              )
+              .eq("id", userId)
+              .maybeSingle();
+            const currentMissing = profileMissingFields(currentProfile);
+            if (currentMissing.length === 0 && currentProfile) {
+              tenant = {
+                company_legal_name: currentProfile.company_legal_name,
+                company_fantasy_name: currentProfile.company_fantasy_name,
+                company_cnpj: currentProfile.company_cnpj,
+                company_address: currentProfile.company_address,
+                company_city: currentProfile.company_city,
+                company_uf: currentProfile.company_uf,
+                company_cep: currentProfile.company_cep,
+                company_email: currentProfile.company_email,
+                company_phone: currentProfile.company_phone,
+                representative_name: currentProfile.representative_name,
+                representative_cpf: currentProfile.representative_cpf,
+                representative_qualification: currentProfile.representative_qualification,
+                comarca: currentProfile.comarca,
+              };
+              await supabase
+                .from("transactions")
+                .update({ tenant_snapshot: tenant as never } as never)
+                .eq("id", contract.id);
+              missingProfile = [];
+            } else {
+              missingProfile = currentMissing;
+            }
+          }
           if (missingProfile.length) {
             return {
               ok: false,
               error_code: "PROFILE_INCOMPLETE",
               missing_fields: missingProfile,
               message_pt: `Faltam dados do seu perfil: ${missingProfile.join(", ")}. Abra Configurações para completar e tente novamente.`,
+            };
+          }
+          if (!tenant) {
+            return {
+              ok: false,
+              error_code: "PROFILE_INCOMPLETE",
+              missing_fields: ["perfil não encontrado"],
+              message_pt: "Não consegui carregar os dados do vendedor. Abra Configurações, salve novamente e tente gerar o PDF.",
             };
           }
           const { data: cliente } = await supabase
@@ -936,7 +984,6 @@ export const Route = createFileRoute("/api/chat")({
             }
           }
           const { renderContractPdf } = await import("@/lib/contracts.pdf.server");
-          const tenant = contract.tenant_snapshot as never;
           let pdfBytes: Uint8Array;
           try {
             pdfBytes = await renderContractPdf({

@@ -8,7 +8,10 @@ export type ProfileForContract = {
   company_city?: string | null;
   company_uf?: string | null;
   company_cep?: string | null;
+  company_email?: string | null;
+  company_phone?: string | null;
   representative_name?: string | null;
+  representative_cpf?: string | null;
   representative_qualification?: string | null;
   comarca?: string | null;
 };
