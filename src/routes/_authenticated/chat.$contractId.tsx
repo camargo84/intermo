@@ -466,6 +466,16 @@ function friendlyErrorFromOutput(out: ToolOutput | null | undefined): {
       case "CONTRACT_NOT_FOUND":
       case "CONTRACT_INCOMPLETE":
         return { code, message: base ?? "Não encontrei esse registro." };
+      case "PDF_MISSING":
+        return { code, message: base ?? "Gere o PDF antes de enviar para assinatura." };
+      case "ALREADY_SENT":
+        return { code, message: base ?? "Este contrato já foi enviado." };
+      case "AUTENTIQUE_FAILED":
+        return { code, message: base ?? "Falha ao enviar para a Autentique. Tente novamente." };
+      case "MISSING_PHONE":
+        return { code, message: base ?? "Não tenho o telefone do cliente. Qual número devo usar?" };
+      case "DB_ERROR":
+        return { code, message: base ?? "Não consegui salvar. Tente novamente." };
       default:
         return { code, message: base ?? "Algo deu errado. Tente novamente." };
     }
