@@ -1032,6 +1032,15 @@ export const Route = createFileRoute("/api/chat")({
                 lines.push(`- cliente_campos_preenchidos: ${camposPresentes.join(", ")}`);
               if (camposFaltando.length)
                 lines.push(`- cliente_campos_faltando: ${camposFaltando.join(", ")}`);
+              // Telefone explícito para uso em gerar_link_whatsapp.
+              const phoneDigits = (cli.phone ?? "").replace(/\D/g, "");
+              if (phoneDigits) {
+                const e164 = phoneDigits.startsWith("55") ? phoneDigits : `55${phoneDigits}`;
+                lines.push(`- cliente_phone_e164: ${e164}`);
+                lines.push(`- cliente_phone_mascarado: (**) ****-${e164.slice(-4)}`);
+              } else {
+                lines.push(`- cliente_phone_e164: (não informado)`);
+              }
             }
           }
           if (tx?.produtos) {
