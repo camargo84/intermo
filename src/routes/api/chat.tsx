@@ -5,15 +5,17 @@ import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { onlyDigits, validateCPF, validateCNPJ, lookupCEP } from "@/lib/validators";
+import { profileMissingFields, clientMissingFields } from "@/lib/contract-requirements";
 
 const SYSTEM_PROMPT = `Você é o assistente do Intermo, ajudando o vendedor a registrar uma venda e gerar um contrato de validade jurídica.
 
 Fluxo padrão:
 1. Identifique o cliente: peça nome + CPF (ou CNPJ se for pessoa jurídica). SEMPRE peça o CPF/CNPJ antes de chamar buscar_cliente — a busca é feita apenas por documento, nunca por nome (dois clientes podem ter o mesmo nome).
-2. Se não existir, peça os dados que faltam: RG, nacionalidade (default: brasileiro/a), estado civil, data de nascimento, CEP (use consultar_cep para autocompletar endereço), número, complemento, e-mail e telefone. Chame upsert_cliente.
+2. Se não existir, peça os dados que faltam: RG, nacionalidade (default: brasileiro/a), estado civil, data de nascimento, CEP (use consultar_cep para autocompletar endereço), número, complemento, e-mail e telefone. Chame upsert_cliente. O endereço do cliente é obrigatório no contrato — não pule.
 3. Peça produtos (descrição, quantidade, preço unitário em centavos), valor total em centavos e forma de pagamento ("avista", "parcelado" ou "misto"). Para "misto", peça entrada (> 0 e < valor total). Para "parcelado" e "misto", peça quantidade de parcelas.
-4. Confirme o resumo e só chame criar_contrato com confirmado=true depois que o vendedor responder afirmativamente.
-5. Em seguida chame gerar_pdf_contrato passando o contract_id retornado e o número de parcelas (quando aplicável). Avise que o PDF está pronto para download.
+4. ANTES de propor gerar contrato, chame preflight_contrato com o client_id. Se vier "missing_profile", oriente o vendedor a abrir Configurações (não tente preencher por ele — são dados da empresa dele). Se vier "missing_client", peça os dados que faltam e use upsert_cliente para completar antes de seguir.
+5. Confirme o resumo e só chame criar_contrato com confirmado=true depois que o vendedor responder afirmativamente.
+6. Em seguida chame gerar_pdf_contrato passando o contract_id retornado e o número de parcelas (quando aplicável). Avise que o PDF está pronto para download.
 
 Após o contrato assinado (etapas financeiras da transação):
 - Quando o vendedor informar que o cliente pagou, chame registrar_pagamento_cliente (contract_id, valor_cents, método e data opcionais).
@@ -115,6 +117,35 @@ export const Route = createFileRoute("/api/chat")({
             };
           },
         });
+
+        const preflight_contrato = tool({
+          description:
+            "Checa se o perfil do vendedor e o cliente têm todos os campos obrigatórios para gerar o contrato. Chame ANTES de propor gerar o contrato. Retorna { ok, missing_profile, missing_client }.",
+          inputSchema: z.object({ client_id: z.string().uuid() }),
+          execute: async ({ client_id }) => {
+            const { data: prof } = await supabase
+              .from("profiles")
+              .select(
+                "company_legal_name,company_cnpj,company_address,company_city,company_uf,representative_name,comarca",
+              )
+              .eq("id", userId)
+              .maybeSingle();
+            const { data: cli } = await supabase
+              .from("clients")
+              .select("name,cpf,cnpj,email,endereco,cidade,uf,cep")
+              .eq("id", client_id)
+              .maybeSingle();
+            const missing_profile = profileMissingFields(prof);
+            const missing_client = clientMissingFields(cli);
+            return {
+              ok: missing_profile.length === 0 && missing_client.length === 0,
+              missing_profile,
+              missing_client,
+            };
+          },
+        });
+
+
 
         const upsert_cliente = tool({
           description: "Cria ou atualiza um cliente do vendedor. Retorna o client_id.",
@@ -564,6 +595,7 @@ export const Route = createFileRoute("/api/chat")({
             buscar_cliente,
             consultar_cep,
             upsert_cliente,
+            preflight_contrato,
             criar_contrato,
             gerar_pdf_contrato,
             registrar_pagamento_cliente,

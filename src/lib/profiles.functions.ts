@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { onlyDigits, validateCNPJ, validateCPF } from "./validators";
+import { profileMissingFields } from "./contract-requirements";
 
 export const getMyProfile = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -13,6 +14,22 @@ export const getMyProfile = createServerFn({ method: "GET" })
       .maybeSingle();
     if (error) throw new Error(error.message);
     return { profile: data };
+  });
+
+// Usada pelo gate de onboarding e por preflights.
+// Retorna apenas o status — não vaza dados sensíveis além do que o usuário já tem.
+export const getProfileCompleteness = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data } = await context.supabase
+      .from("profiles")
+      .select(
+        "company_legal_name,company_cnpj,company_address,company_city,company_uf,representative_name,comarca",
+      )
+      .eq("id", context.userId)
+      .maybeSingle();
+    const missing = profileMissingFields(data);
+    return { complete: missing.length === 0, missing };
   });
 
 const updateSchema = z.object({

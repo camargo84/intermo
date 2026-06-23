@@ -1,109 +1,76 @@
 
-Duas frentes independentes: **(1) Sidebar de conversas** e **(2) Upload da logo com recorte**. Sem mudança de regra de negócio — só UX e apresentação.
+## Contexto da tela do print
+
+A tela "Grant permission to InTermo / Lovable" **não é uma tela da nossa app** — é o broker OAuth gerenciado pela Lovable Cloud (`oauth.lovable.app`). Por isso o logo é da Lovable, o título do navegador é "Lovable" e os textos vêm em inglês. Não tem como traduzir nem rebrandar essa tela usando código nosso: ela é servida pela infraestrutura da Lovable.
+
+Existem **dois caminhos** para o usuário ver uma tela bonita, em português e sem a marca Lovable:
+
+### Caminho A — BYOC (recomendado para produção) ✅
+Usar credenciais próprias do Google (Client ID + Secret seus, no Google Cloud Console). Quando ativado:
+- O consent screen passa a ser **diretamente do Google** (accounts.google.com), automaticamente em pt-BR pelo idioma do navegador.
+- Aparece **"InTermo quer acessar sua Conta Google"** com o logo que você configurar no Google Cloud.
+- Sem nenhuma menção a Lovable, sem o passo intermediário do broker.
+- Aba do navegador mostra "Fazer login - Contas do Google".
+
+**O que você (usuário) precisa fazer no Google Cloud Console** (faço um passo-a-passo claro quando aprovar):
+1. Criar projeto → OAuth Consent Screen com nome "InTermo", logo, domínio `intermo.com.br`.
+2. Criar credenciais OAuth Client (Web) com o redirect URI que mostro.
+3. Colar Client ID + Secret nas Authentication Settings do backend.
+
+Depois disso o broker da Lovable some do fluxo.
+
+### Caminho B — manter broker Lovable
+Nada muda visualmente: continua em inglês com logo da Lovable. Não tem flag para traduzir.
 
 ---
 
-## 1. Sidebar — quando atualizar e o que mostrar
+## 1. Onboarding pós-Google (dados da empresa)
 
-### 1.1 Quando o label atualiza (jornada)
+Hoje, ao entrar com Google, o usuário cai direto no dashboard com o `profiles` praticamente vazio (só nome e e-mail do Google). O `/signup` por e-mail/senha coleta CNPJ, razão social, telefone, etc., mas o Google pula tudo isso. Resultado: na primeira tentativa de gerar contrato, o agente bloqueia com "faltam: CNPJ, razão social, endereço, ...".
 
-Cascata de gatilhos, do mais barato pro mais informativo:
+**Solução**: gate de onboarding obrigatório.
 
-1. Criou a thread → `Rascunho · 23/abr 14:32`
-2. Agente extrai/confirma o **produto** → `Rascunho | {Produto} · 23/abr 14:32`
-3. Cliente cadastrado/linkado → `{Cliente abreviado} | {Produto} · 23/abr 14:32`
-4. Consolidado → mesma label, com ponto verde no ícone
+- Nova rota `_authenticated/onboarding.tsx` com formulário enxuto (2 passos):
+  - **Passo 1 — Empresa**: razão social, nome fantasia, CNPJ (com validação), telefone, e-mail comercial, endereço, cidade/UF, CEP.
+  - **Passo 2 — Representante & foro**: nome do representante, CPF, qualificação ("sócio administrador" como sugestão), comarca de foro, margem padrão.
+  - Botão "Pular por enquanto" só some quando todos os campos críticos estão vazios — depois fica como "Salvar e continuar".
+- No `_authenticated/route.tsx`, depois do `getUser`, busca `profiles` e redireciona para `/onboarding` se algum campo crítico estiver faltando (`company_cnpj`, `company_legal_name`, `company_address`, `company_city`, `company_uf`, `representative_name`, `comarca`). Onboarding em si fica fora desse gate para não dar loop.
+- Pré-preenche `ownerName` e `companyEmail` com o que veio do Google (`user.user_metadata.full_name`, `user.email`).
+- Trigger no banco já cria o row em `profiles` no signup (verificar; se não tiver, adicionar migration).
 
-**Abreviação do nome** — helper em `src/lib/format.ts`:
-- "Thales Carlos Gomes Silva" → `Thales C. G. Silva`
-- "Thales Gomes Silva" → `Thales G. Silva`
-- "Maria Silva" → `Maria Silva` (só 2 partes)
-- "de/da/do/dos/das" ignorados
+## 2. Preflight do agente ao gerar contrato
 
-**Formato final** (separador `|` confirmado):
-```
-Thales C. G. Silva | Persiana Rolô · 23/abr 14:32
-```
-- Data/hora: relativa quando ≤ 7 dias (`hoje 14:32`, `ontem 09:10`, `qua 16:40`), absoluta depois (`23/abr 14:32`, com ano se diferente).
+Hoje `src/routes/api/chat.tsx` (linhas ~363-396) já valida o `profiles` antes de gerar, mas:
+- A checagem só dispara dentro da tool `generate_contract` — o agente pode propor gerar e só descobre que falta no último passo.
+- Cliente exige só CPF/CNPJ e e-mail; faltam endereço/cidade do cliente, que entram no preâmbulo do contrato.
 
-**Efeito letreiro (marquee)**: só no hover *e somente se* o texto está realmente truncado (mede `scrollWidth > clientWidth`). CSS puro, 1 ciclo 6–8s, pausa em `prefers-reduced-motion`.
+**Mudanças**:
+- Adicionar tool `preflight_contract({ client_id })` que o agente **deve chamar antes** de `generate_contract`. Retorna `{ ok, missing_profile: [...], missing_client: [...] }`.
+- System prompt passa a instruir: "Antes de propor gerar contrato, chame `preflight_contract`. Se houver pendências, pergunte/peça os dados que faltam (no caso do perfil da empresa, oriente abrir Configurações; no caso do cliente, peça no chat e use `upsert_client` para completar)."
+- Estender `upsert_client` para aceitar `address`, `city`, `uf`, `cep` (já tem coluna nos `transactions`/`clients`? verifico na implementação; se faltar, migration curta).
+- Lista de campos obrigatórios fica num único arquivo (`src/lib/contract-requirements.ts`) usado pelo preflight, pelo `getMyProfile` e pelo onboarding — fonte única da verdade.
 
-### 1.2 Busca na sidebar (títulos + conteúdo)
+## 3. Pequenos polimentos da tela `/login` e `/signup`
 
-- Campo de busca fixo abaixo de "Nova transação" (ícone `Search`, atalho `⌘K` / `Ctrl+K`).
-- Novo server fn `searchMyChatThreads({ q, limit })` com `ilike` em `transactions.client_name`, `transactions.title` e `chat_threads.messages::text`. Escopo por `user_id` via RLS.
-- Migration de índices: `GIN (to_tsvector('portuguese', messages::text))` em `chat_threads`; trigram em `transactions.client_name`.
-- Pré-carregamento: prefetch da query com `q=""` ao montar (warm cache/planner). Busca acontece no servidor com debounce 250ms.
-- Cobre **todas** as transações do usuário, independente do que está na lista visível. Resultados num painel sobreposto enquanto o input está focado.
-
-### 1.3 Scroll infinito
-
-- `useInfiniteQuery`, páginas de 30, ordem `updated_at desc`.
-- Sentinela com `IntersectionObserver`.
-- Virtualização (`@tanstack/react-virtual`) só se passar de ~200 itens.
-
-### 1.4 Largura redimensionável + persistência
-
-- Handle de drag na borda direita do `<Sidebar>` (8px hit area), livre entre **220px** e **440px**.
-- Atalhos `Ctrl/⌘ + [` e `Ctrl/⌘ + ]` para −10% / +10%.
-- Persistir em `localStorage` (`intermo.sidebar.width`), leitura síncrona via inline script no `__root.tsx` pra evitar flash. Fallback 280px.
-- Collapsed/expanded continua no cookie do shadcn-sidebar (não mexer).
+Só o que dá pra fazer no nosso lado (o broker é intocável):
+- Garantir que os textos em todas as telas próprias estão em pt-BR (já estão, mas reviso mensagens de erro do `lovable.auth.signInWithOAuth`).
+- Confirmar `favicon.ico` e `<title>` corretos em `/auth` (já existe, mas a aba do broker é da Lovable — só BYOC resolve).
 
 ---
 
-## 2. Upload de logo com recorte
+## Pergunta antes de implementar
 
-Tela `configuracoes.tsx` ganha modal `Recortar logo` no fluxo do upload atual:
+Você quer seguir o **Caminho A (BYOC, recomendado)** para a tela ficar 100% em pt-BR e sem Lovable? Se sim, ao aprovar:
+1. Implemento o **onboarding** + **preflight do agente** agora.
+2. Te entrego um **passo-a-passo numerado** do Google Cloud Console + onde colar as credenciais (nada precisa ser commitado — fica nas Auth Settings do backend).
 
-- `react-easy-crop` para drag/zoom (mouse + pinch).
-- Botão **"Recortar automaticamente"**: no cliente, varre alpha > 0 (ou luminância < 250 sobre branco) e ajusta o bounding box. Cobre logo com fundo branco/transparente.
-- Razão livre, com preset "ajustar pro cabeçalho" (~4:1).
-- "Confirmar" gera PNG ≤ 800px no maior lado e manda via `uploadMyLogo` (server fn intacta).
+Se preferir o Caminho B, faço só onboarding + preflight e a tela do broker continua igual.
 
-### 2.1 Linhas do cabeçalho/rodapé do PDF
-
-Confirmar em `contracts.pdf.server.ts` que as linhas usam `rgb(0,0,0)` — se já estão pretas, não mexo; se não, ajusto. Adicionar teste de regressão lendo o PDF e validando uma linha preta no header e outra no footer.
-
----
-
-## Pedaços técnicos
-
-```
-src/
-  lib/
-    format.ts              + abbreviateName(), formatThreadTimestamp()
-    chat.functions.ts      + searchMyChatThreads({ q, limit, cursor })
-                           ~ listMyChatThreads aceita cursor/limit
-  components/shell/
-    ClaudeSidebar.tsx      ~ busca, infinite scroll, resize handle, label nova
-    SidebarResizer.tsx     + handle de drag + atalhos
-    ThreadLabel.tsx        + label com marquee on hover
-  components/profile/
-    LogoCropDialog.tsx     + recorte/zoom/auto-crop
-  routes/_authenticated/
-    configuracoes.tsx      ~ integra LogoCropDialog
-supabase migration:
-  - idx GIN sobre to_tsvector('portuguese', chat_threads.messages::text)
-  - idx trigram em transactions.client_name
-```
-
-Dependência nova: `react-easy-crop` (~15kB). `@tanstack/react-virtual` só se virarmos a chave.
-
----
-
-## Fora deste PR
-
-- Não vamos materializar a label na coluna `transactions` — derivação fica só na UI.
-- Sem ranking estilo Algolia; `ilike` + `tsvector` resolve no volume atual.
-
----
-
-## Rodada 4 — IMPLEMENTADO
-
-- Sidebar: label "Cliente | Produto · data" (helpers `abbreviateName`, `formatThreadTimestamp` em `src/lib/format.ts`); marquee on hover quando trunca (`ThreadLabel.tsx` + `@keyframes marquee` em `styles.css`).
-- Sidebar: busca server-side cobrindo client_name/title/messages (`searchMyChatThreads` em `src/lib/chat.functions.ts`); debounce 250ms.
-- Sidebar: scroll infinito via `useInfiniteQuery` (`listMyChatThreads` agora aceita `{limit,cursor}` e retorna `nextCursor`).
-- Sidebar: largura redimensionável (220–440px) com handle, atalhos Ctrl/⌘+[ / ], duplo-clique reseta, persistido em `localStorage` (`AppShell.tsx`).
-- Migration: GIN tsvector('portuguese') sobre `chat_threads.messages::text`, trigram em `transactions.client_name` e `transactions.title`.
-- Logo: `LogoCropDialog` com `react-easy-crop` — drag/zoom, preset 4:1 cabeçalho, "Recortar automaticamente" (bbox por alpha/luminância) e clamp a 800px no maior lado; configuracoes.tsx integrado.
-- PDF: linhas de separação do cabeçalho e do rodapé agora em `rgb(0,0,0)` (preto) — `src/lib/contracts.pdf.server.ts`.
+## Arquivos afetados
+- `src/routes/_authenticated/onboarding.tsx` (novo)
+- `src/routes/_authenticated/route.tsx` (gate de onboarding)
+- `src/lib/profiles.functions.ts` (server fn `getProfileCompleteness`)
+- `src/lib/contract-requirements.ts` (novo, fonte única)
+- `src/routes/api/chat.tsx` (tool `preflight_contract`, system prompt)
+- `src/lib/agent.functions.ts` (reuso da lista única)
+- migration leve, se faltar colunas de endereço em `clients`
