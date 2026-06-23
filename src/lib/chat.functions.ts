@@ -2,6 +2,20 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+export type SidebarThreadRow = {
+  contract_id: string;
+  updated_at: string;
+  transactions: {
+    id: string;
+    title: string | null;
+    client_name: string | null;
+    status: string | null;
+    produtos: unknown;
+    created_at: string;
+    consolidated: boolean | null;
+  } | null;
+};
+
 // Cria um contrato "draft" mínimo e retorna o id (para abrir uma thread nova de chat)
 export const createDraftContractForChat = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
