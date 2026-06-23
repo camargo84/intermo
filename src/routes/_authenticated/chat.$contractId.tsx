@@ -425,7 +425,11 @@ function MessageBlock({
       <div className="flex justify-end">
         <div className="max-w-[80%] rounded-2xl bg-[color:var(--color-signal-mint)] px-4 py-2 text-sm text-[color:var(--color-abyss)]">
           {message.parts.map((part, idx) =>
-            part.type === "text" ? <div key={idx}>{part.text}</div> : null,
+            part.type === "text" ? (
+              <div key={idx} className="whitespace-pre-wrap break-words">
+                {part.text}
+              </div>
+            ) : null,
           )}
         </div>
       </div>
