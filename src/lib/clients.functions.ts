@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { onlyDigits, validateCPF, validateCNPJ } from "./validators";
+import { normalizeDateBR, normalizeCEP, normalizePhoneBR, InputFormatError } from "./normalize-input";
 
 const upsertSchema = z.object({
   name: z.string().min(2).max(160),
