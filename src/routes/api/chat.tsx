@@ -450,7 +450,160 @@ export const Route = createFileRoute("/api/chat")({
         });
 
 
-        // -------- Ferramentas de etapas financeiras (pós-contrato) --------
+        // -------- Assinatura e envio --------
+        function generateUrlsafeToken(): string {
+          const bytes = new Uint8Array(32);
+          crypto.getRandomValues(bytes);
+          let s = "";
+          for (const b of bytes) s += String.fromCharCode(b);
+          return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+        }
+
+        async function createWhitelabelSignatureUrl(
+          contract_id: string,
+        ): Promise<{ ok: true; url: string; token: string } | { ok: false; error_code: string; message_pt: string }> {
+          const { data: contract } = await supabase
+            .from("transactions")
+            .select("id,user_id,client_name,client_email,client_doc")
+            .eq("id", contract_id)
+            .maybeSingle();
+          if (!contract || contract.user_id !== userId) {
+            return { ok: false, error_code: "CONTRACT_NOT_FOUND", message_pt: "Contrato não encontrado." };
+          }
+          const token = generateUrlsafeToken();
+          const { error: insErr } = await supabase.from("signature_tokens").insert({
+            token,
+            transaction_id: contract.id,
+            signer_role: "cliente",
+            signer_name: contract.client_name,
+            signer_email: contract.client_email,
+            signer_doc: contract.client_doc ?? null,
+          } as never);
+          if (insErr) {
+            console.error("[chat] createWhitelabelSignatureUrl insert error", insErr);
+            return { ok: false, error_code: "DB_ERROR", message_pt: "Não consegui gerar o link de assinatura." };
+          }
+          return { ok: true, url: `${baseUrl}/assinar/${token}`, token };
+        }
+
+        const enviar_para_assinatura = tool({
+          description:
+            "Envia o contrato (PDF já gerado) para a Autentique. Retorna o link de assinatura do cliente. Use depois de gerar_pdf_contrato e da confirmação do vendedor.",
+          inputSchema: z.object({ contract_id: z.string().uuid() }),
+          execute: async ({ contract_id }) => {
+            const { data: contract } = await supabase
+              .from("transactions")
+              .select("*")
+              .eq("id", contract_id)
+              .maybeSingle();
+            if (!contract || contract.user_id !== userId) {
+              return { ok: false, error_code: "CONTRACT_NOT_FOUND", message_pt: "Contrato não encontrado." };
+            }
+            if (!contract.pdf_path) {
+              return { ok: false, error_code: "PDF_MISSING", message_pt: "Gere o PDF do contrato antes de enviar para assinatura." };
+            }
+            if (contract.status !== "draft" || contract.autentique_document_id) {
+              return {
+                ok: false,
+                error_code: "ALREADY_SENT",
+                message_pt: "Este contrato já foi enviado para assinatura. Acompanhe em Transações.",
+              };
+            }
+            try {
+              const { dispatchContractToAutentique } = await import("@/lib/autentique-dispatch.server");
+              const result = await dispatchContractToAutentique(contract, supabase);
+              const signer = result.signers[0] ?? null;
+              return {
+                ok: true,
+                document_id: result.documentId,
+                signer_name: signer?.name ?? contract.client_name,
+                signer_email: signer?.email ?? contract.client_email,
+                signer_link: signer?.link ?? null,
+              };
+            } catch (e) {
+              const msg = e instanceof Error ? e.message : String(e);
+              console.error("[chat] enviar_para_assinatura failed", msg);
+              return {
+                ok: false,
+                error_code: "AUTENTIQUE_FAILED",
+                message_pt: "Não consegui enviar para assinatura agora. Tente novamente em instantes.",
+              };
+            }
+          },
+        });
+
+        const gerar_link_assinatura = tool({
+          description:
+            "Gera um link whitelabel (no domínio do Intermo) para o cliente assinar o contrato. Útil quando o vendedor quer só o link, sem WhatsApp.",
+          inputSchema: z.object({ contract_id: z.string().uuid() }),
+          execute: async ({ contract_id }) => {
+            return await createWhitelabelSignatureUrl(contract_id);
+          },
+        });
+
+        const gerar_link_whatsapp = tool({
+          description:
+            "Monta um link wa.me com mensagem pronta para o vendedor enviar ao cliente, incluindo o link de assinatura. Se telefone não vier, usa cliente_phone_e164 do CONTEXTO. Sempre passe o telefone só quando o vendedor pedir explicitamente outro número.",
+          inputSchema: z.object({
+            contract_id: z.string().uuid(),
+            telefone: z
+              .string()
+              .nullable()
+              .optional()
+              .describe("Telefone alternativo. Se omitido, usa o telefone cadastrado do cliente."),
+            mensagem: z
+              .string()
+              .nullable()
+              .optional()
+              .describe("Mensagem custom; se omitida, usa template padrão com o link de assinatura."),
+          }),
+          execute: async ({ contract_id, telefone, mensagem }) => {
+            const { data: contract } = await supabase
+              .from("transactions")
+              .select("id,user_id,client_id,client_name")
+              .eq("id", contract_id)
+              .maybeSingle();
+            if (!contract || contract.user_id !== userId) {
+              return { ok: false, error_code: "CONTRACT_NOT_FOUND", message_pt: "Contrato não encontrado." };
+            }
+            // Resolve telefone
+            let rawPhone: string | null = null;
+            if (telefone) {
+              rawPhone = telefone.replace(/\D/g, "");
+            } else if (contract.client_id) {
+              const { data: cli } = await supabase
+                .from("clients")
+                .select("phone")
+                .eq("id", contract.client_id)
+                .maybeSingle();
+              rawPhone = (cli?.phone ?? "").replace(/\D/g, "") || null;
+            }
+            if (!rawPhone) {
+              return {
+                ok: false,
+                error_code: "MISSING_PHONE",
+                message_pt: "Não tenho telefone do cliente. Qual número devo usar?",
+              };
+            }
+            const e164 = rawPhone.startsWith("55") ? rawPhone : `55${rawPhone}`;
+
+            // Gera link whitelabel
+            const sig = await createWhitelabelSignatureUrl(contract_id);
+            if (!sig.ok) return sig;
+
+            const firstName = (contract.client_name ?? "").split(" ")[0] || "tudo bem";
+            const defaultMsg = `Olá ${firstName}, seu contrato está pronto! Para assinar, é só clicar aqui: ${sig.url}. Qualquer dúvida, é só chamar.`;
+            const text = encodeURIComponent(mensagem ?? defaultMsg);
+            return {
+              ok: true,
+              wa_url: `https://wa.me/${e164}?text=${text}`,
+              signature_url: sig.url,
+              phone_used_masked: `(**) ****-${e164.slice(-4)}`,
+            };
+          },
+        });
+
+
         const registrar_pagamento_cliente = tool({
           description:
             "Registra o pagamento recebido do cliente para uma transação já existente. Use quando o vendedor informar que o cliente pagou.",
