@@ -141,6 +141,31 @@ function ContractDetailsPage() {
     queryKey: ["profile-readiness"],
     queryFn: () => checkProfileFn(),
   });
+  const { data: tokensData, refetch: refetchTokens } = useQuery({
+    queryKey: ["signature-tokens", contractId],
+    queryFn: () => listTokensFn({ data: { contractId } }),
+  });
+
+  const generateLink = async (signerRole: "lojista" | "cliente") => {
+    try {
+      const result = await createTokenFn({ data: { contractId, signerRole } });
+      const fullUrl = `${window.location.origin}${result.url}`;
+      try {
+        await navigator.clipboard.writeText(fullUrl);
+        toast.success(
+          `Link de ${signerRole} copiado. ${signerRole === "lojista" ? "Abra para assinar." : "Envie ao cliente."}`,
+        );
+      } catch {
+        toast.success(`Link gerado: ${fullUrl}`);
+      }
+      if (signerRole === "lojista") {
+        window.open(fullUrl, "_blank", "noopener");
+      }
+      refetchTokens();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    }
+  };
 
   const invalidateContract = () => {
     queryClient.invalidateQueries({ queryKey: ["contract", contractId] });
