@@ -171,12 +171,11 @@ export const searchMyChatThreads = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const term = data.q.trim();
-    if (!term) return { results: [] as unknown[] };
     const limit = data.limit ?? 20;
+    if (!term) return { results: [] as SidebarThreadRow[] };
     const escaped = term.replace(/[%_]/g, (m) => `\\${m}`);
     const like = `%${escaped}%`;
 
-    // 1) match no metadado da transação (rápido, usa trigram)
     const metaQ = context.supabase
       .from("chat_threads")
       .select(
@@ -189,7 +188,6 @@ export const searchMyChatThreads = createServerFn({ method: "POST" })
       .order("updated_at", { ascending: false })
       .limit(limit);
 
-    // 2) match no conteúdo da conversa (GIN tsvector + fallback ilike)
     const bodyQ = context.supabase
       .from("chat_threads")
       .select(
@@ -205,11 +203,14 @@ export const searchMyChatThreads = createServerFn({ method: "POST" })
     if (body.error) throw new Error(body.error.message);
 
     const seen = new Set<string>();
-    const merged: unknown[] = [];
-    for (const row of [...(meta.data ?? []), ...(body.data ?? [])]) {
-      const id = (row as { contract_id: string }).contract_id;
-      if (seen.has(id)) continue;
-      seen.add(id);
+    const merged: SidebarThreadRow[] = [];
+    const all = [
+      ...((meta.data ?? []) as unknown as SidebarThreadRow[]),
+      ...((body.data ?? []) as unknown as SidebarThreadRow[]),
+    ];
+    for (const row of all) {
+      if (seen.has(row.contract_id)) continue;
+      seen.add(row.contract_id);
       merged.push(row);
       if (merged.length >= limit) break;
     }
