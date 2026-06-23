@@ -251,8 +251,8 @@ export const Route = createFileRoute("/api/chat")({
               throw e;
             }
 
-            let existingId: string | null = null;
-            if (cpf) {
+            let existingId: string | null = existingClient?.id ?? null;
+            if (!existingId && cpf) {
               const { data: r } = await supabase
                 .from("clients")
                 .select("id")
@@ -270,9 +270,18 @@ export const Route = createFileRoute("/api/chat")({
                 .maybeSingle();
               if (r) existingId = r.id;
             }
+            const resolvedName = input.name ?? existingClient?.name ?? null;
+            if (!existingId && !resolvedName) {
+              return {
+                ok: false,
+                error_code: "INVALID_INPUT",
+                field: "name",
+                message_pt: "Informe o nome do cliente.",
+              };
+            }
             const payload = {
               user_id: userId,
-              name: input.name,
+              name: resolvedName ?? "",
               cpf,
               cnpj,
               rg: input.rg ?? null,
@@ -292,7 +301,25 @@ export const Route = createFileRoute("/api/chat")({
             let resultClientId: string;
             let created: boolean;
             if (existingId) {
-              const { error } = await supabase.from("clients").update(payload).eq("id", existingId);
+              // Em updates, não sobrescreve campos que não vieram no input (mantém o que existe).
+              const updatePayload: Record<string, unknown> = { user_id: userId };
+              if (input.name !== undefined && input.name !== null) updatePayload.name = input.name;
+              if (input.cpf !== undefined) updatePayload.cpf = cpf;
+              if (input.cnpj !== undefined) updatePayload.cnpj = cnpj;
+              if (input.rg !== undefined) updatePayload.rg = input.rg;
+              if (input.nacionalidade !== undefined) updatePayload.nacionalidade = input.nacionalidade;
+              if (input.estado_civil !== undefined) updatePayload.estado_civil = input.estado_civil;
+              if (input.data_nascimento !== undefined) updatePayload.data_nascimento = dataNascimento;
+              if (input.cep !== undefined) updatePayload.cep = cep;
+              if (input.endereco !== undefined) updatePayload.endereco = input.endereco;
+              if (input.complemento !== undefined) updatePayload.complemento = input.complemento;
+              if (input.bairro !== undefined) updatePayload.bairro = input.bairro;
+              if (input.cidade !== undefined) updatePayload.cidade = input.cidade;
+              if (input.uf !== undefined) updatePayload.uf = input.uf ? input.uf.toUpperCase().slice(0, 2) : null;
+              if (input.email !== undefined) updatePayload.email = input.email;
+              if (input.phone !== undefined) updatePayload.phone = phone;
+              if (input.is_pj !== undefined) updatePayload.is_pj = input.is_pj;
+              const { error } = await supabase.from("clients").update(updatePayload as never).eq("id", existingId);
               if (error) {
                 console.error("[chat] upsert_cliente update error", error);
                 return { ok: false, error_code: "DB_ERROR", message_pt: "Não consegui salvar o cliente. Tente novamente." };
