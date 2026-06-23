@@ -51,3 +51,57 @@ export function formatPhoneBR(value: string) {
   }
   return d.replace(/^(\d{2})(\d)/, "($1) $2").replace(/(\d{5})(\d)/, "$1-$2");
 }
+
+/**
+ * Abrevia o "miolo" de um nome composto: mantém primeiro e último por extenso,
+ * vira o restante em iniciais. Partículas (de/da/do/dos/das/e) são preservadas
+ * em minúsculas e não contam como partes a abreviar.
+ *
+ *   "Thales Carlos Gomes Silva"   -> "Thales C. G. Silva"
+ *   "Thales Gomes Silva"          -> "Thales G. Silva"
+ *   "Maria Silva"                 -> "Maria Silva"
+ *   "Ana Paula de Souza Lima"     -> "Ana P. S. Lima"
+ */
+export function abbreviateName(full: string | null | undefined): string {
+  if (!full) return "";
+  const cleaned = full.replace(/\s+/g, " ").trim();
+  if (!cleaned) return "";
+  const particles = new Set(["de", "da", "do", "dos", "das", "e"]);
+  const parts = cleaned.split(" ").filter(Boolean);
+  const meaningful = parts.filter((p) => !particles.has(p.toLowerCase()));
+  if (meaningful.length <= 2) return meaningful.join(" ");
+  const first = meaningful[0];
+  const last = meaningful[meaningful.length - 1];
+  const middle = meaningful.slice(1, -1).map((m) => {
+    const ch = Array.from(m)[0] ?? "";
+    return `${ch.toUpperCase()}.`;
+  });
+  return [first, ...middle, last].join(" ");
+}
+
+/**
+ * Formata data/hora para o label da sidebar de conversas.
+ *  - hoje              -> "hoje 14:32"
+ *  - ontem             -> "ontem 09:10"
+ *  - dentro de 7 dias  -> "qua 16:40"
+ *  - este ano          -> "23/abr 14:32"
+ *  - outro ano         -> "23/abr/24"
+ */
+export function formatThreadTimestamp(input: Date | string | number): string {
+  const date = input instanceof Date ? input : new Date(input);
+  if (Number.isNaN(date.getTime())) return "";
+  const now = new Date();
+  const startOfDay = (d: Date) =>
+    new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const diffDays = Math.floor((startOfDay(now) - startOfDay(date)) / 86_400_000);
+  const hhmm = format(date, "HH:mm");
+  if (diffDays === 0) return `hoje ${hhmm}`;
+  if (diffDays === 1) return `ontem ${hhmm}`;
+  if (diffDays > 1 && diffDays < 7) {
+    return `${format(date, "EEE", { locale: ptBR }).toLowerCase().replace(".", "")} ${hhmm}`;
+  }
+  if (date.getFullYear() === now.getFullYear()) {
+    return `${format(date, "dd/MMM", { locale: ptBR }).toLowerCase()} ${hhmm}`;
+  }
+  return format(date, "dd/MMM/yy", { locale: ptBR }).toLowerCase();
+}
