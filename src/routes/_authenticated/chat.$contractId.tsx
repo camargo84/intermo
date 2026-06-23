@@ -532,29 +532,37 @@ function MessageBlock({
           const toolName = part.type.replace("tool-", "");
           const state = (part as { state?: string }).state;
           const isDone = state === "output-available" || state === "result";
-          const output = (part as { output?: unknown }).output;
-          const errorMessage =
-            isDone && output && typeof output === "object" && "error" in output
-              ? String((output as { error?: unknown }).error ?? "")
-              : undefined;
+          const output = (part as { output?: unknown }).output as ToolOutput | undefined;
+          const friendly = isDone ? friendlyErrorFromOutput(output) : null;
+          const errorMessage = friendly?.message;
           const hasError = Boolean(errorMessage);
+          const showProfileLink = friendly?.code === "PROFILE_INCOMPLETE";
           return (
             <div
               key={idx}
               className={
                 hasError
-                  ? "mt-2 inline-flex items-center gap-2 rounded-full border border-destructive/40 bg-destructive/10 px-3 py-1 text-[11px] text-destructive"
-                  : "mt-2 inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-[11px] text-muted-foreground"
+                  ? "mt-2 inline-flex max-w-full items-center gap-2 rounded-full border border-destructive/40 bg-destructive/10 px-3 py-1 text-[11px] text-destructive"
+                  : "mt-2 inline-flex max-w-full items-center gap-2 rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-[11px] text-muted-foreground"
               }
+              title={errorMessage}
             >
               {hasError ? (
-                <AlertCircle className="h-3 w-3" />
+                <AlertCircle className="h-3 w-3 shrink-0" />
               ) : isDone ? (
-                <CheckCircle2 className="h-3 w-3 text-[color:var(--color-signal-mint)]" />
+                <CheckCircle2 className="h-3 w-3 shrink-0 text-[color:var(--color-signal-mint)]" />
               ) : (
-                <Loader2 className="h-3 w-3 animate-spin" />
+                <Loader2 className="h-3 w-3 shrink-0 animate-spin" />
               )}
-              {toolLabel(toolName, state, errorMessage)}
+              <span className="truncate">{toolLabel(toolName, state, errorMessage)}</span>
+              {showProfileLink ? (
+                <Link
+                  to="/configuracoes"
+                  className="ml-1 shrink-0 rounded-full border border-destructive/40 px-2 py-0.5 text-[10px] font-medium underline-offset-2 hover:underline"
+                >
+                  Abrir Configurações
+                </Link>
+              ) : null}
             </div>
           );
         }
