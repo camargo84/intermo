@@ -1,13 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/integrations/supabase/types";
-
-const AUTENTIQUE_ENDPOINT = "https://api.autentique.com.br/v2/graphql";
-
-type Supa = SupabaseClient<Database>;
-type ContractRow = Database["public"]["Tables"]["transactions"]["Row"];
+import { dispatchContractToAutentique } from "@/lib/autentique-dispatch.server";
 
 // `createContract` foi removido — fluxo unificado via `criarContrato` (agent.functions.ts),
 // que valida cliente, produtos, valor e forma de pagamento com o mesmo schema do chat.
