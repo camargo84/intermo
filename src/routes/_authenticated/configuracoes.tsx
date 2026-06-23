@@ -111,7 +111,8 @@ function ConfiguracoesPage() {
     },
   });
 
-  const cnpjLocked = Boolean(profileData?.profile?.company_cnpj);
+  const currentCnpjDigits = onlyDigits(profileData?.profile?.company_cnpj ?? "");
+  const hadCnpj = Boolean(currentCnpjDigits);
 
   useEffect(() => {
     const p = profileData?.profile;
@@ -355,14 +356,12 @@ function ConfiguracoesPage() {
                         shouldValidate: false,
                       }),
                   })}
-                  readOnly={cnpjLocked}
-                  disabled={cnpjLocked}
-                  placeholder={cnpjLocked ? undefined : "00.000.000/0000-00"}
+                  placeholder="00.000.000/0000-00"
                 />
                 <p className="text-xs text-muted-foreground">
-                  {cnpjLocked
-                    ? "CNPJ não pode ser alterado depois de cadastrado."
-                    : "Informe o CNPJ da empresa. Depois de salvo, não poderá ser alterado."}
+                  {hadCnpj
+                    ? "Você pode atualizar o CNPJ. Contratos e transações já gerados mantêm os dados originais (snapshot) — a alteração só vale para novos contratos."
+                    : "Informe o CNPJ da empresa. Você poderá atualizá-lo depois se necessário."}
                 </p>
               </div>
 
