@@ -58,22 +58,14 @@ export const updateMyProfile = createServerFn({ method: "POST" })
     const repCpf = data.representativeCpf ? onlyDigits(data.representativeCpf) : null;
     if (repCpf && !validateCPF(repCpf)) throw new Error("CPF do representante inválido.");
 
-    // CNPJ é imutável depois de cadastrado, mas pode ser preenchido se ainda está vazio.
+    // CNPJ pode ser alterado. Contratos/transações já gerados preservam os dados
+    // através do tenant_snapshot salvo no momento da geração, então mudar o CNPJ
+    // do perfil não afeta documentos antigos — só passa a valer para novos contratos.
     let cnpjPatch: { company_cnpj: string } | Record<string, never> = {};
     const newCnpjDigits = data.companyCnpj ? onlyDigits(data.companyCnpj) : "";
     if (newCnpjDigits) {
-      const { data: current } = await context.supabase
-        .from("profiles")
-        .select("company_cnpj")
-        .eq("id", context.userId)
-        .maybeSingle();
-      const existing = current?.company_cnpj ? onlyDigits(current.company_cnpj) : "";
-      if (!existing) {
-        if (!validateCNPJ(newCnpjDigits)) throw new Error("CNPJ inválido.");
-        cnpjPatch = { company_cnpj: newCnpjDigits };
-      } else if (existing !== newCnpjDigits) {
-        throw new Error("CNPJ não pode ser alterado depois do cadastro.");
-      }
+      if (!validateCNPJ(newCnpjDigits)) throw new Error("CNPJ inválido.");
+      cnpjPatch = { company_cnpj: newCnpjDigits };
     }
 
     const payload = {
