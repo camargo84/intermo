@@ -86,8 +86,10 @@ function formatCep(cep?: string | null): string {
 
 function safePhone(phone?: string | null): string {
   if (!phone) return "";
+  let d = phone.replace(/\D/g, "");
+  if (d.length > 11 && d.startsWith("55")) d = d.slice(2);
   try {
-    return formatPhoneBR(phone);
+    return formatPhoneBR(d);
   } catch {
     return phone;
   }
