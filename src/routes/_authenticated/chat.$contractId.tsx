@@ -407,9 +407,61 @@ const TOOL_LABELS: Record<string, { running: string; done: string }> = {
 function toolLabel(name: string, state?: string, errorMessage?: string) {
   const entry = TOOL_LABELS[name];
   const isDone = state === "output-available" || state === "result";
-  if (errorMessage) return `Falha: ${errorMessage}`;
+  if (errorMessage) return errorMessage;
   if (entry) return isDone ? entry.done : entry.running;
   return isDone ? "Concluído" : "Processando…";
+}
+
+type ToolOutput = {
+  ok?: boolean;
+  error?: unknown;
+  error_code?: string;
+  message_pt?: string;
+  missing_fields?: string[];
+  field?: string;
+};
+
+function friendlyErrorFromOutput(out: ToolOutput | null | undefined): {
+  message: string;
+  code?: string;
+} | null {
+  if (!out) return null;
+  // formato legado { error: string }
+  if (out.ok === undefined && out.error) {
+    return { message: typeof out.error === "string" ? out.error : "Algo deu errado. Tente novamente." };
+  }
+  if (out.ok === false) {
+    const code = out.error_code;
+    const missing = (out.missing_fields ?? []).join(", ");
+    const field = out.field;
+    const base = out.message_pt;
+    switch (code) {
+      case "PROFILE_INCOMPLETE":
+        return { code, message: `Faltam dados do seu perfil${missing ? `: ${missing}` : ""}.` };
+      case "CLIENT_INCOMPLETE":
+        return { code, message: `Faltam dados do cliente${missing ? `: ${missing}` : ""}.` };
+      case "INVALID_INPUT":
+        return { code, message: base ?? `Dado inválido${field ? ` em ${field}` : ""}.` };
+      case "PDF_RENDER_FAILED":
+      case "PDF_UPLOAD_FAILED":
+        return { code, message: base ?? "Não foi possível gerar o PDF. Tente novamente." };
+      case "RATE_LIMITED":
+        return { code, message: base ?? "Muitas tentativas. Aguarde um instante." };
+      case "TERMS_OUTDATED":
+        return { code, message: base ?? "Aceite os novos termos em Configurações." };
+      case "NO_SUBSCRIPTION":
+        return { code, message: base ?? "Sua assinatura não está ativa." };
+      case "CONFIRMATION_PENDING":
+        return { code, message: base ?? "Aguardando confirmação do resumo." };
+      case "CLIENT_NOT_FOUND":
+      case "CONTRACT_NOT_FOUND":
+      case "CONTRACT_INCOMPLETE":
+        return { code, message: base ?? "Não encontrei esse registro." };
+      default:
+        return { code, message: base ?? "Algo deu errado. Tente novamente." };
+    }
+  }
+  return null;
 }
 
 function MessageBlock({
