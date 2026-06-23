@@ -118,6 +118,35 @@ export const Route = createFileRoute("/api/chat")({
           },
         });
 
+        const preflight_contrato = tool({
+          description:
+            "Checa se o perfil do vendedor e o cliente têm todos os campos obrigatórios para gerar o contrato. Chame ANTES de propor gerar o contrato. Retorna { ok, missing_profile, missing_client }.",
+          inputSchema: z.object({ client_id: z.string().uuid() }),
+          execute: async ({ client_id }) => {
+            const { data: prof } = await supabase
+              .from("profiles")
+              .select(
+                "company_legal_name,company_cnpj,company_address,company_city,company_uf,representative_name,comarca",
+              )
+              .eq("id", userId)
+              .maybeSingle();
+            const { data: cli } = await supabase
+              .from("clients")
+              .select("name,cpf,cnpj,email,endereco,cidade,uf,cep")
+              .eq("id", client_id)
+              .maybeSingle();
+            const missing_profile = profileMissingFields(prof);
+            const missing_client = clientMissingFields(cli);
+            return {
+              ok: missing_profile.length === 0 && missing_client.length === 0,
+              missing_profile,
+              missing_client,
+            };
+          },
+        });
+
+
+
         const upsert_cliente = tool({
           description: "Cria ou atualiza um cliente do vendedor. Retorna o client_id.",
           inputSchema: z.object({
