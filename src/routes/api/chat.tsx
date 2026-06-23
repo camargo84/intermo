@@ -329,7 +329,7 @@ export const Route = createFileRoute("/api/chat")({
             } else {
               const { data, error } = await supabase
                 .from("clients")
-                .insert(payload)
+                .insert(payload as never)
                 .select("id")
                 .single();
               if (error) {
@@ -351,9 +351,10 @@ export const Route = createFileRoute("/api/chat")({
               if (tx && tx.status === "draft" && !tx.client_id) {
                 await supabase
                   .from("transactions")
-                  .update({ client_id: resultClientId, client_name: input.name } as never)
+                  .update({ client_id: resultClientId, client_name: resolvedName ?? "" } as never)
                   .eq("id", body.contractId);
               }
+            }
             }
             return { client_id: resultClientId, created };
           },
