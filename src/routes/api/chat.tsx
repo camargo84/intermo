@@ -160,9 +160,18 @@ export const Route = createFileRoute("/api/chat")({
 
 
         const upsert_cliente = tool({
-          description: "Cria ou atualiza um cliente do vendedor. Retorna o client_id.",
+          description:
+            "Cria ou atualiza um cliente do vendedor. Retorna o client_id. Se já existir um cliente vinculado à transação (active_client_id no CONTEXTO), passe client_id para atualizar campos sem precisar reenviar CPF/CNPJ.",
           inputSchema: z.object({
-            name: z.string().min(2),
+            client_id: z
+              .string()
+              .uuid()
+              .nullable()
+              .optional()
+              .describe(
+                "ID de um cliente já existente para atualizar. Use o active_client_id do CONTEXTO quando estiver completando dados (CEP, endereço, etc.) sem repedir documento.",
+              ),
+            name: z.string().min(2).nullable().optional(),
             cpf: z.string().nullable().optional(),
             cnpj: z.string().nullable().optional(),
             rg: z.string().nullable().optional(),
@@ -180,8 +189,33 @@ export const Route = createFileRoute("/api/chat")({
             is_pj: z.boolean().optional(),
           }),
           execute: async (input) => {
-            const cpf = input.cpf ? onlyDigits(input.cpf) : null;
-            const cnpj = input.cnpj ? onlyDigits(input.cnpj) : null;
+            // Se vier client_id, carrega o cliente existente para herdar campos faltantes
+            // (especialmente documento) e evitar exigir CPF/CNPJ novamente.
+            let existingClient: {
+              id: string;
+              name: string | null;
+              cpf: string | null;
+              cnpj: string | null;
+            } | null = null;
+            if (input.client_id) {
+              const { data: r } = await supabase
+                .from("clients")
+                .select("id,name,cpf,cnpj")
+                .eq("id", input.client_id)
+                .eq("user_id", userId)
+                .maybeSingle();
+              if (!r) {
+                return {
+                  ok: false,
+                  error_code: "CLIENT_NOT_FOUND",
+                  message_pt: "Cliente não encontrado para atualização.",
+                };
+              }
+              existingClient = r;
+            }
+
+            const cpf = input.cpf ? onlyDigits(input.cpf) : existingClient?.cpf ?? null;
+            const cnpj = input.cnpj ? onlyDigits(input.cnpj) : existingClient?.cnpj ?? null;
             if (!cpf && !cnpj) {
               return {
                 ok: false,
