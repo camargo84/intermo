@@ -527,8 +527,14 @@ function MessageBlock({
                     </span>
                     {rest ? " " : ""}
                     <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
                       components={{
                         p: ({ children }) => <>{children}</>,
+                        a: ({ children, ...props }) => (
+                          <a {...props} target="_blank" rel="noopener noreferrer" className="text-[color:var(--color-coral)] underline">
+                            {children}
+                          </a>
+                        ),
                       }}
                     >
                       {rest}
@@ -543,7 +549,18 @@ function MessageBlock({
               key={idx}
               className="prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-headings:font-serif-display"
             >
-              <ReactMarkdown>{safeText}</ReactMarkdown>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  a: ({ children, ...props }) => (
+                    <a {...props} target="_blank" rel="noopener noreferrer" className="text-[color:var(--color-coral)] underline">
+                      {children}
+                    </a>
+                  ),
+                }}
+              >
+                {safeText}
+              </ReactMarkdown>
             </div>
           );
         }
