@@ -1,60 +1,54 @@
-# Plano travado — Whitelabel + Autentique como cofre (opção B)
+## Objetivo
+Tirar o login com Google, manter só email + senha (com reset de senha e confirmação de email), e fazer com que todos os e-mails de autenticação cheguem em português, com a marca inTermo, vindos de um remetente `@intermo.com.br`.
 
-Decisão: o cliente assina no nosso domínio; ao fechar, empurramos o pacote de evidências pra Autentique como arquivo morto/custódia.
+## 1. Remover Sign in with Google
+- `src/routes/login.tsx`: remover botão "Continuar com Google", `onGoogle`, `googleLoading`, divider "ou", import de `lovable` e ícone Google.
+- `src/routes/signup.tsx`: mesma limpeza. O cadastro fica só pelo formulário com email + senha.
+- `src/routes/auth.tsx`: se houver atalho Google, remover.
+- Chamar a configuração de provedores para **desativar Google** e manter **email** ativo (sem auto-confirmação — usuário precisa confirmar o e-mail).
 
-## 1. Whitelabel real na página de assinatura
-**Arquivos:** `src/routes/api/public/sign.$token.tsx`, `src/routes/assinar.$token.tsx`
+## 2. Domínio de envio @intermo.com.br
+Hoje os e-mails saem do remetente padrão da Lovable. Para usar `@intermo.com.br` precisamos configurar o domínio de e-mail da Lovable. Isso é feito uma única vez por você num diálogo que abre no chat:
 
-- GET retorna também: `tenant_logo_url` (signed URL 1h do bucket `tenant-logos` se existir `profiles.company_logo_path`) e `tenant_name` (fantasia → legal → owner).
-- Header da página whitelabel passa a renderizar `<img src={tenant_logo_url}>` + nome fantasia. Fallback pro `<Logo />` do inTermo só quando o tenant não tem logo nem nome.
-- Rodapé discreto: "Assinatura segura por inTermo" (mantém nossa identidade sem competir com a marca do lojista).
+```text
+<presentation-actions>
+<presentation-open-email-setup>Configurar domínio de e-mail</presentation-open-email-setup>
+</presentation-actions>
+```
 
-## 2. Fluxo de assinatura do lojista
-**Arquivos:** `src/routes/_authenticated/transacoes.$contractId.tsx`, `src/routes/assinar.$token.tsx`, `src/lib/signature.functions.ts`
+Você escolhe um subdomínio (recomendo `notify.intermo.com.br`) e o remetente visível pode continuar sendo, por exemplo, `nao-responda@intermo.com.br`. A Lovable cuida de SPF/DKIM/DMARC. Os e-mails só passam a sair de fato depois que o DNS for verificado (geralmente minutos, pode levar até algumas horas).
 
-- Botão "Assinar como lojista" na tela do contrato quando `status='sent'` e o token do lojista ainda não foi assinado.
-- Chama `createSignatureToken({ contractId, signerRole: 'lojista' })` e abre `/assinar/$token` em nova aba.
-- Na página whitelabel: quando `signer_role='lojista'`, copy muda pra "Você está assinando como lojista" e os dados exibidos são "Cliente: X / Lojista: você".
-- Contrato só vai pra `status='signed'` quando **ambos** os tokens (lojista + cliente) tiverem `signed_at`. Hoje só temos token de cliente; passamos a emitir os dois.
+## 3. Templates em PT-BR com logo inTermo
+Depois do domínio configurado, vou criar os 6 templates de autenticação como componentes React Email, todos em português brasileiro e com a identidade inTermo:
 
-## 3. Custódia Autentique pós-assinatura (opção B)
-**Arquivo novo:** `src/lib/autentique-custody.server.ts`
-**Edita:** `src/routes/api/public/sign.$token.tsx` (POST)
+1. **Confirmação de cadastro** — "Bem-vindo(a) ao inTermo, confirme seu e-mail"
+2. **Recuperação de senha** — "Redefina sua senha do inTermo"
+3. **Magic link** — "Seu link de acesso ao inTermo"
+4. **Convite** — "Você foi convidado para o inTermo"
+5. **Troca de e-mail** — "Confirme a alteração do seu e-mail"
+6. **Reautenticação** — "Confirme sua identidade"
 
-Quando o **último** token pendente for assinado (fechando o contrato bilateralmente):
-1. Compor um "PDF de evidências": original + página final com nome, IP, user-agent, timestamp UTC, hash SHA-256 do PDF original e imagem PNG das duas assinaturas embutidas. Usa o mesmo `pdf-lib` do `contracts.pdf.server.ts`.
-2. Subir esse PDF na Autentique via `createDocument` com **um único signatário**: o lojista, com `action: "SIGN"` mas marcado como `external_signature: true` se o schema permitir; caso contrário, usar a conta do tenant Autentique como signatário-arquivo (a Autentique não tem endpoint público pra "marcar signatário externo como já-assinado", então tratamos o doc como prova arquivada).
-3. Mover pra pasta do tenant (reusa `moveDocumentToFolder`).
-4. Atualizar `transactions`: `autentique_custody_document_id`, `status='signed'`, `signed_at=now()`.
-5. Gravar `contract_events: 'custody_archived'`.
+Cada template terá:
+- Cabeçalho com a marca inTermo (o símbolo atual é SVG; vou exportá-lo como PNG hospedado em `public/` para que clientes de e-mail renderizem)
+- Saudação, explicação curta, botão de ação grande, link alternativo
+- Rodapé com aviso "Se você não solicitou, ignore este e-mail" e assinatura "Equipe inTermo"
+- Tipografia, cores e botão coerentes com o app (fundo branco por exigência de deliverability)
 
-Falha no passo Autentique **não** invalida a assinatura whitelabel — gravamos `contract_events: 'custody_failed'` e seguimos. A prova jurídica primária continua sendo a `signature_tokens` + auditoria local (MP 2.200-2).
+## 4. Página `/reset-password` (já existe)
+Garantir que o link do e-mail de recuperação leve para `https://intermo.com.br/reset-password` e que o `redirectTo` na chamada `resetPasswordForEmail` use `window.location.origin + '/reset-password'`.
 
-## 4. Validação do schema Autentique (folders)
-**Arquivo:** `src/lib/autentique.server.ts`
+## 5. Confirmação de e-mail no cadastro
+- `supabase.auth.signUp` já passa `emailRedirectTo`; vou apontar para `${origin}/login?confirmed=1` e exibir um toast "Confirme seu e-mail para entrar".
+- Não habilitar auto-confirm — o usuário precisa clicar no link.
 
-- Fetch da doc oficial (https://docs.autentique.com.br/api/mutations/) pra confirmar `createFolder` e `moveDocumentToFolder`. Se o schema real divergir, corrijo as mutations. Se a API não expõe pastas via GraphQL, removo a feature e deixo TODO claro.
+## Ordem de execução (build mode)
+1. Limpar Google das telas de login/signup/auth e desativar o provider Google (mantendo email).
+2. Pedir a você para abrir o diálogo de configuração de domínio de e-mail (passo manual — só você consegue concluir).
+3. Assim que o domínio estiver registrado (mesmo com DNS ainda propagando), rodar o scaffolding dos templates de auth.
+4. Reescrever os 6 templates em PT-BR com a marca inTermo.
+5. Ajustar `emailRedirectTo` no signup e no reset.
 
-## Migration necessária
-Coluna nova `transactions.autentique_custody_document_id text null` (separada do `autentique_document_id` original pra não sobrescrever caso o fluxo (A) tenha sido usado antes). Grants já existem na tabela.
-
-## Travamento do chat (evita duplicação)
-**Arquivo:** `src/routes/api/chat.tsx`
-
-- Remover a tool `enviar_para_assinatura` (fluxo A vira morto).
-- Manter `gerar_link_assinatura` e `gerar_link_whatsapp`.
-- Adicionar `gerar_link_assinatura_lojista` pro vendedor pedir o link da própria assinatura.
-- Prompt do agente atualizado: o fluxo correto é gerar PDF → gerar link do lojista (assina) → gerar link/wa.me do cliente.
-
-## O que NÃO muda
-- Webhook Autentique (`/api/public/autentique-webhook`) continua de pé pra capturar eventos do documento de custódia.
-- Template do contrato (já corrigido na rodada anterior).
-- Bucket `contract-pdfs` (custody PDF vai no mesmo bucket sob `custody/<contract_id>.pdf`).
-
-## Ordem de execução
-1. Migration (coluna `autentique_custody_document_id`).
-2. Whitelabel logo (gap 1).
-3. Fluxo lojista (gap 2) + emissão automática dos dois tokens.
-4. Custódia Autentique (gap 3) + arquivo novo `autentique-custody.server.ts`.
-5. Validar folders + ajustar `autentique.server.ts`.
-6. Limpar chat tools (evita fluxo A duplicado).
+## Observações
+- Não vou mexer em `src/integrations/supabase/*` (auto-gerado).
+- Os e-mails da Autentique (assinatura de contrato) não são afetados — isto é só sobre os e-mails de autenticação do app.
+- Marketing/newsletter não entra aqui; só transacionais de auth.
