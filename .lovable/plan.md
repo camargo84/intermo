@@ -1,82 +1,61 @@
-# Auditoria + plano de correção do fluxo do agente
+# Correções no contrato gerado (modelo inTermo)
 
-## Achados da auditoria
+Dois problemas no PDF anexado:
 
-Fiz a leitura do fluxo do chat (`src/routes/api/chat.tsx`), das funções já existentes em `src/lib/contracts.functions.ts`, `src/lib/signature.functions.ts`, `src/lib/autentique.server.ts` e da página whitelabel `src/routes/assinar.$token.tsx`. Os blocos do print mostram exatamente o que está faltando no agente — apesar das peças do back-end já existirem.
+1. **Minuta errada.** O template atual é “Compra e Venda de Bens Móveis”. O modelo de referência (Vento Norte) é **Contrato de Encomenda / Intermediação de Serviços**, e é esse que a inTermo precisa usar — com adaptações pedidas por você.
+2. **“Local e data: Casimiro de Abreu/RJ” aparecendo por padrão.** O código já lê do perfil; o problema é que o perfil hoje está salvo como `Rua das Flores, 50 — Casimiro de Abreu/RJ — Comarca Casimiro de Abreu/RJ` (dado antigo). Vou eliminar a linha “Local e data” fixa e deixar a Autentique carimbar local/data/IP, e em paralelo confirmar que o cadastro da empresa em Configurações já é editável (é).
 
-| # | Problema | Onde |
-|---|---|---|
-| 1 | Após `gerar_pdf_contrato`, o agente entrega só a URL temporária do PDF e encerra. Não envia para Autentique, não gera link whitelabel `/assinar/:token`, não monta link `wa.me`. | `src/routes/api/chat.tsx` (faltam tools), `BASE_SYSTEM_PROMPT` (fluxo termina no passo 6). |
-| 2 | A página whitelabel `/assinar/:token` e o helper `createSignatureToken` já existem; a tela de Conversa já tem um botão `openWhatsapp()` que combina os dois. **Nada disso está disponível para o agente** dentro do chat. | `src/routes/_authenticated/chat.$contractId.tsx` linhas 198/217. |
-| 3 | `sendContractToAutentique` server fn já existe e a página `/transacoes/:id` usa via botão. **Não há tool no chat** que dispare esse fluxo. | `src/lib/contracts.functions.ts` linha 52. |
-| 4 | Mesmo com `active_client_id` no CONTEXTO, o modelo às vezes ignora a instrução e chama `upsert_cliente` sem `client_id` nem documento → retorno `INVALID_INPUT: Informe CPF ou CNPJ` (badge vermelho do print). | `src/routes/api/chat.tsx` `upsert_cliente.execute` linhas 217–226. |
-| 5 | O bloco de CONTEXTO não expõe o **telefone do cliente em dígitos** (apenas marca como "preenchido"). Sem isso o agente não consegue propor o `wa.me` do cadastro. | `src/routes/api/chat.tsx` linhas 838–854. |
-| 6 | Sem `TOOL_LABELS` para as novas ferramentas (`enviar_para_assinatura`, `gerar_link_assinatura`, `gerar_link_whatsapp`) os badges aparecem como "Processando…/Concluído". | `src/routes/_authenticated/chat.$contractId.tsx` linhas 399–405. |
-| 7 | `friendlyErrorFromOutput` não trata códigos novos (`AUTENTIQUE_FAILED`, `ALREADY_SENT`, `MISSING_PHONE`). | mesmo arquivo, linhas 438–462. |
+## O que vou fazer
 
-## Plano de correção
+### 1. Nova minuta (`src/lib/contracts.pdf.server.ts`)
 
-### 1. Novas tools do agente (`src/routes/api/chat.tsx`)
+Reescrever `renderContractPdf` no formato Vento Norte, **adaptado para a inTermo**:
 
-**`enviar_para_assinatura`**
-- Input: `{ contract_id }`.
-- Verifica ownership, exige `pdf_path`, status `draft` e `autentique_document_id` nulo.
-- Reaproveita a lógica de `dispatchToAutentique` (extrair para `src/lib/autentique-dispatch.server.ts` para ser chamado tanto pela server fn pública quanto pela tool). Não duplica código.
-- Retorna `{ ok, document_id, signers: [{ name, email, link }] }` ou `{ ok:false, error_code: "ALREADY_SENT" | "PDF_MISSING" | "AUTENTIQUE_FAILED", message_pt }`.
+- **Título:** `CONTRATO DE ENCOMENDA`
+- **DAS PARTES**
+  - `CONTRATANTE:` cliente — nome, qualificação (PF: nacionalidade, estado civil, CPF; PJ: CNPJ), endereço completo do cadastro, e-mail, celular.
+  - `CONTRATADA:` empresa — razão social, CNPJ, endereço, e-mail, celular, representada por nome do representante (nacionalidade, estado civil, CPF).
+- **Cláusulas**
+  1. **DO OBJETO** — prestação de serviços na modalidade intermediação.
+  2. **EXECUÇÃO DOS SERVIÇOS** — lista de produtos (descrição, qtd, especificações vindas do cadastro do produto).
+  3. **PRAZO, PRORROGAÇÃO E REEMBOLSO** — 7 dias úteis, prorrogação única por 15 dias, reembolso em 5 dias úteis.
+  4. **REMUNERAÇÃO** — valor total + por extenso, despesas inclusas.
+  5. **FORMA E LOCAL DE PAGAMENTO** — **sem simulação de parcelamento**. Texto montado conforme `forma_pagamento`:
+     - `avista` → “à vista (dinheiro / transferência / PIX), referente ao valor total de R$ X.”
+     - `parcelado` → “parcelamento no cartão em N vezes, sendo os juros conforme simulação apresentada à parte CONTRATANTE.”
+     - `misto` → “entrada de R$ X (dinheiro / transferência / PIX) + saldo no cartão em N vezes, sendo os juros conforme simulação apresentada à parte CONTRATANTE.”
+     Nenhum valor de parcela calculado/simulado dentro do contrato.
+  6. **MULTAS** — 20% sobre o valor do contrato.
+  7. **FORTUITO OU FORÇA MAIOR** — art. 393 CC.
+  8. **DISPOSIÇÕES GERAIS** — autorização de uso de dados para intermediação, garantia de funcionamento no Brasil, garantia de 12 meses do fabricante.
+  9. **FORO** — Comarca do `comarca` cadastrado no perfil.
+- **Encerramento** (sem testemunhas, sem “Local e data: …”):
+  ```
+  CONTRATADA: <razão social>
+  CNPJ nº: <cnpj>
 
-**`gerar_link_assinatura`** (whitelabel)
-- Input: `{ contract_id }`.
-- Chama mesma lógica do `createSignatureToken`. Retorna `{ ok, url }` com URL absoluta `${baseUrl}/assinar/<token>` (deriva `baseUrl` de `request.url` no handler — funciona em preview, prod e custom domain).
+  CONTRATANTE: <nome do cliente>
+  CPF/CNPJ nº: <doc>
+  ```
+  Data/local/IP ficam por conta da Autentique (válido juridicamente pela MP 2.200-2/2001).
 
-**`gerar_link_whatsapp`**
-- Input: `{ contract_id, telefone?: string, mensagem?: string, incluir_link_assinatura?: boolean (default true) }`.
-- Resolve telefone: usa `telefone` informado, senão `clients.phone` do cliente da transação (e o expõe ao agente — ver item 4).
-- Normaliza para E.164 BR (`55XXXXXXXXXXX`).
-- Se `incluir_link_assinatura`, chama internamente `createSignatureToken` para gerar o token e monta a mensagem padrão ("Olá <nome>, seu contrato está pronto. Para assinar: <url>").
-- Retorna `{ ok, wa_url, phone_used, signature_url }` ou `{ ok:false, error_code: "MISSING_PHONE", message_pt }`.
+### 2. Sem fallback de cidade/UF/comarca
 
-### 2. Hardening de `upsert_cliente`
+Remover qualquer `?? "—"` no PDF. Se faltar campo essencial, o `assertProfileReadyForContract` já bloqueia e direciona para `/configuracoes`.
 
-Antes de devolver `INVALID_INPUT: Informe CPF ou CNPJ`, se `input.client_id` não veio mas `body.contractId` existe e a transação tem `client_id`, usar esse `client_id` como `existingClient`. Isso evita o badge vermelho do print quando o modelo "esquece" de passar o `client_id`.
+### 3. Passar campos novos do cliente
 
-### 3. Atualizar o `BASE_SYSTEM_PROMPT`
+`ContractClient` ganha `email` e `telefone`; `contracts.functions.ts` (ou de onde vier `args.cliente`) passa esses dois campos do cadastro do cliente para o renderer.
 
-Adicionar passos 7–8 explícitos:
+## Arquivos alterados
 
-> 7. Após `gerar_pdf_contrato` ok, NÃO encerre. Pergunte: "Posso enviar para assinatura agora?". Se sim, chame `enviar_para_assinatura` e mostre o link do signatário.
-> 8. Em seguida ofereça gerar um link para WhatsApp. Pergunte: "Envio para o número cadastrado (<últimos 4 do CONTEXTO>) ou para outro número?". Com a resposta, chame `gerar_link_whatsapp` e devolva a URL `wa.me` clicável. Se o vendedor preferir só o link whitelabel, chame `gerar_link_assinatura`.
+- `src/lib/contracts.pdf.server.ts` — minuta nova + interface `ContractClient` ampliada (`email`, `telefone`) + remoção de “Local e data” e de fallbacks `—`.
+- Local que chama `renderContractPdf` (provável `src/lib/contracts.functions.ts` / `src/routes/api/chat.tsx`) — passar `email`/`phone` do cliente.
 
-Também reforçar: "NUNCA peça CPF/CNPJ se `active_client_id` está no CONTEXTO — chame `upsert_cliente` com esse `client_id`."
+## O que NÃO muda
 
-### 4. Expor telefone no CONTEXTO
+- Header com logo e footer com paginação.
+- Pipeline Autentique + link wa.me (já implementados).
+- Schema do banco.
 
-No bloco de CONTEXTO, quando o cliente está vinculado, adicionar:
-- `cliente_phone_e164: 55XXXXXXXXXXX` (ou `(não informado)`).
-- `cliente_phone_mascarado: ****-1234`.
-
-Assim o modelo consegue propor "envio para o número terminado em 1234?" e passar o número ao `gerar_link_whatsapp`.
-
-### 5. UI do chat (`src/routes/_authenticated/chat.$contractId.tsx`)
-
-- Estender `TOOL_LABELS` com:
-  - `enviar_para_assinatura`: "Enviando para Autentique…" / "Enviado para assinatura"
-  - `gerar_link_assinatura`: "Gerando link de assinatura…" / "Link de assinatura pronto"
-  - `gerar_link_whatsapp`: "Montando mensagem do WhatsApp…" / "Link do WhatsApp pronto"
-  - `gerar_pdf_contrato`: "Gerando PDF…" / "PDF gerado" (faltava também).
-- Estender `friendlyErrorFromOutput` com `ALREADY_SENT`, `AUTENTIQUE_FAILED`, `PDF_MISSING`, `MISSING_PHONE`.
-- Garantir que URLs (PDF assinado, `/assinar/<token>`, `wa.me`) sejam renderizadas como **link clicável** pelo `ReactMarkdown` já em uso (validar `linkify` / autolink — se preciso, ativar `remark-gfm` que já existe nas dependências do template ou trocar o renderer de `a` para abrir em nova aba com `target="_blank" rel="noopener"`).
-
-### 6. Refatoração mínima
-
-Extrair a função privada `dispatchToAutentique` de `src/lib/contracts.functions.ts` para `src/lib/autentique-dispatch.server.ts`, recebendo `supabase: Supa` e `contract: ContractRow`. Tanto `sendContractToAutentique` quanto a nova tool `enviar_para_assinatura` importam de lá. Sem mudança de comportamento para a UI existente.
-
-## Fora do escopo agora
-
-- Reenvio para outros signatários, lembretes automáticos, edição do template da mensagem WhatsApp.
-- Métricas de leitura/assinatura no chat (já existem em `/transacoes/:id`).
-- Mudanças visuais — light/dark e tokens ficam como estão.
-
-## Arquivos
-
-- **Novo:** `src/lib/autentique-dispatch.server.ts`.
-- **Editados:** `src/routes/api/chat.tsx` (3 tools novas, prompt, contexto, hardening do upsert), `src/lib/contracts.functions.ts` (passa a importar dispatch), `src/routes/_authenticated/chat.$contractId.tsx` (TOOL_LABELS + friendlyErrorFromOutput + target=_blank em links).
+Se aprovar, implemento direto.
