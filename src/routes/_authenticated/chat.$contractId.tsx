@@ -15,8 +15,6 @@ import {
   CheckCircle2,
   AlertCircle,
   Circle,
-  UserPlus,
-  UserSearch,
   Package,
   Wallet,
   ScrollText,
