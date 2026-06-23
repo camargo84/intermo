@@ -391,6 +391,7 @@ export type Database = {
       }
       transactions: {
         Row: {
+          autentique_custody_document_id: string | null
           autentique_document_id: string | null
           autentique_signers: Json | null
           client_doc: string | null
@@ -431,6 +432,7 @@ export type Database = {
           value_cents: number | null
         }
         Insert: {
+          autentique_custody_document_id?: string | null
           autentique_document_id?: string | null
           autentique_signers?: Json | null
           client_doc?: string | null
@@ -471,6 +473,7 @@ export type Database = {
           value_cents?: number | null
         }
         Update: {
+          autentique_custody_document_id?: string | null
           autentique_document_id?: string | null
           autentique_signers?: Json | null
           client_doc?: string | null
