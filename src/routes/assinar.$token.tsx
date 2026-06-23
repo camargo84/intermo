@@ -19,8 +19,11 @@ export const Route = createFileRoute("/assinar/$token")({
 
 type ContractData = {
   lojista: string;
+  tenantName: string | null;
+  tenantLogoUrl: string | null;
   cliente: string;
   signerName: string;
+  signerRole: "lojista" | "cliente";
   produto: string;
   valorCents: number | null;
   pdfUrl: string | null;
