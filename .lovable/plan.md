@@ -1,76 +1,84 @@
+## Escopo
 
-## Contexto da tela do print
-
-A tela "Grant permission to InTermo / Lovable" **não é uma tela da nossa app** — é o broker OAuth gerenciado pela Lovable Cloud (`oauth.lovable.app`). Por isso o logo é da Lovable, o título do navegador é "Lovable" e os textos vêm em inglês. Não tem como traduzir nem rebrandar essa tela usando código nosso: ela é servida pela infraestrutura da Lovable.
-
-Existem **dois caminhos** para o usuário ver uma tela bonita, em português e sem a marca Lovable:
-
-### Caminho A — BYOC (recomendado para produção) ✅
-Usar credenciais próprias do Google (Client ID + Secret seus, no Google Cloud Console). Quando ativado:
-- O consent screen passa a ser **diretamente do Google** (accounts.google.com), automaticamente em pt-BR pelo idioma do navegador.
-- Aparece **"InTermo quer acessar sua Conta Google"** com o logo que você configurar no Google Cloud.
-- Sem nenhuma menção a Lovable, sem o passo intermediário do broker.
-- Aba do navegador mostra "Fazer login - Contas do Google".
-
-**O que você (usuário) precisa fazer no Google Cloud Console** (faço um passo-a-passo claro quando aprovar):
-1. Criar projeto → OAuth Consent Screen com nome "InTermo", logo, domínio `intermo.com.br`.
-2. Criar credenciais OAuth Client (Web) com o redirect URI que mostro.
-3. Colar Client ID + Secret nas Authentication Settings do backend.
-
-Depois disso o broker da Lovable some do fluxo.
-
-### Caminho B — manter broker Lovable
-Nada muda visualmente: continua em inglês com logo da Lovable. Não tem flag para traduzir.
+Três ajustes no chat — só comportamento/UI e normalização de input. Sem mudar schema do banco.
 
 ---
 
-## 1. Onboarding pós-Google (dados da empresa)
+## 1. Quebras de linha preservadas na mensagem do usuário
 
-Hoje, ao entrar com Google, o usuário cai direto no dashboard com o `profiles` praticamente vazio (só nome e e-mail do Google). O `/signup` por e-mail/senha coleta CNPJ, razão social, telefone, etc., mas o Google pula tudo isso. Resultado: na primeira tentativa de gerar contrato, o agente bloqueia com "faltam: CNPJ, razão social, endereço, ...".
+**Problema:** colar texto do WhatsApp com vários `Enter` (visível no 2º print, a bolha verde inteira virou um parágrafão único) faz a mensagem ficar emendada.
 
-**Solução**: gate de onboarding obrigatório.
+**Causa:** em `src/routes/_authenticated/chat.$contractId.tsx`, o ramo `isUser` de `MessageBlock` renderiza `<div>{part.text}</div>` — o HTML colapsa `\n` em espaço.
 
-- Nova rota `_authenticated/onboarding.tsx` com formulário enxuto (2 passos):
-  - **Passo 1 — Empresa**: razão social, nome fantasia, CNPJ (com validação), telefone, e-mail comercial, endereço, cidade/UF, CEP.
-  - **Passo 2 — Representante & foro**: nome do representante, CPF, qualificação ("sócio administrador" como sugestão), comarca de foro, margem padrão.
-  - Botão "Pular por enquanto" só some quando todos os campos críticos estão vazios — depois fica como "Salvar e continuar".
-- No `_authenticated/route.tsx`, depois do `getUser`, busca `profiles` e redireciona para `/onboarding` se algum campo crítico estiver faltando (`company_cnpj`, `company_legal_name`, `company_address`, `company_city`, `company_uf`, `representative_name`, `comarca`). Onboarding em si fica fora desse gate para não dar loop.
-- Pré-preenche `ownerName` e `companyEmail` com o que veio do Google (`user.user_metadata.full_name`, `user.email`).
-- Trigger no banco já cria o row em `profiles` no signup (verificar; se não tiver, adicionar migration).
-
-## 2. Preflight do agente ao gerar contrato
-
-Hoje `src/routes/api/chat.tsx` (linhas ~363-396) já valida o `profiles` antes de gerar, mas:
-- A checagem só dispara dentro da tool `generate_contract` — o agente pode propor gerar e só descobre que falta no último passo.
-- Cliente exige só CPF/CNPJ e e-mail; faltam endereço/cidade do cliente, que entram no preâmbulo do contrato.
-
-**Mudanças**:
-- Adicionar tool `preflight_contract({ client_id })` que o agente **deve chamar antes** de `generate_contract`. Retorna `{ ok, missing_profile: [...], missing_client: [...] }`.
-- System prompt passa a instruir: "Antes de propor gerar contrato, chame `preflight_contract`. Se houver pendências, pergunte/peça os dados que faltam (no caso do perfil da empresa, oriente abrir Configurações; no caso do cliente, peça no chat e use `upsert_client` para completar)."
-- Estender `upsert_client` para aceitar `address`, `city`, `uf`, `cep` (já tem coluna nos `transactions`/`clients`? verifico na implementação; se faltar, migration curta).
-- Lista de campos obrigatórios fica num único arquivo (`src/lib/contract-requirements.ts`) usado pelo preflight, pelo `getMyProfile` e pelo onboarding — fonte única da verdade.
-
-## 3. Pequenos polimentos da tela `/login` e `/signup`
-
-Só o que dá pra fazer no nosso lado (o broker é intocável):
-- Garantir que os textos em todas as telas próprias estão em pt-BR (já estão, mas reviso mensagens de erro do `lovable.auth.signInWithOAuth`).
-- Confirmar `favicon.ico` e `<title>` corretos em `/auth` (já existe, mas a aba do broker é da Lovable — só BYOC resolve).
+**Correção:** trocar por `<div className="whitespace-pre-wrap break-words">…</div>`, mantendo o restante do estilo da bolha. ~2 linhas, só apresentação. O texto já chega íntegro no backend; é só visual.
 
 ---
 
-## Pergunta antes de implementar
+## 2. Normalização de inputs do agente (data, CPF, CEP, telefone)
 
-Você quer seguir o **Caminho A (BYOC, recomendado)** para a tela ficar 100% em pt-BR e sem Lovable? Se sim, ao aprovar:
-1. Implemento o **onboarding** + **preflight do agente** agora.
-2. Te entrego um **passo-a-passo numerado** do Google Cloud Console + onde colar as credenciais (nada precisa ser commitado — fica nas Auth Settings do backend).
+**Problema visto no print:** badge vermelho `Falha: date/time field value out of range: "25/11/1996"`. O usuário escreveu a data no formato brasileiro `DD/MM/YYYY` e o agente repassou cru para a coluna `DATE` do Postgres, que só aceita ISO `YYYY-MM-DD`. Mesma fragilidade existe para CPF/CNPJ/CEP/telefone quando vêm com pontuação ou sem.
 
-Se preferir o Caminho B, faço só onboarding + preflight e a tela do broker continua igual.
+**Correções (server-side, em `src/routes/api/chat.tsx` e `src/lib/clients.functions.ts`):**
+
+- Criar `src/lib/normalize-input.ts` com:
+  - `normalizeDateBR(input)` → aceita `DD/MM/YYYY`, `DD-MM-YYYY`, `YYYY-MM-DD`, `DD/MM/YY` (assume 19xx/20xx por janela), `Date` ISO; valida calendário (mês 1-12, dia válido para o mês, ano 1900-hoje); devolve `YYYY-MM-DD` ou `null` se vazio; lança `InputFormatError` com mensagem pt-BR se inválido.
+  - `normalizeCEP(input)` → mantém só dígitos, valida 8 chars.
+  - `normalizePhoneBR(input)` → mantém só dígitos, valida 10/11 chars.
+  - (CPF/CNPJ já são normalizados via `onlyDigits` + validadores existentes — manter.)
+- No `inputValidator`/handler de `upsert_cliente` (e em `clients.functions.ts → upsertClient`):
+  - Passar `data_nascimento` por `normalizeDateBR` antes do INSERT/UPDATE.
+  - Passar `cep` por `normalizeCEP`, `phone` por `normalizePhoneBR`.
+  - Em falha de formato, retornar `{ ok: false, error_code: "INVALID_INPUT", field, message_pt }` em vez de deixar o erro do Postgres vazar.
+- Reforçar no system prompt do agente que datas devem ser enviadas como `YYYY-MM-DD` (e que o normalizador aceita BR como fallback), eliminando a tendência de repassar o texto cru do usuário.
+
+---
+
+## 3. Tratamento amigável de erros do agente
+
+**Problema visto no 1º print:** dois badges contraditórios — “Contrato gerado” (verde) + “Falha: Cannot read properties of null (reading 'company_address')” (vermelho em inglês). O agente criou o registro de contrato mesmo sem dados de perfil, e o `TypeError` cru de JS vazou para a UI. No 2º print, mesma classe de problema com o erro do Postgres aparecendo entre os badges “Cliente consultado” e “Cliente salvo”.
+
+**Causas:**
+- `gerar_pdf_contrato`/`renderContractPdf` acessam `profile.company_address` sem checar `null`.
+- O agente está chamando `gerar_contrato` antes do `preflight_contrato` confirmar perfil completo (preflight existe mas não é obrigatório).
+- O badge de ferramenta na UI imprime literalmente `output.error` sem tradução, sem agrupamento e sem distinguir erro recuperado de erro fatal.
+- Quando o PDF falha após o INSERT, o registro fica órfão e ainda aparece “Contrato gerado”.
+
+**Correções:**
+
+1. **Server tools (`src/routes/api/chat.tsx`, `src/lib/agent.functions.ts`):**
+   - `gerar_contrato` e `gerar_pdf_contrato`: rodar a mesma checagem do preflight no início. Faltando perfil/cliente, retornar `{ ok: false, error_code: "PROFILE_INCOMPLETE" | "CLIENT_INCOMPLETE", missing_fields, message_pt }` sem prosseguir. Nunca `throw`.
+   - Envolver `renderContractPdf` + upload em `try/catch`. Em falha, **deletar a linha de `transactions` recém-criada** (rollback) e retornar `{ ok: false, error_code: "PDF_RENDER_FAILED" }`. Some o “Contrato gerado” fantasma.
+   - Padronizar todos os retornos: `{ ok: true, ... }` ou `{ ok: false, error_code, message_pt, ...detalhes }`. Nunca expor `error.message` cru.
+
+2. **`renderContractPdf` (`src/lib/contracts.pdf.server.ts`):** validar campos obrigatórios do `TenantSnapshot` no topo e lançar `ContractDataError` tipado (capturado pelo caller).
+
+3. **System prompt do agente (`src/routes/api/chat.tsx`):**
+   - Regra explícita: **sempre** chamar `preflight_contrato` antes de `gerar_contrato`. Se `missing_profile` não vazio → não chamar `gerar_contrato`, pedir para abrir Configurações, parar.
+   - Recebendo `{ ok: false }` de qualquer tool: traduzir para uma única mensagem pt-BR clara e parar (sem retry automático em loop).
+
+4. **UI do badge de ferramenta (`MessageBlock` em `chat.$contractId.tsx`):**
+   - Mapa `error_code → label pt-BR`:
+     - `PROFILE_INCOMPLETE` → “Faltam dados do seu perfil: {campos}” + botão **Abrir Configurações** (`<Link to="/configuracoes">`).
+     - `CLIENT_INCOMPLETE` → “Faltam dados do cliente: {campos}”.
+     - `INVALID_INPUT` → “{field}: {message_pt}”.
+     - `PDF_RENDER_FAILED` → “Não foi possível gerar o PDF. Tente novamente.”
+     - `RATE_LIMITED` → “Muitas tentativas, aguarde um instante.”
+     - default → “Algo deu errado. Tente novamente.” (nunca stack/inglês).
+   - **Agrupamento visual:** quando vários badges de tool aparecerem na mesma resposta (ex.: “Cliente consultado” + “Falha…” + “Cliente salvo”), agrupar em uma única linha compacta com separador, em vez de três chips empilhados disputando atenção. Erro fatal ao final → o sucesso anterior vira badge neutro (“Cancelado”). Erro recuperado (próxima tool teve sucesso) → o erro vira badge âmbar discreto (“Reententado”), não vermelho gritante.
+   - Limite de 1 linha de altura para o conjunto de badges, com tooltip mostrando detalhes ao passar o mouse.
+
+5. **Logs:** erro técnico só em `console.error` server-side (via `error-capture`), nunca no payload da tool retornado ao cliente.
+
+---
 
 ## Arquivos afetados
-- `src/routes/_authenticated/onboarding.tsx` (novo)
-- `src/routes/_authenticated/route.tsx` (gate de onboarding)
-- `src/lib/profiles.functions.ts` (server fn `getProfileCompleteness`)
-- `src/lib/contract-requirements.ts` (novo, fonte única)
-- `src/routes/api/chat.tsx` (tool `preflight_contract`, system prompt)
-- `src/lib/agent.functions.ts` (reuso da lista única)
-- migration leve, se faltar colunas de endereço em `clients`
+
+- `src/routes/_authenticated/chat.$contractId.tsx` — `whitespace-pre-wrap` na bolha do usuário; mapa de erros, agrupamento dos chips e botão “Abrir Configurações” no badge de tool.
+- `src/routes/api/chat.tsx` — normalização de data/CEP/telefone em `upsert_cliente`; guards de início + rollback em `gerar_contrato`/`gerar_pdf_contrato`; retornos padronizados `{ ok, error_code, ... }`; system prompt reforçando preflight e formato de data.
+- `src/lib/agent.functions.ts` — mesmos guards e formato de retorno.
+- `src/lib/clients.functions.ts` — `upsertClient` chamando os normalizadores; retornos padronizados.
+- `src/lib/contracts.pdf.server.ts` — validação no topo de `renderContractPdf` lançando `ContractDataError` tipado.
+- `src/lib/contract-requirements.ts` — utilitário único `assertProfileComplete`/`assertClientComplete` reutilizado pelas tools.
+- `src/lib/normalize-input.ts` (novo) — `normalizeDateBR`, `normalizeCEP`, `normalizePhoneBR` + `InputFormatError`.
+
+Sem migration, sem mudança em UI fora do chat, sem mudança no fluxo de auth/onboarding.
