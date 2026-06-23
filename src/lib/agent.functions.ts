@@ -18,13 +18,8 @@ async function buildTenantSnapshot(supabase: Supa, userId: string): Promise<Tena
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!p) throw new Error("Perfil não encontrado.");
-  const missing: string[] = [];
-  if (!p.company_legal_name) missing.push("razão social");
-  if (!p.company_cnpj) missing.push("CNPJ");
-  if (!p.company_address) missing.push("endereço");
-  if (!p.company_city || !p.company_uf) missing.push("cidade/UF");
-  if (!p.representative_name) missing.push("representante");
-  if (!p.comarca) missing.push("comarca");
+  const { profileMissingFields } = await import("./contract-requirements");
+  const missing = profileMissingFields(p);
   if (missing.length > 0) {
     throw new Error(`Complete em Configurações: ${missing.join(", ")}.`);
   }
