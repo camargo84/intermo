@@ -401,7 +401,15 @@ const TOOL_LABELS: Record<string, { running: string; done: string }> = {
   buscar_cliente: { running: "Buscando cliente…", done: "Cliente consultado" },
   consultar_cep: { running: "Consultando CEP…", done: "Endereço encontrado" },
   upsert_cliente: { running: "Salvando dados do cliente…", done: "Cliente salvo" },
+  preflight_contrato: { running: "Verificando dados…", done: "Tudo certo para gerar" },
   criar_contrato: { running: "Gerando contrato…", done: "Contrato gerado" },
+  gerar_pdf_contrato: { running: "Gerando PDF…", done: "PDF gerado" },
+  enviar_para_assinatura: { running: "Enviando para Autentique…", done: "Enviado para assinatura" },
+  gerar_link_assinatura: { running: "Gerando link de assinatura…", done: "Link de assinatura pronto" },
+  gerar_link_whatsapp: { running: "Montando mensagem do WhatsApp…", done: "Link do WhatsApp pronto" },
+  registrar_pagamento_cliente: { running: "Registrando pagamento…", done: "Pagamento registrado" },
+  registrar_pagamento_fornecedor: { running: "Registrando custo do fornecedor…", done: "Custo registrado" },
+  registrar_frete: { running: "Registrando frete…", done: "Frete registrado" },
   validate_cnpj: { running: "Validando CNPJ…", done: "CNPJ validado" },
 };
 
