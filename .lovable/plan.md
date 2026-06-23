@@ -1,61 +1,60 @@
-# Correções no contrato gerado (modelo inTermo)
+# Plano travado — Whitelabel + Autentique como cofre (opção B)
 
-Dois problemas no PDF anexado:
+Decisão: o cliente assina no nosso domínio; ao fechar, empurramos o pacote de evidências pra Autentique como arquivo morto/custódia.
 
-1. **Minuta errada.** O template atual é “Compra e Venda de Bens Móveis”. O modelo de referência (Vento Norte) é **Contrato de Encomenda / Intermediação de Serviços**, e é esse que a inTermo precisa usar — com adaptações pedidas por você.
-2. **“Local e data: Casimiro de Abreu/RJ” aparecendo por padrão.** O código já lê do perfil; o problema é que o perfil hoje está salvo como `Rua das Flores, 50 — Casimiro de Abreu/RJ — Comarca Casimiro de Abreu/RJ` (dado antigo). Vou eliminar a linha “Local e data” fixa e deixar a Autentique carimbar local/data/IP, e em paralelo confirmar que o cadastro da empresa em Configurações já é editável (é).
+## 1. Whitelabel real na página de assinatura
+**Arquivos:** `src/routes/api/public/sign.$token.tsx`, `src/routes/assinar.$token.tsx`
 
-## O que vou fazer
+- GET retorna também: `tenant_logo_url` (signed URL 1h do bucket `tenant-logos` se existir `profiles.company_logo_path`) e `tenant_name` (fantasia → legal → owner).
+- Header da página whitelabel passa a renderizar `<img src={tenant_logo_url}>` + nome fantasia. Fallback pro `<Logo />` do inTermo só quando o tenant não tem logo nem nome.
+- Rodapé discreto: "Assinatura segura por inTermo" (mantém nossa identidade sem competir com a marca do lojista).
 
-### 1. Nova minuta (`src/lib/contracts.pdf.server.ts`)
+## 2. Fluxo de assinatura do lojista
+**Arquivos:** `src/routes/_authenticated/transacoes.$contractId.tsx`, `src/routes/assinar.$token.tsx`, `src/lib/signature.functions.ts`
 
-Reescrever `renderContractPdf` no formato Vento Norte, **adaptado para a inTermo**:
+- Botão "Assinar como lojista" na tela do contrato quando `status='sent'` e o token do lojista ainda não foi assinado.
+- Chama `createSignatureToken({ contractId, signerRole: 'lojista' })` e abre `/assinar/$token` em nova aba.
+- Na página whitelabel: quando `signer_role='lojista'`, copy muda pra "Você está assinando como lojista" e os dados exibidos são "Cliente: X / Lojista: você".
+- Contrato só vai pra `status='signed'` quando **ambos** os tokens (lojista + cliente) tiverem `signed_at`. Hoje só temos token de cliente; passamos a emitir os dois.
 
-- **Título:** `CONTRATO DE ENCOMENDA`
-- **DAS PARTES**
-  - `CONTRATANTE:` cliente — nome, qualificação (PF: nacionalidade, estado civil, CPF; PJ: CNPJ), endereço completo do cadastro, e-mail, celular.
-  - `CONTRATADA:` empresa — razão social, CNPJ, endereço, e-mail, celular, representada por nome do representante (nacionalidade, estado civil, CPF).
-- **Cláusulas**
-  1. **DO OBJETO** — prestação de serviços na modalidade intermediação.
-  2. **EXECUÇÃO DOS SERVIÇOS** — lista de produtos (descrição, qtd, especificações vindas do cadastro do produto).
-  3. **PRAZO, PRORROGAÇÃO E REEMBOLSO** — 7 dias úteis, prorrogação única por 15 dias, reembolso em 5 dias úteis.
-  4. **REMUNERAÇÃO** — valor total + por extenso, despesas inclusas.
-  5. **FORMA E LOCAL DE PAGAMENTO** — **sem simulação de parcelamento**. Texto montado conforme `forma_pagamento`:
-     - `avista` → “à vista (dinheiro / transferência / PIX), referente ao valor total de R$ X.”
-     - `parcelado` → “parcelamento no cartão em N vezes, sendo os juros conforme simulação apresentada à parte CONTRATANTE.”
-     - `misto` → “entrada de R$ X (dinheiro / transferência / PIX) + saldo no cartão em N vezes, sendo os juros conforme simulação apresentada à parte CONTRATANTE.”
-     Nenhum valor de parcela calculado/simulado dentro do contrato.
-  6. **MULTAS** — 20% sobre o valor do contrato.
-  7. **FORTUITO OU FORÇA MAIOR** — art. 393 CC.
-  8. **DISPOSIÇÕES GERAIS** — autorização de uso de dados para intermediação, garantia de funcionamento no Brasil, garantia de 12 meses do fabricante.
-  9. **FORO** — Comarca do `comarca` cadastrado no perfil.
-- **Encerramento** (sem testemunhas, sem “Local e data: …”):
-  ```
-  CONTRATADA: <razão social>
-  CNPJ nº: <cnpj>
+## 3. Custódia Autentique pós-assinatura (opção B)
+**Arquivo novo:** `src/lib/autentique-custody.server.ts`
+**Edita:** `src/routes/api/public/sign.$token.tsx` (POST)
 
-  CONTRATANTE: <nome do cliente>
-  CPF/CNPJ nº: <doc>
-  ```
-  Data/local/IP ficam por conta da Autentique (válido juridicamente pela MP 2.200-2/2001).
+Quando o **último** token pendente for assinado (fechando o contrato bilateralmente):
+1. Compor um "PDF de evidências": original + página final com nome, IP, user-agent, timestamp UTC, hash SHA-256 do PDF original e imagem PNG das duas assinaturas embutidas. Usa o mesmo `pdf-lib` do `contracts.pdf.server.ts`.
+2. Subir esse PDF na Autentique via `createDocument` com **um único signatário**: o lojista, com `action: "SIGN"` mas marcado como `external_signature: true` se o schema permitir; caso contrário, usar a conta do tenant Autentique como signatário-arquivo (a Autentique não tem endpoint público pra "marcar signatário externo como já-assinado", então tratamos o doc como prova arquivada).
+3. Mover pra pasta do tenant (reusa `moveDocumentToFolder`).
+4. Atualizar `transactions`: `autentique_custody_document_id`, `status='signed'`, `signed_at=now()`.
+5. Gravar `contract_events: 'custody_archived'`.
 
-### 2. Sem fallback de cidade/UF/comarca
+Falha no passo Autentique **não** invalida a assinatura whitelabel — gravamos `contract_events: 'custody_failed'` e seguimos. A prova jurídica primária continua sendo a `signature_tokens` + auditoria local (MP 2.200-2).
 
-Remover qualquer `?? "—"` no PDF. Se faltar campo essencial, o `assertProfileReadyForContract` já bloqueia e direciona para `/configuracoes`.
+## 4. Validação do schema Autentique (folders)
+**Arquivo:** `src/lib/autentique.server.ts`
 
-### 3. Passar campos novos do cliente
+- Fetch da doc oficial (https://docs.autentique.com.br/api/mutations/) pra confirmar `createFolder` e `moveDocumentToFolder`. Se o schema real divergir, corrijo as mutations. Se a API não expõe pastas via GraphQL, removo a feature e deixo TODO claro.
 
-`ContractClient` ganha `email` e `telefone`; `contracts.functions.ts` (ou de onde vier `args.cliente`) passa esses dois campos do cadastro do cliente para o renderer.
+## Migration necessária
+Coluna nova `transactions.autentique_custody_document_id text null` (separada do `autentique_document_id` original pra não sobrescrever caso o fluxo (A) tenha sido usado antes). Grants já existem na tabela.
 
-## Arquivos alterados
+## Travamento do chat (evita duplicação)
+**Arquivo:** `src/routes/api/chat.tsx`
 
-- `src/lib/contracts.pdf.server.ts` — minuta nova + interface `ContractClient` ampliada (`email`, `telefone`) + remoção de “Local e data” e de fallbacks `—`.
-- Local que chama `renderContractPdf` (provável `src/lib/contracts.functions.ts` / `src/routes/api/chat.tsx`) — passar `email`/`phone` do cliente.
+- Remover a tool `enviar_para_assinatura` (fluxo A vira morto).
+- Manter `gerar_link_assinatura` e `gerar_link_whatsapp`.
+- Adicionar `gerar_link_assinatura_lojista` pro vendedor pedir o link da própria assinatura.
+- Prompt do agente atualizado: o fluxo correto é gerar PDF → gerar link do lojista (assina) → gerar link/wa.me do cliente.
 
 ## O que NÃO muda
+- Webhook Autentique (`/api/public/autentique-webhook`) continua de pé pra capturar eventos do documento de custódia.
+- Template do contrato (já corrigido na rodada anterior).
+- Bucket `contract-pdfs` (custody PDF vai no mesmo bucket sob `custody/<contract_id>.pdf`).
 
-- Header com logo e footer com paginação.
-- Pipeline Autentique + link wa.me (já implementados).
-- Schema do banco.
-
-Se aprovar, implemento direto.
+## Ordem de execução
+1. Migration (coluna `autentique_custody_document_id`).
+2. Whitelabel logo (gap 1).
+3. Fluxo lojista (gap 2) + emissão automática dos dois tokens.
+4. Custódia Autentique (gap 3) + arquivo novo `autentique-custody.server.ts`.
+5. Validar folders + ajustar `autentique.server.ts`.
+6. Limpar chat tools (evita fluxo A duplicado).

@@ -19,8 +19,11 @@ export const Route = createFileRoute("/assinar/$token")({
 
 type ContractData = {
   lojista: string;
+  tenantName: string | null;
+  tenantLogoUrl: string | null;
   cliente: string;
   signerName: string;
+  signerRole: "lojista" | "cliente";
   produto: string;
   valorCents: number | null;
   pdfUrl: string | null;
@@ -195,10 +198,30 @@ function SignPage() {
     }
   };
 
+  const isLojista = data?.signerRole === "lojista";
+
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="flex h-16 items-center border-b border-border px-6">
-        <Logo />
+      <header className="flex h-16 items-center justify-between border-b border-border px-6">
+        {data?.tenantLogoUrl ? (
+          <div className="flex items-center gap-3">
+            <img
+              src={data.tenantLogoUrl}
+              alt={data.tenantName ?? "Logo"}
+              className="h-9 w-auto max-w-[180px] object-contain"
+            />
+            {data.tenantName && (
+              <span className="text-sm font-medium text-foreground">{data.tenantName}</span>
+            )}
+          </div>
+        ) : data?.tenantName ? (
+          <span className="font-serif text-lg text-primary">{data.tenantName}</span>
+        ) : (
+          <Logo />
+        )}
+        <span className="hidden text-xs text-muted-foreground sm:inline">
+          Assinatura segura por inTermo
+        </span>
       </header>
 
       <main className="mx-auto w-full max-w-2xl px-4 py-8">
@@ -235,9 +258,13 @@ function SignPage() {
         {!loading && data && !done && !alreadySigned && (
           <div className="space-y-6">
             <div className="space-y-1 text-center">
-              <h1 className="font-serif text-2xl text-primary">Assinatura de contrato</h1>
+              <h1 className="font-serif text-2xl text-primary">
+                {isLojista ? "Assinatura do lojista" : "Assinatura de contrato"}
+              </h1>
               <p className="text-sm text-muted-foreground">
-                {data.lojista} convidou você para assinar este contrato.
+                {isLojista
+                  ? `Você está assinando como representante de ${data.lojista}.`
+                  : `${data.lojista} convidou você para assinar este contrato.`}
               </p>
             </div>
 

@@ -1,14 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createHash } from "node:crypto";
 
-// Rota PÚBLICA (fora de _authenticated): o cliente final assina sem login.
-// GET  /api/public/sign/:token  -> dados públicos do contrato + URL do PDF
-// POST /api/public/sign/:token  -> captura a assinatura eletrônica white-label
-//
-// Segurança: o token é uma chave de lookup de alta entropia (32 bytes). Não é
-// comparado por timingSafeEqual porque não é um segredo compartilhado fixo —
-// é um identificador único por contrato. Toda a validação (expiração, revogação,
-// já-assinado) é feita server-side via supabaseAdmin (service role).
+// Rota PÚBLICA (fora de _authenticated): o signatário (cliente OU lojista)
+// assina sem login. GET retorna dados do contrato + marca whitelabel do tenant;
+// POST captura a assinatura, e quando TODAS as partes tiverem assinado,
+// fecha o contrato e dispara a custódia na Autentique (best-effort).
 
 export const Route = createFileRoute("/api/public/sign/$token")({
   server: {
@@ -37,7 +33,6 @@ export const Route = createFileRoute("/api/public/sign/$token")({
           return json({ alreadySigned: true, signedAt: tk.signed_at });
         }
 
-        // Dados mínimos do contrato + dados do lojista para identidade.
         const { data: tx } = await supabaseAdmin
           .from("transactions")
           .select("id, user_id, title, client_name, value_cents, pdf_path")
@@ -47,7 +42,9 @@ export const Route = createFileRoute("/api/public/sign/$token")({
 
         const { data: profile } = await supabaseAdmin
           .from("profiles")
-          .select("company_legal_name, company_fantasy_name, owner_name")
+          .select(
+            "company_legal_name, company_fantasy_name, owner_name, logo_path",
+          )
           .eq("id", tx.user_id)
           .maybeSingle();
 
@@ -59,14 +56,31 @@ export const Route = createFileRoute("/api/public/sign/$token")({
           pdfUrl = signed?.signedUrl ?? null;
         }
 
+        let tenantLogoUrl: string | null = null;
+        if (profile?.logo_path) {
+          const { data: signedLogo } = await supabaseAdmin.storage
+            .from("tenant-logos")
+            .createSignedUrl(profile.logo_path, 3600);
+          tenantLogoUrl = signedLogo?.signedUrl ?? null;
+        }
+
+        const tenantName =
+          profile?.company_fantasy_name ||
+          profile?.company_legal_name ||
+          profile?.owner_name ||
+          null;
+
         return json({
           lojista:
             profile?.company_legal_name ||
             profile?.company_fantasy_name ||
             profile?.owner_name ||
             "Loja",
+          tenantName,
+          tenantLogoUrl,
           cliente: tx.client_name,
           signerName: tk.signer_name ?? tx.client_name,
+          signerRole: tk.signer_role,
           produto: tx.title,
           valorCents: tx.value_cents ?? null,
           pdfUrl,
@@ -104,10 +118,9 @@ export const Route = createFileRoute("/api/public/sign/$token")({
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-        // Revalida o token server-side (estado pode ter mudado desde o GET).
         const { data: tk } = await supabaseAdmin
           .from("signature_tokens")
-          .select("id, transaction_id, signed_at, revoked_at, expires_at")
+          .select("id, transaction_id, signer_role, signed_at, revoked_at, expires_at")
           .eq("token", token)
           .maybeSingle();
         if (!tk) return json({ error: "Token inválido." }, 404);
@@ -142,14 +155,10 @@ export const Route = createFileRoute("/api/public/sign/$token")({
           }
         }
 
-        // Salva a imagem da assinatura no bucket privado.
         const imagePath = `signatures/${tx.id}/${token}.png`;
         const { error: upErr } = await supabaseAdmin.storage
           .from("contract-pdfs")
-          .upload(imagePath, pngBytes, {
-            upsert: true,
-            contentType: "image/png",
-          });
+          .upload(imagePath, pngBytes, { upsert: true, contentType: "image/png" });
         if (upErr) return json({ error: "Falha ao salvar assinatura." }, 500);
 
         const ip =
@@ -171,28 +180,59 @@ export const Route = createFileRoute("/api/public/sign/$token")({
           .eq("id", tk.id);
         if (updErr) return json({ error: "Falha ao registrar assinatura." }, 500);
 
-        // Registro de auditoria (MP 2.200-2): a assinatura white-label foi
-        // capturada com consentimento, IP e user-agent.
         await supabaseAdmin.from("contract_events").insert({
           contract_id: tx.id,
           event_type: "white_label_signed",
           status: null,
           signer_email: null,
-          message: `Assinatura eletrônica capturada (${signerName}). IP ${ip ?? "?"}.`,
+          message: `Assinatura eletrônica capturada (${signerName}, papel: ${tk.signer_role}). IP ${ip ?? "?"}.`,
           payload: null,
         });
 
-        // Replicação Autentique (best-effort, invisível ao cliente).
-        // TODO(autentique-schema): a API v2 da Autentique não expõe um endpoint
-        // claro para INJETAR uma assinatura já coletada externamente em um
-        // documento. As opções reais são: (a) usar a Autentique apenas como
-        // custódia, anexando o PDF + evidências via createDocument com a
-        // assinatura embutida; ou (b) operar o fluxo de assinatura inteiramente
-        // white-label e tratar a Autentique como arquivo morto. Mantemos o
-        // registro de auditoria acima como prova primária até a decisão de
-        // produto/jurídico. Não inventamos chamada de API aqui.
+        // Verifica se todos os tokens ativos do contrato já foram assinados.
+        // Se sim: marca status=signed e dispara custódia na Autentique.
+        const { data: allTokens } = await supabaseAdmin
+          .from("signature_tokens")
+          .select("id, signer_role, signed_at, revoked_at")
+          .eq("transaction_id", tx.id);
 
-        return json({ ok: true });
+        const active = (allTokens ?? []).filter((t) => !t.revoked_at);
+        const roles = new Set(active.map((t) => t.signer_role));
+        const allSigned =
+          active.length > 0 &&
+          roles.has("cliente") &&
+          roles.has("lojista") &&
+          active.every((t) => t.signed_at);
+
+        if (allSigned) {
+          await supabaseAdmin
+            .from("transactions")
+            .update({ status: "signed", signed_at: new Date().toISOString() })
+            .eq("id", tx.id);
+
+          // Custódia Autentique (best-effort).
+          try {
+            const { pushContractToCustody } = await import("@/lib/autentique-custody.server");
+            const result = await pushContractToCustody(tx.id, supabaseAdmin);
+            if (!result.ok) {
+              await supabaseAdmin.from("contract_events").insert({
+                contract_id: tx.id,
+                event_type: "custody_failed",
+                status: null,
+                message: `Custódia Autentique falhou: ${result.reason}`,
+              });
+            }
+          } catch (e) {
+            await supabaseAdmin.from("contract_events").insert({
+              contract_id: tx.id,
+              event_type: "custody_failed",
+              status: null,
+              message: `Custódia Autentique exception: ${e instanceof Error ? e.message : String(e)}`,
+            });
+          }
+        }
+
+        return json({ ok: true, allSigned });
       },
     },
   },

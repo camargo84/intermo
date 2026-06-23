@@ -11,6 +11,7 @@ import {
   Download,
   ExternalLink,
   MessageSquare,
+  PenLine,
   RefreshCw,
   Send,
   Trash2,
@@ -40,6 +41,7 @@ import {
   checkProfileReadiness,
 } from "@/lib/contracts.functions";
 import { getContractPdfSignedUrl, getSignedContractPdfUrl } from "@/lib/agent.functions";
+import { createSignatureToken, listSignatureTokens } from "@/lib/signature.functions";
 
 export const Route = createFileRoute("/_authenticated/transacoes/$contractId")({
   head: () => ({ meta: [{ title: "Detalhes da transação — inTermo" }] }),
@@ -125,6 +127,8 @@ function ContractDetailsPage() {
   const checkProfileFn = useServerFn(checkProfileReadiness);
   const getPdfFn = useServerFn(getContractPdfSignedUrl);
   const getSignedPdfFn = useServerFn(getSignedContractPdfUrl);
+  const createTokenFn = useServerFn(createSignatureToken);
+  const listTokensFn = useServerFn(listSignatureTokens);
 
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -137,6 +141,31 @@ function ContractDetailsPage() {
     queryKey: ["profile-readiness"],
     queryFn: () => checkProfileFn(),
   });
+  const { data: tokensData, refetch: refetchTokens } = useQuery({
+    queryKey: ["signature-tokens", contractId],
+    queryFn: () => listTokensFn({ data: { contractId } }),
+  });
+
+  const generateLink = async (signerRole: "lojista" | "cliente") => {
+    try {
+      const result = await createTokenFn({ data: { contractId, signerRole } });
+      const fullUrl = `${window.location.origin}${result.url}`;
+      try {
+        await navigator.clipboard.writeText(fullUrl);
+        toast.success(
+          `Link de ${signerRole} copiado. ${signerRole === "lojista" ? "Abra para assinar." : "Envie ao cliente."}`,
+        );
+      } catch {
+        toast.success(`Link gerado: ${fullUrl}`);
+      }
+      if (signerRole === "lojista") {
+        window.open(fullUrl, "_blank", "noopener");
+      }
+      refetchTokens();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    }
+  };
 
   const invalidateContract = () => {
     queryClient.invalidateQueries({ queryKey: ["contract", contractId] });
@@ -440,6 +469,84 @@ function ContractDetailsPage() {
 
         <Card>
           <CardHeader>
+            <CardTitle className="text-base">Assinatura whitelabel</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-xs text-muted-foreground">
+              Links de assinatura sob o domínio inTermo, com sua marca. Quando lojista e cliente
+              assinarem, o contrato é arquivado automaticamente como custódia na Autentique.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!hasPdf}
+                onClick={() => generateLink("lojista")}
+              >
+                <PenLine className="mr-2 h-4 w-4" /> Assinar como lojista
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!hasPdf || !contract.client_name}
+                onClick={() => generateLink("cliente")}
+              >
+                <ExternalLink className="mr-2 h-4 w-4" /> Link de assinatura do cliente
+              </Button>
+            </div>
+            {!hasPdf && (
+              <p className="text-xs text-muted-foreground">
+                Gere o PDF do contrato pelo chat antes de criar os links de assinatura.
+              </p>
+            )}
+            {tokensData?.tokens && tokensData.tokens.length > 0 && (
+              <ul className="divide-y rounded-md border">
+                {tokensData.tokens.map((t) => {
+                  const link = `${typeof window !== "undefined" ? window.location.origin : ""}/assinar/${t.token}`;
+                  const isExpired = new Date(t.expires_at).getTime() < Date.now();
+                  return (
+                    <li key={t.token} className="flex flex-col gap-1 p-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="min-w-0 text-sm">
+                        <p className="font-medium capitalize">
+                          {t.signer_role}
+                          {t.signer_name ? ` — ${t.signer_name}` : ""}
+                        </p>
+                        {t.signed_at ? (
+                          <p className="text-xs text-green-600">
+                            Assinou em {formatDate(t.signed_at)}
+                          </p>
+                        ) : t.revoked_at ? (
+                          <p className="text-xs text-destructive">Revogado</p>
+                        ) : isExpired ? (
+                          <p className="text-xs text-amber-600">Expirado</p>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">Aguardando assinatura</p>
+                        )}
+                      </div>
+                      {!t.signed_at && !t.revoked_at && !isExpired && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            navigator.clipboard?.writeText(link);
+                            toast.success("Link copiado.");
+                          }}
+                        >
+                          Copiar link
+                        </Button>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+
+
+        <Card>
+          <CardHeader>
             <CardTitle className="text-base">Histórico</CardTitle>
           </CardHeader>
           <CardContent>
@@ -498,6 +605,9 @@ function humanizeEvent(type: string): string {
     sent: "Documento enviado pra Autentique",
     send_failed: "Falha ao enviar pra Autentique",
     resend_requested: "Reenvio solicitado",
+    white_label_signed: "Assinatura whitelabel capturada",
+    custody_archived: "Cópia de custódia criada na Autentique",
+    custody_failed: "Falha ao arquivar custódia na Autentique",
     "document.signed": "Documento totalmente assinado",
     "signature.signed": "Assinatura concluída",
     "signature.rejected": "Assinatura recusada",
