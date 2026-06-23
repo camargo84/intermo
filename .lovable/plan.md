@@ -95,3 +95,15 @@ Dependência nova: `react-easy-crop` (~15kB). `@tanstack/react-virtual` só se v
 
 - Não vamos materializar a label na coluna `transactions` — derivação fica só na UI.
 - Sem ranking estilo Algolia; `ilike` + `tsvector` resolve no volume atual.
+
+---
+
+## Rodada 4 — IMPLEMENTADO
+
+- Sidebar: label "Cliente | Produto · data" (helpers `abbreviateName`, `formatThreadTimestamp` em `src/lib/format.ts`); marquee on hover quando trunca (`ThreadLabel.tsx` + `@keyframes marquee` em `styles.css`).
+- Sidebar: busca server-side cobrindo client_name/title/messages (`searchMyChatThreads` em `src/lib/chat.functions.ts`); debounce 250ms.
+- Sidebar: scroll infinito via `useInfiniteQuery` (`listMyChatThreads` agora aceita `{limit,cursor}` e retorna `nextCursor`).
+- Sidebar: largura redimensionável (220–440px) com handle, atalhos Ctrl/⌘+[ / ], duplo-clique reseta, persistido em `localStorage` (`AppShell.tsx`).
+- Migration: GIN tsvector('portuguese') sobre `chat_threads.messages::text`, trigram em `transactions.client_name` e `transactions.title`.
+- Logo: `LogoCropDialog` com `react-easy-crop` — drag/zoom, preset 4:1 cabeçalho, "Recortar automaticamente" (bbox por alpha/luminância) e clamp a 800px no maior lado; configuracoes.tsx integrado.
+- PDF: linhas de separação do cabeçalho e do rodapé agora em `rgb(0,0,0)` (preto) — `src/lib/contracts.pdf.server.ts`.
