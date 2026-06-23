@@ -469,6 +469,84 @@ function ContractDetailsPage() {
 
         <Card>
           <CardHeader>
+            <CardTitle className="text-base">Assinatura whitelabel</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-xs text-muted-foreground">
+              Links de assinatura sob o domínio inTermo, com sua marca. Quando lojista e cliente
+              assinarem, o contrato é arquivado automaticamente como custódia na Autentique.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!hasPdf}
+                onClick={() => generateLink("lojista")}
+              >
+                <PenLine className="mr-2 h-4 w-4" /> Assinar como lojista
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!hasPdf || !contract.client_name}
+                onClick={() => generateLink("cliente")}
+              >
+                <ExternalLink className="mr-2 h-4 w-4" /> Link de assinatura do cliente
+              </Button>
+            </div>
+            {!hasPdf && (
+              <p className="text-xs text-muted-foreground">
+                Gere o PDF do contrato pelo chat antes de criar os links de assinatura.
+              </p>
+            )}
+            {tokensData?.tokens && tokensData.tokens.length > 0 && (
+              <ul className="divide-y rounded-md border">
+                {tokensData.tokens.map((t) => {
+                  const link = `${typeof window !== "undefined" ? window.location.origin : ""}/assinar/${t.token}`;
+                  const isExpired = new Date(t.expires_at).getTime() < Date.now();
+                  return (
+                    <li key={t.token} className="flex flex-col gap-1 p-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="min-w-0 text-sm">
+                        <p className="font-medium capitalize">
+                          {t.signer_role}
+                          {t.signer_name ? ` — ${t.signer_name}` : ""}
+                        </p>
+                        {t.signed_at ? (
+                          <p className="text-xs text-green-600">
+                            Assinou em {formatDate(t.signed_at)}
+                          </p>
+                        ) : t.revoked_at ? (
+                          <p className="text-xs text-destructive">Revogado</p>
+                        ) : isExpired ? (
+                          <p className="text-xs text-amber-600">Expirado</p>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">Aguardando assinatura</p>
+                        )}
+                      </div>
+                      {!t.signed_at && !t.revoked_at && !isExpired && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            navigator.clipboard?.writeText(link);
+                            toast.success("Link copiado.");
+                          }}
+                        >
+                          Copiar link
+                        </Button>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+
+
+        <Card>
+          <CardHeader>
             <CardTitle className="text-base">Histórico</CardTitle>
           </CardHeader>
           <CardContent>
