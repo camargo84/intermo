@@ -50,22 +50,6 @@ const FOOTER_ITEMS = [
   { title: "Configurações", url: "/configuracoes", icon: Settings },
 ] as const;
 
-const SIDEBAR_WIDTH_KEY = "intermo.sidebar.width";
-const SIDEBAR_WIDTH_MIN = 220;
-const SIDEBAR_WIDTH_MAX = 440;
-const SIDEBAR_WIDTH_DEFAULT = 280;
-
-function clampWidth(v: number) {
-  return Math.round(Math.max(SIDEBAR_WIDTH_MIN, Math.min(SIDEBAR_WIDTH_MAX, v)));
-}
-
-function readSavedWidth(): number {
-  if (typeof window === "undefined") return SIDEBAR_WIDTH_DEFAULT;
-  const raw = window.localStorage.getItem(SIDEBAR_WIDTH_KEY);
-  const n = raw ? Number(raw) : NaN;
-  return Number.isFinite(n) ? clampWidth(n) : SIDEBAR_WIDTH_DEFAULT;
-}
-
 /** Deriva o label da sidebar a partir do registro da transação. */
 function buildThreadLabel(t: SidebarThreadRow["transactions"], updated_at: string) {
   if (!t) return { primary: "Rascunho", time: formatThreadTimestamp(updated_at) };
@@ -86,44 +70,6 @@ export function ClaudeSidebar() {
   const collapsed = state === "collapsed";
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
-
-  // ---------------- largura redimensionável + persistência ----------------
-  const [width, setWidth] = useState<number>(() => readSavedWidth());
-  const rootRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    window.localStorage.setItem(SIDEBAR_WIDTH_KEY, String(width));
-    document.documentElement.style.setProperty("--sidebar-width", `${width}px`);
-  }, [width]);
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (!(e.metaKey || e.ctrlKey)) return;
-      if (e.key === "[") {
-        e.preventDefault();
-        setWidth((w) => clampWidth(w - Math.round(w * 0.1)));
-      } else if (e.key === "]") {
-        e.preventDefault();
-        setWidth((w) => clampWidth(w + Math.round(w * 0.1)));
-      }
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
-  function startResize(e: React.PointerEvent<HTMLDivElement>) {
-    e.preventDefault();
-    const startX = e.clientX;
-    const startW = width;
-    function onMove(ev: PointerEvent) {
-      setWidth(clampWidth(startW + (ev.clientX - startX)));
-    }
-    function onUp() {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-      document.body.style.cursor = "";
-    }
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
-    document.body.style.cursor = "col-resize";
-  }
 
   // ---------------- threads (paginadas) ----------------
   const fetchThreads = useServerFn(listMyChatThreads);
