@@ -68,6 +68,8 @@ function ConfiguracoesPage() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [reorganizing, setReorganizing] = useState(false);
+  const [pendingLogoFile, setPendingLogoFile] = useState<File | null>(null);
+  const [cropOpen, setCropOpen] = useState(false);
 
   const { data: profileData, isLoading } = useQuery({
     queryKey: ["my-profile"],
