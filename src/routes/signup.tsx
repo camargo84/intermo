@@ -125,23 +125,6 @@ function SignupPage() {
         </>
       }
     >
-      <div className="space-y-4 mb-6">
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full"
-          onClick={onGoogle}
-          disabled={googleLoading || submitting}
-        >
-          {googleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-          Continuar com Google
-        </Button>
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          <div className="h-px flex-1 bg-border" />
-          ou preencha os dados da empresa
-          <div className="h-px flex-1 bg-border" />
-        </div>
-      </div>
       <form
         method="post"
         action="#"
