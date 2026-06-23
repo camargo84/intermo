@@ -454,12 +454,23 @@ export const Route = createFileRoute("/api/chat")({
             )
             .eq("id", userId)
             .maybeSingle();
-          if (profile?.accepted_terms_version !== TERMS_VERSION)
-            return { error: "Aceite os novos termos para continuar." };
+          if (profile?.accepted_terms_version !== TERMS_VERSION) {
+            return {
+              ok: false,
+              error_code: "TERMS_OUTDATED",
+              message_pt: "Aceite os novos termos em Configurações para continuar.",
+            };
+          }
           const { data: hasSub } = await supabase.rpc("has_active_subscription", {
             _user_id: userId,
           });
-          if (!hasSub) return { error: "Sua assinatura não está ativa." };
+          if (!hasSub) {
+            return {
+              ok: false,
+              error_code: "NO_SUBSCRIPTION",
+              message_pt: "Sua assinatura não está ativa.",
+            };
+          }
           // anti-abuso
           const { data: count } = await supabase.rpc("current_month_transaction_count");
           const { data: sub } = await supabase
@@ -468,27 +479,56 @@ export const Route = createFileRoute("/api/chat")({
             .eq("user_id", userId)
             .maybeSingle();
           const ceil = sub?.monthly_contract_quota ?? 2000;
-          if ((count ?? 0) >= ceil) return { error: "Uso anormal detectado." };
+          if ((count ?? 0) >= ceil) {
+            return {
+              ok: false,
+              error_code: "RATE_LIMITED",
+              message_pt: "Limite mensal atingido. Tente novamente mais tarde.",
+            };
+          }
           if (input.forma_pagamento === "misto") {
             if (!(input.entrada_cents > 0 && input.entrada_cents < input.valor_cents)) {
-              return { error: "Entrada inválida (deve ser > 0 e < valor total)." };
+              return {
+                ok: false,
+                error_code: "INVALID_INPUT",
+                field: "entrada_cents",
+                message_pt: "Entrada inválida: deve ser maior que zero e menor que o valor total.",
+              };
             }
           }
-          const missing: string[] = [];
-          if (!profile?.company_legal_name) missing.push("razão social");
-          if (!profile?.company_cnpj) missing.push("CNPJ");
-          if (!profile?.company_address) missing.push("endereço");
-          if (!profile?.company_city || !profile?.company_uf) missing.push("cidade/UF");
-          if (!profile?.representative_name) missing.push("representante");
-          if (!profile?.comarca) missing.push("comarca");
-          if (missing.length) return { error: `Complete em Configurações: ${missing.join(", ")}.` };
+          // Preflight de perfil — bloqueia a criação se faltar dado obrigatório.
+          const missingProfile = profileMissingFields(profile);
+          if (missingProfile.length) {
+            return {
+              ok: false,
+              error_code: "PROFILE_INCOMPLETE",
+              missing_fields: missingProfile,
+              message_pt: `Faltam dados do seu perfil: ${missingProfile.join(", ")}. Abra Configurações para completar.`,
+            };
+          }
 
           const { data: cli } = await supabase
             .from("clients")
-            .select("id,name,email,cpf,cnpj")
+            .select("id,name,email,cpf,cnpj,endereco,cidade,uf,cep")
             .eq("id", input.client_id)
             .maybeSingle();
-          if (!cli) return { error: "Cliente não encontrado." };
+          if (!cli) {
+            return {
+              ok: false,
+              error_code: "CLIENT_NOT_FOUND",
+              message_pt: "Cliente não encontrado.",
+            };
+          }
+          const missingClient = clientMissingFields(cli);
+          if (missingClient.length) {
+            return {
+              ok: false,
+              error_code: "CLIENT_INCOMPLETE",
+              missing_fields: missingClient,
+              message_pt: `Faltam dados do cliente: ${missingClient.join(", ")}.`,
+            };
+          }
+
 
           const tenant_snapshot = {
             company_legal_name: profile.company_legal_name,
