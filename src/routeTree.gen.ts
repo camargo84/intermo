@@ -21,6 +21,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AssinarTokenRouteImport } from './routes/assinar.$token'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedNfsRouteImport } from './routes/_authenticated/nfs'
 import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authenticated/financeiro'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
@@ -101,6 +102,11 @@ const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedNfsRoute = AuthenticatedNfsRouteImport.update({
   id: '/nfs',
@@ -233,6 +239,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/nfs': typeof AuthenticatedNfsRoute
+  '/onboarding': typeof AuthenticatedOnboardingRoute
   '/api/chat': typeof ApiChatRoute
   '/assinar/$token': typeof AssinarTokenRoute
   '/assinaturas': typeof AuthenticatedAdminAssinaturasRoute
@@ -266,6 +273,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/nfs': typeof AuthenticatedNfsRoute
+  '/onboarding': typeof AuthenticatedOnboardingRoute
   '/api/chat': typeof ApiChatRoute
   '/assinar/$token': typeof AssinarTokenRoute
   '/assinaturas': typeof AuthenticatedAdminAssinaturasRoute
@@ -302,6 +310,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/financeiro': typeof AuthenticatedFinanceiroRoute
   '/_authenticated/nfs': typeof AuthenticatedNfsRoute
+  '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/api/chat': typeof ApiChatRoute
   '/assinar/$token': typeof AssinarTokenRoute
   '/_authenticated/_admin/assinaturas': typeof AuthenticatedAdminAssinaturasRoute
@@ -337,6 +346,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/financeiro'
     | '/nfs'
+    | '/onboarding'
     | '/api/chat'
     | '/assinar/$token'
     | '/assinaturas'
@@ -370,6 +380,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/financeiro'
     | '/nfs'
+    | '/onboarding'
     | '/api/chat'
     | '/assinar/$token'
     | '/assinaturas'
@@ -405,6 +416,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/financeiro'
     | '/_authenticated/nfs'
+    | '/_authenticated/onboarding'
     | '/api/chat'
     | '/assinar/$token'
     | '/_authenticated/_admin/assinaturas'
@@ -529,6 +541,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/chat'
       preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/onboarding': {
+      id: '/_authenticated/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof AuthenticatedOnboardingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/nfs': {
       id: '/_authenticated/nfs'
@@ -704,6 +723,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedFinanceiroRoute: typeof AuthenticatedFinanceiroRoute
   AuthenticatedNfsRoute: typeof AuthenticatedNfsRoute
+  AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedChatContractIdRoute: typeof AuthenticatedChatContractIdRoute
   AuthenticatedContratosContractIdRoute: typeof AuthenticatedContratosContractIdRoute
   AuthenticatedContratosNovoRoute: typeof AuthenticatedContratosNovoRoute
@@ -721,6 +741,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedFinanceiroRoute: AuthenticatedFinanceiroRoute,
   AuthenticatedNfsRoute: AuthenticatedNfsRoute,
+  AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedChatContractIdRoute: AuthenticatedChatContractIdRoute,
   AuthenticatedContratosContractIdRoute: AuthenticatedContratosContractIdRoute,
   AuthenticatedContratosNovoRoute: AuthenticatedContratosNovoRoute,
