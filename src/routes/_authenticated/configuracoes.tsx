@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { LogoCropDialog } from "@/components/profile/LogoCropDialog";
 import { formatCNPJ, formatPhoneBR } from "@/lib/format";
 import {
   getMyProfile,
@@ -67,6 +68,8 @@ function ConfiguracoesPage() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [reorganizing, setReorganizing] = useState(false);
+  const [pendingLogoFile, setPendingLogoFile] = useState<File | null>(null);
+  const [cropOpen, setCropOpen] = useState(false);
 
   const { data: profileData, isLoading } = useQuery({
     queryKey: ["my-profile"],
@@ -157,22 +160,31 @@ function ConfiguracoesPage() {
     }
   }
 
-  async function handleLogoFile(file: File) {
+  function handleLogoPick(file: File) {
     if (!["image/png", "image/jpeg"].includes(file.type)) {
       toast.error("Use PNG ou JPG.");
       return;
     }
-    if (file.size > 2_000_000) {
-      toast.error("Arquivo acima de 2MB.");
+    if (file.size > 8_000_000) {
+      toast.error("Arquivo acima de 8MB.");
+      return;
+    }
+    setPendingLogoFile(file);
+    setCropOpen(true);
+  }
+
+  async function handleCroppedLogo(blob: Blob) {
+    if (blob.size > 2_000_000) {
+      toast.error("Recorte ficou acima de 2MB. Reduza o tamanho.");
       return;
     }
     setUploading(true);
     try {
-      const buf = new Uint8Array(await file.arrayBuffer());
+      const buf = new Uint8Array(await blob.arrayBuffer());
       let bin = "";
       for (let i = 0; i < buf.byteLength; i++) bin += String.fromCharCode(buf[i]);
       const base64 = btoa(bin);
-      await uploadLogo({ data: { base64, mime: file.type as "image/png" | "image/jpeg" } });
+      await uploadLogo({ data: { base64, mime: "image/png" } });
       await refetchLogo();
       toast.success("Logo atualizado.");
     } catch (err) {
@@ -249,7 +261,7 @@ function ConfiguracoesPage() {
                 type="file"
                 accept="image/png,image/jpeg"
                 className="hidden"
-                onChange={(e) => e.target.files?.[0] && handleLogoFile(e.target.files[0])}
+                onChange={(e) => e.target.files?.[0] && handleLogoPick(e.target.files[0])}
               />
               <span className="inline-flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-sm hover:bg-accent">
                 {uploading ? (
@@ -257,7 +269,7 @@ function ConfiguracoesPage() {
                 ) : (
                   <Upload className="h-4 w-4" />
                 )}
-                Enviar logo (PNG/JPG, até 2MB)
+                Enviar logo (PNG/JPG, até 8MB — você recorta antes do upload)
               </span>
             </Label>
           </div>
@@ -266,6 +278,16 @@ function ConfiguracoesPage() {
           </p>
         </CardContent>
       </Card>
+
+      <LogoCropDialog
+        open={cropOpen}
+        file={pendingLogoFile}
+        onClose={() => {
+          setCropOpen(false);
+          setPendingLogoFile(null);
+        }}
+        onConfirm={handleCroppedLogo}
+      />
 
       <Card>
         <CardHeader>

@@ -2,6 +2,26 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+export type SidebarThreadProduto = {
+  descricao?: string | null;
+  quantidade?: number | null;
+  preco_unit_cents?: number | null;
+};
+
+export type SidebarThreadRow = {
+  contract_id: string;
+  updated_at: string;
+  transactions: {
+    id: string;
+    title: string | null;
+    client_name: string | null;
+    status: string | null;
+    produtos: SidebarThreadProduto[] | null;
+    created_at: string;
+    consolidated: boolean | null;
+  } | null;
+};
+
 // Cria um contrato "draft" mínimo e retorna o id (para abrir uma thread nova de chat)
 export const createDraftContractForChat = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -112,14 +132,93 @@ export const saveChatThread = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-export const listMyChatThreads = createServerFn({ method: "GET" })
+export const listMyChatThreads = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
+  .inputValidator((i: unknown) =>
+    z
+      .object({
+        limit: z.number().int().min(1).max(100).default(30),
+        cursor: z.string().datetime().nullable().optional(),
+      })
+      .partial()
+      .parse(i ?? {}),
+  )
+  .handler(async ({ data, context }) => {
+    const limit = data.limit ?? 30;
+    let q = context.supabase
       .from("chat_threads")
-      .select("contract_id,updated_at,transactions!inner(id,title,client_name,status)")
+      .select(
+        "contract_id,updated_at,transactions!inner(id,title,client_name,status,produtos,created_at,consolidated)",
+      )
+      .eq("user_id", context.userId)
       .order("updated_at", { ascending: false })
-      .limit(50);
+      .limit(limit);
+    if (data.cursor) q = q.lt("updated_at", data.cursor);
+    const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
-    return { threads: data ?? [] };
+    const threads = (rows ?? []) as unknown as SidebarThreadRow[];
+    const nextCursor =
+      threads.length === limit ? threads[threads.length - 1]?.updated_at : null;
+    return { threads, nextCursor };
+  });
+
+/**
+ * Busca server-side em todas as conversas do usuário. Cobre:
+ *  - transactions.client_name
+ *  - transactions.title
+ *  - chat_threads.messages (json -> texto)
+ *
+ * Use debounce no cliente. Resultado já vem ordenado por updated_at desc.
+ */
+export const searchMyChatThreads = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) =>
+    z.object({ q: z.string().min(1).max(200), limit: z.number().int().min(1).max(50).default(20) }).parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    const term = data.q.trim();
+    const limit = data.limit ?? 20;
+    if (!term) return { results: [] as SidebarThreadRow[] };
+    const escaped = term.replace(/[%_]/g, (m) => `\\${m}`);
+    const like = `%${escaped}%`;
+
+    const metaQ = context.supabase
+      .from("chat_threads")
+      .select(
+        "contract_id,updated_at,transactions!inner(id,title,client_name,status,produtos,created_at,consolidated)",
+      )
+      .eq("user_id", context.userId)
+      .or(`client_name.ilike.${like},title.ilike.${like}`, {
+        foreignTable: "transactions",
+      })
+      .order("updated_at", { ascending: false })
+      .limit(limit);
+
+    const bodyQ = context.supabase
+      .from("chat_threads")
+      .select(
+        "contract_id,updated_at,transactions!inner(id,title,client_name,status,produtos,created_at,consolidated)",
+      )
+      .eq("user_id", context.userId)
+      .filter("messages::text", "ilike", like)
+      .order("updated_at", { ascending: false })
+      .limit(limit);
+
+    const [meta, body] = await Promise.all([metaQ, bodyQ]);
+    if (meta.error) throw new Error(meta.error.message);
+    if (body.error) throw new Error(body.error.message);
+
+    const seen = new Set<string>();
+    const merged: SidebarThreadRow[] = [];
+    const all = [
+      ...((meta.data ?? []) as unknown as SidebarThreadRow[]),
+      ...((body.data ?? []) as unknown as SidebarThreadRow[]),
+    ];
+    for (const row of all) {
+      if (seen.has(row.contract_id)) continue;
+      seen.add(row.contract_id);
+      merged.push(row);
+      if (merged.length >= limit) break;
+    }
+    return { results: merged };
   });
