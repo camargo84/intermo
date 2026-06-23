@@ -91,15 +91,15 @@ export const upsertClient = createServerFn({ method: "POST" })
       rg: data.rg ?? null,
       nacionalidade: data.nacionalidade ?? null,
       estado_civil: data.estado_civil ?? null,
-      data_nascimento: data.data_nascimento ?? null,
-      cep: data.cep ? onlyDigits(data.cep) : null,
+      data_nascimento: dataNascimento,
+      cep,
       endereco: data.endereco ?? null,
       complemento: data.complemento ?? null,
       bairro: data.bairro ?? null,
       cidade: data.cidade ?? null,
       uf: data.uf ? data.uf.toUpperCase().slice(0, 2) : null,
       email: data.email ?? null,
-      phone: data.phone ? onlyDigits(data.phone) : null,
+      phone,
       is_pj: data.is_pj ?? Boolean(cnpj && !cpf),
     };
 
