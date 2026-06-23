@@ -4,6 +4,7 @@ import { convertToModelMessages, streamText, tool, stepCountIs, type UIMessage }
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
+import type { TenantSnapshot } from "@/lib/contracts.pdf.server";
 import { onlyDigits, validateCPF, validateCNPJ, lookupCEP } from "@/lib/validators";
 import { profileMissingFields, clientMissingFields } from "@/lib/contract-requirements";
 import {
@@ -893,9 +894,7 @@ export const Route = createFileRoute("/api/chat")({
           // Preflight: validar snapshot do vendedor antes de renderizar.
           // Drafst antigos podem ter sido criados antes de salvar o snapshot; se o perfil atual
           // já estiver completo, reconstruímos o snapshot em vez de bloquear o usuário.
-          let tenant = (contract.tenant_snapshot ?? null) as
-            | Parameters<typeof profileMissingFields>[0]
-            | null;
+          let tenant = (contract.tenant_snapshot ?? null) as TenantSnapshot | null;
           let missingProfile = profileMissingFields(tenant);
           if (missingProfile.length) {
             const { data: currentProfile } = await supabase
@@ -937,6 +936,14 @@ export const Route = createFileRoute("/api/chat")({
               error_code: "PROFILE_INCOMPLETE",
               missing_fields: missingProfile,
               message_pt: `Faltam dados do seu perfil: ${missingProfile.join(", ")}. Abra Configurações para completar e tente novamente.`,
+            };
+          }
+          if (!tenant) {
+            return {
+              ok: false,
+              error_code: "PROFILE_INCOMPLETE",
+              missing_fields: ["perfil não encontrado"],
+              message_pt: "Não consegui carregar os dados do vendedor. Abra Configurações, salve novamente e tente gerar o PDF.",
             };
           }
           const { data: cliente } = await supabase
