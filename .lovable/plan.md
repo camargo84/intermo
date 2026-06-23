@@ -1,61 +1,82 @@
-# Corrigir contraste do app
+# Auditoria + plano de correção do fluxo do agente
 
-## O que está acontecendo no print
+## Achados da auditoria
 
-A tela enviada está em **dark mode** — sidebar e fundo escuros. Os campos do formulário aparecem com fundo **branco e texto branco** (ilegíveis) porque o Chrome desenha campos com **autofill** usando estilos próprios (fundo claro/amarelo) que sobrescrevem o tema escuro. Não é "light mode" — é o autofill do navegador estragando os inputs do dark mode.
+Fiz a leitura do fluxo do chat (`src/routes/api/chat.tsx`), das funções já existentes em `src/lib/contracts.functions.ts`, `src/lib/signature.functions.ts`, `src/lib/autentique.server.ts` e da página whitelabel `src/routes/assinar.$token.tsx`. Os blocos do print mostram exatamente o que está faltando no agente — apesar das peças do back-end já existirem.
 
-Além disso, o **light mode** real (para quem trocar pelo toggle) está com contraste fraco em vários tokens (cinza-sobre-branco demais, bordas quase invisíveis, primary mint sobre branco com pouca legibilidade).
+| # | Problema | Onde |
+|---|---|---|
+| 1 | Após `gerar_pdf_contrato`, o agente entrega só a URL temporária do PDF e encerra. Não envia para Autentique, não gera link whitelabel `/assinar/:token`, não monta link `wa.me`. | `src/routes/api/chat.tsx` (faltam tools), `BASE_SYSTEM_PROMPT` (fluxo termina no passo 6). |
+| 2 | A página whitelabel `/assinar/:token` e o helper `createSignatureToken` já existem; a tela de Conversa já tem um botão `openWhatsapp()` que combina os dois. **Nada disso está disponível para o agente** dentro do chat. | `src/routes/_authenticated/chat.$contractId.tsx` linhas 198/217. |
+| 3 | `sendContractToAutentique` server fn já existe e a página `/transacoes/:id` usa via botão. **Não há tool no chat** que dispare esse fluxo. | `src/lib/contracts.functions.ts` linha 52. |
+| 4 | Mesmo com `active_client_id` no CONTEXTO, o modelo às vezes ignora a instrução e chama `upsert_cliente` sem `client_id` nem documento → retorno `INVALID_INPUT: Informe CPF ou CNPJ` (badge vermelho do print). | `src/routes/api/chat.tsx` `upsert_cliente.execute` linhas 217–226. |
+| 5 | O bloco de CONTEXTO não expõe o **telefone do cliente em dígitos** (apenas marca como "preenchido"). Sem isso o agente não consegue propor o `wa.me` do cadastro. | `src/routes/api/chat.tsx` linhas 838–854. |
+| 6 | Sem `TOOL_LABELS` para as novas ferramentas (`enviar_para_assinatura`, `gerar_link_assinatura`, `gerar_link_whatsapp`) os badges aparecem como "Processando…/Concluído". | `src/routes/_authenticated/chat.$contractId.tsx` linhas 399–405. |
+| 7 | `friendlyErrorFromOutput` não trata códigos novos (`AUTENTIQUE_FAILED`, `ALREADY_SENT`, `MISSING_PHONE`). | mesmo arquivo, linhas 438–462. |
 
-## Mudanças
+## Plano de correção
 
-### 1. Eliminar a "tela branca" dos inputs com autofill (`src/styles.css`)
+### 1. Novas tools do agente (`src/routes/api/chat.tsx`)
 
-Adicionar regra global para que valores preenchidos pelo Chrome respeitem o tema:
+**`enviar_para_assinatura`**
+- Input: `{ contract_id }`.
+- Verifica ownership, exige `pdf_path`, status `draft` e `autentique_document_id` nulo.
+- Reaproveita a lógica de `dispatchToAutentique` (extrair para `src/lib/autentique-dispatch.server.ts` para ser chamado tanto pela server fn pública quanto pela tool). Não duplica código.
+- Retorna `{ ok, document_id, signers: [{ name, email, link }] }` ou `{ ok:false, error_code: "ALREADY_SENT" | "PDF_MISSING" | "AUTENTIQUE_FAILED", message_pt }`.
 
-```css
-input:-webkit-autofill,
-input:-webkit-autofill:hover,
-input:-webkit-autofill:focus,
-textarea:-webkit-autofill,
-select:-webkit-autofill {
-  -webkit-text-fill-color: hsl(var(--foreground));
-  -webkit-box-shadow: 0 0 0 1000px hsl(var(--input)) inset;
-  caret-color: hsl(var(--foreground));
-  transition: background-color 9999s ease-in-out 0s;
-}
-```
+**`gerar_link_assinatura`** (whitelabel)
+- Input: `{ contract_id }`.
+- Chama mesma lógica do `createSignatureToken`. Retorna `{ ok, url }` com URL absoluta `${baseUrl}/assinar/<token>` (deriva `baseUrl` de `request.url` no handler — funciona em preview, prod e custom domain).
 
-Resultado: campos autofilled ficam com fundo `--input` (cinza escuro no dark, cinza claro no light) e texto `--foreground` — legíveis nos dois temas.
+**`gerar_link_whatsapp`**
+- Input: `{ contract_id, telefone?: string, mensagem?: string, incluir_link_assinatura?: boolean (default true) }`.
+- Resolve telefone: usa `telefone` informado, senão `clients.phone` do cliente da transação (e o expõe ao agente — ver item 4).
+- Normaliza para E.164 BR (`55XXXXXXXXXXX`).
+- Se `incluir_link_assinatura`, chama internamente `createSignatureToken` para gerar o token e monta a mensagem padrão ("Olá <nome>, seu contrato está pronto. Para assinar: <url>").
+- Retorna `{ ok, wa_url, phone_used, signature_url }` ou `{ ok:false, error_code: "MISSING_PHONE", message_pt }`.
 
-### 2. Repintar o light mode com contraste sério (`src/styles.css`, bloco `:root`)
+### 2. Hardening de `upsert_cliente`
 
-Tokens atuais usam cinzas muito claros (`muted-foreground: 0 0% 36%`, `border: 0 0% 90%`) e primary mint `#3fe280` sobre branco — péssima leitura. Ajustes:
+Antes de devolver `INVALID_INPUT: Informe CPF ou CNPJ`, se `input.client_id` não veio mas `body.contractId` existe e a transação tem `client_id`, usar esse `client_id` como `existingClient`. Isso evita o badge vermelho do print quando o modelo "esquece" de passar o `client_id`.
 
-- `--background`: branco quente `0 0% 99%` (não puro 100%).
-- `--foreground`: `0 0% 9%` (preto suave, mais legível que `4%`).
-- `--card` / `--surface-1..3`: escala neutra com mais separação (`100% / 97% / 93%`) para criar profundidade visível.
-- `--muted-foreground`: subir para `0 0% 30%` (WCAG AA em 14px).
-- `--border` / `--input`: `0 0% 86%` (mais visível que 90%).
-- `--primary`: trocar mint claro por **coral editorial** `15 60% 45%` (token `--color-coral` da paleta) com `primary-foreground` branco — alto contraste em CTA, mantém identidade Claude/warm.
-- `--ring`: alinhar ao novo primary.
-- `--sidebar`: `0 0% 97%` com borda `0 0% 88%`.
-- `--accent`: cinza neutro `0 0% 94%` com texto preto, para hover de itens de menu não brigar com o primary.
-- `--destructive`: subir saturação `0 75% 42%` para destacar em fundo claro.
+### 3. Atualizar o `BASE_SYSTEM_PROMPT`
 
-### 3. Garantir bordas visíveis em light (`src/styles.css`)
+Adicionar passos 7–8 explícitos:
 
-`--border-subtle/--border-hairline/--border-strong` no `:root` hoje são `rgba(0,0,0,0.06/0.1/0.16)` — subir para `0.10/0.14/0.22` para que cards e divisores apareçam em fundo claro.
+> 7. Após `gerar_pdf_contrato` ok, NÃO encerre. Pergunte: "Posso enviar para assinatura agora?". Se sim, chame `enviar_para_assinatura` e mostre o link do signatário.
+> 8. Em seguida ofereça gerar um link para WhatsApp. Pergunte: "Envio para o número cadastrado (<últimos 4 do CONTEXTO>) ou para outro número?". Com a resposta, chame `gerar_link_whatsapp` e devolva a URL `wa.me` clicável. Se o vendedor preferir só o link whitelabel, chame `gerar_link_assinatura`.
 
-### 4. Reset global de `color-scheme`
+Também reforçar: "NUNCA peça CPF/CNPJ se `active_client_id` está no CONTEXTO — chame `upsert_cliente` com esse `client_id`."
 
-Hoje `html { color-scheme: dark }` é forçado no CSS. Remover essa linha (o bootstrap script em `__root.tsx` já seta `documentElement.style.colorScheme` conforme o tema atual). Sem isso, no light mode o Chrome continua pintando elementos nativos (scrollbar, autofill) com aparência dark.
+### 4. Expor telefone no CONTEXTO
 
-## Escopo NÃO incluído
+No bloco de CONTEXTO, quando o cliente está vinculado, adicionar:
+- `cliente_phone_e164: 55XXXXXXXXXXX` (ou `(não informado)`).
+- `cliente_phone_mascarado: ****-1234`.
 
-- Sem mudar nenhum componente individual; tudo via tokens.
-- Sem alterar o dark mode (já está aprovado pelo usuário).
-- Sem mexer em rotas, lógica ou backend.
+Assim o modelo consegue propor "envio para o número terminado em 1234?" e passar o número ao `gerar_link_whatsapp`.
 
-## Arquivos editados
+### 5. UI do chat (`src/routes/_authenticated/chat.$contractId.tsx`)
 
-- `src/styles.css` (autofill + bloco `:root` light + remover `color-scheme: dark` fixo)
+- Estender `TOOL_LABELS` com:
+  - `enviar_para_assinatura`: "Enviando para Autentique…" / "Enviado para assinatura"
+  - `gerar_link_assinatura`: "Gerando link de assinatura…" / "Link de assinatura pronto"
+  - `gerar_link_whatsapp`: "Montando mensagem do WhatsApp…" / "Link do WhatsApp pronto"
+  - `gerar_pdf_contrato`: "Gerando PDF…" / "PDF gerado" (faltava também).
+- Estender `friendlyErrorFromOutput` com `ALREADY_SENT`, `AUTENTIQUE_FAILED`, `PDF_MISSING`, `MISSING_PHONE`.
+- Garantir que URLs (PDF assinado, `/assinar/<token>`, `wa.me`) sejam renderizadas como **link clicável** pelo `ReactMarkdown` já em uso (validar `linkify` / autolink — se preciso, ativar `remark-gfm` que já existe nas dependências do template ou trocar o renderer de `a` para abrir em nova aba com `target="_blank" rel="noopener"`).
+
+### 6. Refatoração mínima
+
+Extrair a função privada `dispatchToAutentique` de `src/lib/contracts.functions.ts` para `src/lib/autentique-dispatch.server.ts`, recebendo `supabase: Supa` e `contract: ContractRow`. Tanto `sendContractToAutentique` quanto a nova tool `enviar_para_assinatura` importam de lá. Sem mudança de comportamento para a UI existente.
+
+## Fora do escopo agora
+
+- Reenvio para outros signatários, lembretes automáticos, edição do template da mensagem WhatsApp.
+- Métricas de leitura/assinatura no chat (já existem em `/transacoes/:id`).
+- Mudanças visuais — light/dark e tokens ficam como estão.
+
+## Arquivos
+
+- **Novo:** `src/lib/autentique-dispatch.server.ts`.
+- **Editados:** `src/routes/api/chat.tsx` (3 tools novas, prompt, contexto, hardening do upsert), `src/lib/contracts.functions.ts` (passa a importar dispatch), `src/routes/_authenticated/chat.$contractId.tsx` (TOOL_LABELS + friendlyErrorFromOutput + target=_blank em links).

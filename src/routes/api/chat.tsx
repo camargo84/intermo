@@ -13,12 +13,12 @@ import {
   InputFormatError,
 } from "@/lib/normalize-input";
 
-const BASE_SYSTEM_PROMPT = `Você é o assistente do Intermo, ajudando o vendedor a registrar uma venda e gerar um contrato de validade jurídica.
+const BASE_SYSTEM_PROMPT = `Você é o assistente do Intermo, ajudando o vendedor a registrar uma venda, gerar contrato de validade jurídica e enviar para assinatura.
 
 MEMÓRIA E CONTEXTO (LEIA PRIMEIRO):
-- O bloco "CONTEXTO DA CONVERSA" abaixo é a fonte da verdade sobre o estado atual da transação (cliente vinculado, documento, endereço, produtos, valores). Ele é atualizado a cada turno a partir do banco de dados.
-- NUNCA volte a pedir uma informação que já está no CONTEXTO ou que o vendedor acabou de informar nas mensagens anteriores. Reaproveite dados (CPF, CNPJ, endereço, valores, produtos, forma de pagamento) sem perguntar de novo.
-- Se um cliente já está vinculado (active_client_id presente), você JÁ tem CPF/CNPJ — use upsert_cliente com client_id para atualizar campos faltantes (ex: CEP, endereço) SEM pedir o documento novamente.
+- O bloco "CONTEXTO DA CONVERSA" abaixo é a fonte da verdade sobre o estado atual da transação (cliente vinculado, documento, telefone, endereço, produtos, valores). Ele é atualizado a cada turno a partir do banco de dados.
+- NUNCA volte a pedir uma informação que já está no CONTEXTO ou que o vendedor acabou de informar nas mensagens anteriores. Reaproveite dados (CPF, CNPJ, telefone, endereço, valores, produtos, forma de pagamento) sem perguntar de novo.
+- Se um cliente já está vinculado (active_client_id presente), você JÁ tem CPF/CNPJ — use upsert_cliente com client_id para atualizar campos faltantes (ex: CEP, endereço) SEM pedir o documento novamente. NUNCA peça CPF/CNPJ se active_client_id está no CONTEXTO.
 
 Fluxo padrão:
 1. Identifique o cliente: peça nome + CPF (ou CNPJ se PJ). SEMPRE peça CPF/CNPJ antes de chamar buscar_cliente — a busca é só por documento (dois clientes podem ter o mesmo nome). Se já houver active_client_id no CONTEXTO, pule esta etapa.
@@ -26,19 +26,23 @@ Fluxo padrão:
 3. Peça produtos (descrição, quantidade, preço unitário em centavos), valor total em centavos e forma de pagamento ("avista", "parcelado" ou "misto"). Para "misto", entrada > 0 e < total. Para "parcelado" e "misto", quantidade de parcelas.
 4. ANTES de propor gerar contrato, chame preflight_contrato com o client_id. Se vier "missing_profile", oriente o vendedor a abrir Configurações. Se vier "missing_client", complete via upsert_cliente. NUNCA chame criar_contrato sem preflight ok=true.
 5. Confirme o resumo e só chame criar_contrato com confirmado=true depois do vendedor confirmar.
-6. Em seguida chame gerar_pdf_contrato passando o contract_id e parcelas (quando aplicável).
+6. Em seguida chame gerar_pdf_contrato passando o contract_id e parcelas (quando aplicável). Devolva a URL temporária do PDF como link clicável em markdown: [Baixar PDF](URL).
+7. Após o PDF gerado, NÃO encerre. Pergunte: "Posso enviar o contrato para assinatura via Autentique agora?". Se sim, chame enviar_para_assinatura e mostre o link do signatário em markdown clicável.
+8. Em seguida ofereça o link para WhatsApp. Se cliente_phone_e164 estiver no CONTEXTO, pergunte: "Envio o link de assinatura para o número cadastrado (terminado em <últimos 4>) ou para outro número?". Com a resposta, chame gerar_link_whatsapp passando o telefone (ou nada, para usar o cadastrado). Devolva a URL wa.me como link clicável em markdown: [Enviar pelo WhatsApp](URL). Se o vendedor preferir só o link em si (sem WhatsApp), chame gerar_link_assinatura e devolva-o em markdown.
 
 Tratamento de erros:
 - Toda ferramenta devolve { ok: true, ... } ou { ok: false, error_code, message_pt, ... }.
-- Em { ok: false }: NÃO tente novamente automaticamente. Traduza message_pt para o vendedor em UMA mensagem clara, e pare. PROFILE_INCOMPLETE → abrir Configurações. CLIENT_INCOMPLETE/INVALID_INPUT → peça apenas o(s) campo(s) que faltam.
+- Em { ok: false }: NÃO tente novamente automaticamente. Traduza message_pt para o vendedor em UMA mensagem clara, e pare. PROFILE_INCOMPLETE → abrir Configurações. CLIENT_INCOMPLETE/INVALID_INPUT → peça apenas o(s) campo(s) que faltam. MISSING_PHONE → peça o número de WhatsApp. ALREADY_SENT → informe que já foi enviado e ofereça reenvio só pela tela de Transações.
 
 Após o contrato (etapas financeiras):
 - cliente pagou → registrar_pagamento_cliente; pago ao fornecedor → registrar_pagamento_fornecedor; frete → registrar_frete. Sempre converta reais para centavos (R$ 1.500,00 → 150000).
 
 Regras:
-- Não invente CPF, CNPJ, CEP ou e-mail. Pergunte ao vendedor — exceto quando já estiverem no CONTEXTO.
+- Não invente CPF, CNPJ, CEP, telefone ou e-mail. Pergunte ao vendedor — exceto quando já estiverem no CONTEXTO.
 - Reais → centavos (R$ 9.000,00 → 900000).
 - Nunca exiba CPF/CNPJ por extenso — use só os últimos dígitos ("***.***.123-45").
+- Para telefone exiba só os últimos 4 dígitos ("(**) ****-1234").
+- TODA URL (PDF, link de assinatura, wa.me) deve ser entregue como link markdown clicável: [Texto](https://...).
 - Linguagem objetiva, português do Brasil.`;
 
 export const Route = createFileRoute("/api/chat")({
@@ -65,6 +69,7 @@ export const Route = createFileRoute("/api/chat")({
         if (!userRes?.user) return new Response("Unauthorized", { status: 401 });
         const userId = userRes.user.id;
 
+        const baseUrl = new URL(request.url).origin;
         const body = (await request.json()) as { messages?: UIMessage[]; contractId?: string };
         if (!Array.isArray(body.messages)) return new Response("Bad request", { status: 400 });
 
@@ -212,6 +217,24 @@ export const Route = createFileRoute("/api/chat")({
                 };
               }
               existingClient = r;
+            } else if (!input.cpf && !input.cnpj && body.contractId) {
+              // Hardening: se o modelo "esquecer" de passar client_id mas a
+              // transação corrente já tem um cliente vinculado, usa esse cliente
+              // como existente — evita pedir CPF/CNPJ de novo.
+              const { data: tx } = await supabase
+                .from("transactions")
+                .select("client_id")
+                .eq("id", body.contractId)
+                .maybeSingle();
+              if (tx?.client_id) {
+                const { data: r } = await supabase
+                  .from("clients")
+                  .select("id,name,cpf,cnpj")
+                  .eq("id", tx.client_id)
+                  .eq("user_id", userId)
+                  .maybeSingle();
+                if (r) existingClient = r;
+              }
             }
 
             const cpf = input.cpf ? onlyDigits(input.cpf) : existingClient?.cpf ?? null;
@@ -427,7 +450,160 @@ export const Route = createFileRoute("/api/chat")({
         });
 
 
-        // -------- Ferramentas de etapas financeiras (pós-contrato) --------
+        // -------- Assinatura e envio --------
+        function generateUrlsafeToken(): string {
+          const bytes = new Uint8Array(32);
+          crypto.getRandomValues(bytes);
+          let s = "";
+          for (const b of bytes) s += String.fromCharCode(b);
+          return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+        }
+
+        async function createWhitelabelSignatureUrl(
+          contract_id: string,
+        ): Promise<{ ok: true; url: string; token: string } | { ok: false; error_code: string; message_pt: string }> {
+          const { data: contract } = await supabase
+            .from("transactions")
+            .select("id,user_id,client_name,client_email,client_doc")
+            .eq("id", contract_id)
+            .maybeSingle();
+          if (!contract || contract.user_id !== userId) {
+            return { ok: false, error_code: "CONTRACT_NOT_FOUND", message_pt: "Contrato não encontrado." };
+          }
+          const token = generateUrlsafeToken();
+          const { error: insErr } = await supabase.from("signature_tokens").insert({
+            token,
+            transaction_id: contract.id,
+            signer_role: "cliente",
+            signer_name: contract.client_name,
+            signer_email: contract.client_email,
+            signer_doc: contract.client_doc ?? null,
+          } as never);
+          if (insErr) {
+            console.error("[chat] createWhitelabelSignatureUrl insert error", insErr);
+            return { ok: false, error_code: "DB_ERROR", message_pt: "Não consegui gerar o link de assinatura." };
+          }
+          return { ok: true, url: `${baseUrl}/assinar/${token}`, token };
+        }
+
+        const enviar_para_assinatura = tool({
+          description:
+            "Envia o contrato (PDF já gerado) para a Autentique. Retorna o link de assinatura do cliente. Use depois de gerar_pdf_contrato e da confirmação do vendedor.",
+          inputSchema: z.object({ contract_id: z.string().uuid() }),
+          execute: async ({ contract_id }) => {
+            const { data: contract } = await supabase
+              .from("transactions")
+              .select("*")
+              .eq("id", contract_id)
+              .maybeSingle();
+            if (!contract || contract.user_id !== userId) {
+              return { ok: false, error_code: "CONTRACT_NOT_FOUND", message_pt: "Contrato não encontrado." };
+            }
+            if (!contract.pdf_path) {
+              return { ok: false, error_code: "PDF_MISSING", message_pt: "Gere o PDF do contrato antes de enviar para assinatura." };
+            }
+            if (contract.status !== "draft" || contract.autentique_document_id) {
+              return {
+                ok: false,
+                error_code: "ALREADY_SENT",
+                message_pt: "Este contrato já foi enviado para assinatura. Acompanhe em Transações.",
+              };
+            }
+            try {
+              const { dispatchContractToAutentique } = await import("@/lib/autentique-dispatch.server");
+              const result = await dispatchContractToAutentique(contract, supabase);
+              const signer = result.signers[0] ?? null;
+              return {
+                ok: true,
+                document_id: result.documentId,
+                signer_name: signer?.name ?? contract.client_name,
+                signer_email: signer?.email ?? contract.client_email,
+                signer_link: signer?.link ?? null,
+              };
+            } catch (e) {
+              const msg = e instanceof Error ? e.message : String(e);
+              console.error("[chat] enviar_para_assinatura failed", msg);
+              return {
+                ok: false,
+                error_code: "AUTENTIQUE_FAILED",
+                message_pt: "Não consegui enviar para assinatura agora. Tente novamente em instantes.",
+              };
+            }
+          },
+        });
+
+        const gerar_link_assinatura = tool({
+          description:
+            "Gera um link whitelabel (no domínio do Intermo) para o cliente assinar o contrato. Útil quando o vendedor quer só o link, sem WhatsApp.",
+          inputSchema: z.object({ contract_id: z.string().uuid() }),
+          execute: async ({ contract_id }) => {
+            return await createWhitelabelSignatureUrl(contract_id);
+          },
+        });
+
+        const gerar_link_whatsapp = tool({
+          description:
+            "Monta um link wa.me com mensagem pronta para o vendedor enviar ao cliente, incluindo o link de assinatura. Se telefone não vier, usa cliente_phone_e164 do CONTEXTO. Sempre passe o telefone só quando o vendedor pedir explicitamente outro número.",
+          inputSchema: z.object({
+            contract_id: z.string().uuid(),
+            telefone: z
+              .string()
+              .nullable()
+              .optional()
+              .describe("Telefone alternativo. Se omitido, usa o telefone cadastrado do cliente."),
+            mensagem: z
+              .string()
+              .nullable()
+              .optional()
+              .describe("Mensagem custom; se omitida, usa template padrão com o link de assinatura."),
+          }),
+          execute: async ({ contract_id, telefone, mensagem }) => {
+            const { data: contract } = await supabase
+              .from("transactions")
+              .select("id,user_id,client_id,client_name")
+              .eq("id", contract_id)
+              .maybeSingle();
+            if (!contract || contract.user_id !== userId) {
+              return { ok: false, error_code: "CONTRACT_NOT_FOUND", message_pt: "Contrato não encontrado." };
+            }
+            // Resolve telefone
+            let rawPhone: string | null = null;
+            if (telefone) {
+              rawPhone = telefone.replace(/\D/g, "");
+            } else if (contract.client_id) {
+              const { data: cli } = await supabase
+                .from("clients")
+                .select("phone")
+                .eq("id", contract.client_id)
+                .maybeSingle();
+              rawPhone = (cli?.phone ?? "").replace(/\D/g, "") || null;
+            }
+            if (!rawPhone) {
+              return {
+                ok: false,
+                error_code: "MISSING_PHONE",
+                message_pt: "Não tenho telefone do cliente. Qual número devo usar?",
+              };
+            }
+            const e164 = rawPhone.startsWith("55") ? rawPhone : `55${rawPhone}`;
+
+            // Gera link whitelabel
+            const sig = await createWhitelabelSignatureUrl(contract_id);
+            if (!sig.ok) return sig;
+
+            const firstName = (contract.client_name ?? "").split(" ")[0] || "tudo bem";
+            const defaultMsg = `Olá ${firstName}, seu contrato está pronto! Para assinar, é só clicar aqui: ${sig.url}. Qualquer dúvida, é só chamar.`;
+            const text = encodeURIComponent(mensagem ?? defaultMsg);
+            return {
+              ok: true,
+              wa_url: `https://wa.me/${e164}?text=${text}`,
+              signature_url: sig.url,
+              phone_used_masked: `(**) ****-${e164.slice(-4)}`,
+            };
+          },
+        });
+
+
         const registrar_pagamento_cliente = tool({
           description:
             "Registra o pagamento recebido do cliente para uma transação já existente. Use quando o vendedor informar que o cliente pagou.",
@@ -856,6 +1032,15 @@ export const Route = createFileRoute("/api/chat")({
                 lines.push(`- cliente_campos_preenchidos: ${camposPresentes.join(", ")}`);
               if (camposFaltando.length)
                 lines.push(`- cliente_campos_faltando: ${camposFaltando.join(", ")}`);
+              // Telefone explícito para uso em gerar_link_whatsapp.
+              const phoneDigits = (cli.phone ?? "").replace(/\D/g, "");
+              if (phoneDigits) {
+                const e164 = phoneDigits.startsWith("55") ? phoneDigits : `55${phoneDigits}`;
+                lines.push(`- cliente_phone_e164: ${e164}`);
+                lines.push(`- cliente_phone_mascarado: (**) ****-${e164.slice(-4)}`);
+              } else {
+                lines.push(`- cliente_phone_e164: (não informado)`);
+              }
             }
           }
           if (tx?.produtos) {
@@ -885,6 +1070,9 @@ export const Route = createFileRoute("/api/chat")({
             preflight_contrato,
             criar_contrato,
             gerar_pdf_contrato,
+            enviar_para_assinatura,
+            gerar_link_assinatura,
+            gerar_link_whatsapp,
             registrar_pagamento_cliente,
             registrar_pagamento_fornecedor,
             registrar_frete,

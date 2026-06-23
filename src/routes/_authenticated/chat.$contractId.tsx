@@ -5,6 +5,7 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { sanitizeMarkdown } from "@/lib/markdown";
 import {
   Loader2,
@@ -400,7 +401,15 @@ const TOOL_LABELS: Record<string, { running: string; done: string }> = {
   buscar_cliente: { running: "Buscando cliente…", done: "Cliente consultado" },
   consultar_cep: { running: "Consultando CEP…", done: "Endereço encontrado" },
   upsert_cliente: { running: "Salvando dados do cliente…", done: "Cliente salvo" },
+  preflight_contrato: { running: "Verificando dados…", done: "Tudo certo para gerar" },
   criar_contrato: { running: "Gerando contrato…", done: "Contrato gerado" },
+  gerar_pdf_contrato: { running: "Gerando PDF…", done: "PDF gerado" },
+  enviar_para_assinatura: { running: "Enviando para Autentique…", done: "Enviado para assinatura" },
+  gerar_link_assinatura: { running: "Gerando link de assinatura…", done: "Link de assinatura pronto" },
+  gerar_link_whatsapp: { running: "Montando mensagem do WhatsApp…", done: "Link do WhatsApp pronto" },
+  registrar_pagamento_cliente: { running: "Registrando pagamento…", done: "Pagamento registrado" },
+  registrar_pagamento_fornecedor: { running: "Registrando custo do fornecedor…", done: "Custo registrado" },
+  registrar_frete: { running: "Registrando frete…", done: "Frete registrado" },
   validate_cnpj: { running: "Validando CNPJ…", done: "CNPJ validado" },
 };
 
@@ -457,6 +466,16 @@ function friendlyErrorFromOutput(out: ToolOutput | null | undefined): {
       case "CONTRACT_NOT_FOUND":
       case "CONTRACT_INCOMPLETE":
         return { code, message: base ?? "Não encontrei esse registro." };
+      case "PDF_MISSING":
+        return { code, message: base ?? "Gere o PDF antes de enviar para assinatura." };
+      case "ALREADY_SENT":
+        return { code, message: base ?? "Este contrato já foi enviado." };
+      case "AUTENTIQUE_FAILED":
+        return { code, message: base ?? "Falha ao enviar para a Autentique. Tente novamente." };
+      case "MISSING_PHONE":
+        return { code, message: base ?? "Não tenho o telefone do cliente. Qual número devo usar?" };
+      case "DB_ERROR":
+        return { code, message: base ?? "Não consegui salvar. Tente novamente." };
       default:
         return { code, message: base ?? "Algo deu errado. Tente novamente." };
     }
@@ -508,8 +527,14 @@ function MessageBlock({
                     </span>
                     {rest ? " " : ""}
                     <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
                       components={{
                         p: ({ children }) => <>{children}</>,
+                        a: ({ children, ...props }) => (
+                          <a {...props} target="_blank" rel="noopener noreferrer" className="text-[color:var(--color-coral)] underline">
+                            {children}
+                          </a>
+                        ),
                       }}
                     >
                       {rest}
@@ -524,7 +549,18 @@ function MessageBlock({
               key={idx}
               className="prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-headings:font-serif-display"
             >
-              <ReactMarkdown>{safeText}</ReactMarkdown>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  a: ({ children, ...props }) => (
+                    <a {...props} target="_blank" rel="noopener noreferrer" className="text-[color:var(--color-coral)] underline">
+                      {children}
+                    </a>
+                  ),
+                }}
+              >
+                {safeText}
+              </ReactMarkdown>
             </div>
           );
         }
