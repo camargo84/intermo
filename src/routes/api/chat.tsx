@@ -180,9 +180,40 @@ export const Route = createFileRoute("/api/chat")({
           execute: async (input) => {
             const cpf = input.cpf ? onlyDigits(input.cpf) : null;
             const cnpj = input.cnpj ? onlyDigits(input.cnpj) : null;
-            if (!cpf && !cnpj) return { error: "Informe CPF ou CNPJ." };
-            if (cpf && !validateCPF(cpf)) return { error: "CPF inválido." };
-            if (cnpj && !validateCNPJ(cnpj)) return { error: "CNPJ inválido." };
+            if (!cpf && !cnpj) {
+              return {
+                ok: false,
+                error_code: "INVALID_INPUT",
+                field: "documento",
+                message_pt: "Informe CPF ou CNPJ.",
+              };
+            }
+            if (cpf && !validateCPF(cpf)) {
+              return { ok: false, error_code: "INVALID_INPUT", field: "cpf", message_pt: "CPF inválido." };
+            }
+            if (cnpj && !validateCNPJ(cnpj)) {
+              return { ok: false, error_code: "INVALID_INPUT", field: "cnpj", message_pt: "CNPJ inválido." };
+            }
+
+            // Normalização tolerante (DD/MM/AAAA, CEP/telefone com pontuação, etc.)
+            let dataNascimento: string | null = null;
+            let cep: string | null = null;
+            let phone: string | null = null;
+            try {
+              dataNascimento = normalizeDateBR(input.data_nascimento ?? null);
+              cep = normalizeCEP(input.cep ?? null);
+              phone = normalizePhoneBR(input.phone ?? null);
+            } catch (e) {
+              if (e instanceof InputFormatError) {
+                return {
+                  ok: false,
+                  error_code: "INVALID_INPUT",
+                  field: e.field,
+                  message_pt: e.message,
+                };
+              }
+              throw e;
+            }
 
             let existingId: string | null = null;
             if (cpf) {
@@ -211,22 +242,25 @@ export const Route = createFileRoute("/api/chat")({
               rg: input.rg ?? null,
               nacionalidade: input.nacionalidade ?? null,
               estado_civil: input.estado_civil ?? null,
-              data_nascimento: input.data_nascimento ?? null,
-              cep: input.cep ? onlyDigits(input.cep) : null,
+              data_nascimento: dataNascimento,
+              cep,
               endereco: input.endereco ?? null,
               complemento: input.complemento ?? null,
               bairro: input.bairro ?? null,
               cidade: input.cidade ?? null,
               uf: input.uf ? input.uf.toUpperCase().slice(0, 2) : null,
               email: input.email ?? null,
-              phone: input.phone ? onlyDigits(input.phone) : null,
+              phone,
               is_pj: input.is_pj ?? Boolean(cnpj && !cpf),
             };
             let resultClientId: string;
             let created: boolean;
             if (existingId) {
               const { error } = await supabase.from("clients").update(payload).eq("id", existingId);
-              if (error) return { error: error.message };
+              if (error) {
+                console.error("[chat] upsert_cliente update error", error);
+                return { ok: false, error_code: "DB_ERROR", message_pt: "Não consegui salvar o cliente. Tente novamente." };
+              }
               resultClientId = existingId;
               created = false;
             } else {
@@ -235,10 +269,14 @@ export const Route = createFileRoute("/api/chat")({
                 .insert(payload)
                 .select("id")
                 .single();
-              if (error) return { error: error.message };
+              if (error) {
+                console.error("[chat] upsert_cliente insert error", error);
+                return { ok: false, error_code: "DB_ERROR", message_pt: "Não consegui cadastrar o cliente. Tente novamente." };
+              }
               resultClientId = data.id;
               created = true;
             }
+
             // Vincula o cliente à transação corrente se ainda for um rascunho sem cliente,
             // para que a sidebar (e o resumo) reflitam o nome do cliente imediatamente.
             if (body.contractId) {
