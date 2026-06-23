@@ -5,6 +5,7 @@ import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { onlyDigits, validateCPF, validateCNPJ, lookupCEP } from "@/lib/validators";
+import { profileMissingFields, clientMissingFields } from "@/lib/contract-requirements";
 
 const SYSTEM_PROMPT = `Você é o assistente do Intermo, ajudando o vendedor a registrar uma venda e gerar um contrato de validade jurídica.
 
