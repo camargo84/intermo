@@ -11,6 +11,7 @@ import {
   Download,
   ExternalLink,
   MessageSquare,
+  PenLine,
   RefreshCw,
   Send,
   Trash2,
