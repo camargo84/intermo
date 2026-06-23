@@ -69,6 +69,7 @@ export const Route = createFileRoute("/api/chat")({
         if (!userRes?.user) return new Response("Unauthorized", { status: 401 });
         const userId = userRes.user.id;
 
+        const baseUrl = new URL(request.url).origin;
         const body = (await request.json()) as { messages?: UIMessage[]; contractId?: string };
         if (!Array.isArray(body.messages)) return new Response("Bad request", { status: 400 });
 
