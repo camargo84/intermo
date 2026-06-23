@@ -40,6 +40,7 @@ import {
   checkProfileReadiness,
 } from "@/lib/contracts.functions";
 import { getContractPdfSignedUrl, getSignedContractPdfUrl } from "@/lib/agent.functions";
+import { createSignatureToken, listSignatureTokens } from "@/lib/signature.functions";
 
 export const Route = createFileRoute("/_authenticated/transacoes/$contractId")({
   head: () => ({ meta: [{ title: "Detalhes da transação — inTermo" }] }),
