@@ -323,26 +323,28 @@ export const Route = createFileRoute("/api/chat")({
           execute: async (input) => {
             if (!input.confirmado) {
               return {
-                error:
+                ok: false,
+                error_code: "CONFIRMATION_PENDING",
+                message_pt:
                   'Confirmação pendente: apresente o resumo completo (cliente, produtos, valores, forma de pagamento) e peça ao vendedor que confirme com "sim" antes de criar o contrato.',
               };
             }
-            const { criarContrato } = await import("@/lib/agent.functions");
             try {
-              // Chamamos a serverFn diretamente — ela usa o bearer pelo middleware.
-              // Como estamos dentro de uma route handler com a request original,
-              // a serverFn via useServerFn não está disponível; replicamos a lógica core:
-              const r = await contractInsertCore(input);
-              return r;
+              return await contractInsertCore(input);
             } catch (e) {
-              return { error: e instanceof Error ? e.message : String(e) };
+              console.error("[chat] criar_contrato fatal", e);
+              return {
+                ok: false,
+                error_code: "INTERNAL_ERROR",
+                message_pt: "Não consegui criar o contrato. Tente novamente.",
+              };
             }
           },
         });
 
         const gerar_pdf_contrato = tool({
           description:
-            "Gera o PDF do contrato e retorna uma URL temporária (10 min) para download.",
+            "Gera o PDF do contrato e retorna uma URL temporária (10 min) para download. Devolve ok:false em caso de erro — não tente novamente sem orientar o usuário.",
           inputSchema: z.object({
             contract_id: z.string().uuid(),
             parcelas: z.number().int().positive().max(36).nullable().optional(),
@@ -351,10 +353,16 @@ export const Route = createFileRoute("/api/chat")({
             try {
               return await pdfCore(contract_id, parcelas ?? null);
             } catch (e) {
-              return { error: e instanceof Error ? e.message : String(e) };
+              console.error("[chat] gerar_pdf_contrato fatal", e);
+              return {
+                ok: false,
+                error_code: "PDF_RENDER_FAILED",
+                message_pt: "Não foi possível gerar o PDF. Tente novamente em instantes.",
+              };
             }
           },
         });
+
 
         // -------- Ferramentas de etapas financeiras (pós-contrato) --------
         const registrar_pagamento_cliente = tool({
