@@ -13,31 +13,33 @@ import {
   InputFormatError,
 } from "@/lib/normalize-input";
 
-const SYSTEM_PROMPT = `Você é o assistente do Intermo, ajudando o vendedor a registrar uma venda e gerar um contrato de validade jurídica.
+const BASE_SYSTEM_PROMPT = `Você é o assistente do Intermo, ajudando o vendedor a registrar uma venda e gerar um contrato de validade jurídica.
+
+MEMÓRIA E CONTEXTO (LEIA PRIMEIRO):
+- O bloco "CONTEXTO DA CONVERSA" abaixo é a fonte da verdade sobre o estado atual da transação (cliente vinculado, documento, endereço, produtos, valores). Ele é atualizado a cada turno a partir do banco de dados.
+- NUNCA volte a pedir uma informação que já está no CONTEXTO ou que o vendedor acabou de informar nas mensagens anteriores. Reaproveite dados (CPF, CNPJ, endereço, valores, produtos, forma de pagamento) sem perguntar de novo.
+- Se um cliente já está vinculado (active_client_id presente), você JÁ tem CPF/CNPJ — use upsert_cliente com client_id para atualizar campos faltantes (ex: CEP, endereço) SEM pedir o documento novamente.
 
 Fluxo padrão:
-1. Identifique o cliente: peça nome + CPF (ou CNPJ se for pessoa jurídica). SEMPRE peça o CPF/CNPJ antes de chamar buscar_cliente — a busca é feita apenas por documento, nunca por nome (dois clientes podem ter o mesmo nome).
-2. Se não existir, peça os dados que faltam: RG, nacionalidade (default: brasileiro/a), estado civil, data de nascimento (aceita DD/MM/AAAA — repasse o que o usuário escreveu, o sistema normaliza), CEP (use consultar_cep para autocompletar endereço), número, complemento, e-mail e telefone. Chame upsert_cliente. O endereço do cliente é obrigatório no contrato — não pule.
-3. Peça produtos (descrição, quantidade, preço unitário em centavos), valor total em centavos e forma de pagamento ("avista", "parcelado" ou "misto"). Para "misto", peça entrada (> 0 e < valor total). Para "parcelado" e "misto", peça quantidade de parcelas.
-4. ANTES de propor gerar contrato, chame preflight_contrato com o client_id. Se vier "missing_profile", oriente o vendedor a abrir Configurações (não tente preencher por ele — são dados da empresa dele). Se vier "missing_client", peça os dados que faltam e use upsert_cliente para completar antes de seguir. NUNCA chame criar_contrato sem o preflight retornar ok=true.
-5. Confirme o resumo e só chame criar_contrato com confirmado=true depois que o vendedor responder afirmativamente.
-6. Em seguida chame gerar_pdf_contrato passando o contract_id retornado e o número de parcelas (quando aplicável). Avise que o PDF está pronto para download.
+1. Identifique o cliente: peça nome + CPF (ou CNPJ se PJ). SEMPRE peça CPF/CNPJ antes de chamar buscar_cliente — a busca é só por documento (dois clientes podem ter o mesmo nome). Se já houver active_client_id no CONTEXTO, pule esta etapa.
+2. Se faltam dados (RG, nacionalidade, estado civil, data de nascimento — aceita DD/MM/AAAA, CEP — use consultar_cep, número, complemento, e-mail, telefone), peça e chame upsert_cliente. Se já houver active_client_id, passe-o em upsert_cliente para atualizar sem repedir documento.
+3. Peça produtos (descrição, quantidade, preço unitário em centavos), valor total em centavos e forma de pagamento ("avista", "parcelado" ou "misto"). Para "misto", entrada > 0 e < total. Para "parcelado" e "misto", quantidade de parcelas.
+4. ANTES de propor gerar contrato, chame preflight_contrato com o client_id. Se vier "missing_profile", oriente o vendedor a abrir Configurações. Se vier "missing_client", complete via upsert_cliente. NUNCA chame criar_contrato sem preflight ok=true.
+5. Confirme o resumo e só chame criar_contrato com confirmado=true depois do vendedor confirmar.
+6. Em seguida chame gerar_pdf_contrato passando o contract_id e parcelas (quando aplicável).
 
 Tratamento de erros:
 - Toda ferramenta devolve { ok: true, ... } ou { ok: false, error_code, message_pt, ... }.
-- Em { ok: false }: NÃO tente novamente automaticamente. Traduza message_pt para o vendedor em UMA mensagem clara, e pare. Se for PROFILE_INCOMPLETE, peça para ele abrir Configurações. Se for CLIENT_INCOMPLETE ou INVALID_INPUT, peça o(s) campo(s) que faltam/estão errados.
+- Em { ok: false }: NÃO tente novamente automaticamente. Traduza message_pt para o vendedor em UMA mensagem clara, e pare. PROFILE_INCOMPLETE → abrir Configurações. CLIENT_INCOMPLETE/INVALID_INPUT → peça apenas o(s) campo(s) que faltam.
 
-Após o contrato assinado (etapas financeiras da transação):
-- Quando o vendedor informar que o cliente pagou, chame registrar_pagamento_cliente (contract_id, valor_cents, método e data opcionais).
-- Quando informar quanto pagou ao fornecedor pelo produto, chame registrar_pagamento_fornecedor (contract_id, valor_cents, nome e documento do fornecedor opcionais).
-- Quando informar o frete, chame registrar_frete (contract_id, valor_cents, transportadora opcional).
-- Sempre converta valores em reais para centavos antes de chamar a ferramenta (R$ 1.500,00 → 150000). Use o contract_id da transação corrente. Confirme cada registro de forma objetiva.
+Após o contrato (etapas financeiras):
+- cliente pagou → registrar_pagamento_cliente; pago ao fornecedor → registrar_pagamento_fornecedor; frete → registrar_frete. Sempre converta reais para centavos (R$ 1.500,00 → 150000).
 
 Regras:
-- Não invente CPF, CNPJ, CEP ou e-mail. Pergunte ao vendedor.
-- Sempre converta valores em reais para centavos (R$ 9.000,00 → 900000).
-- Nunca exiba CPF ou CNPJ por extenso nos resumos — use apenas os últimos dígitos (ex: "***.***.123-45").
-- Linguagem objetiva e em português do Brasil.`;
+- Não invente CPF, CNPJ, CEP ou e-mail. Pergunte ao vendedor — exceto quando já estiverem no CONTEXTO.
+- Reais → centavos (R$ 9.000,00 → 900000).
+- Nunca exiba CPF/CNPJ por extenso — use só os últimos dígitos ("***.***.123-45").
+- Linguagem objetiva, português do Brasil.`;
 
 export const Route = createFileRoute("/api/chat")({
   server: {
@@ -158,9 +160,18 @@ export const Route = createFileRoute("/api/chat")({
 
 
         const upsert_cliente = tool({
-          description: "Cria ou atualiza um cliente do vendedor. Retorna o client_id.",
+          description:
+            "Cria ou atualiza um cliente do vendedor. Retorna o client_id. Se já existir um cliente vinculado à transação (active_client_id no CONTEXTO), passe client_id para atualizar campos sem precisar reenviar CPF/CNPJ.",
           inputSchema: z.object({
-            name: z.string().min(2),
+            client_id: z
+              .string()
+              .uuid()
+              .nullable()
+              .optional()
+              .describe(
+                "ID de um cliente já existente para atualizar. Use o active_client_id do CONTEXTO quando estiver completando dados (CEP, endereço, etc.) sem repedir documento.",
+              ),
+            name: z.string().min(2).nullable().optional(),
             cpf: z.string().nullable().optional(),
             cnpj: z.string().nullable().optional(),
             rg: z.string().nullable().optional(),
@@ -178,8 +189,33 @@ export const Route = createFileRoute("/api/chat")({
             is_pj: z.boolean().optional(),
           }),
           execute: async (input) => {
-            const cpf = input.cpf ? onlyDigits(input.cpf) : null;
-            const cnpj = input.cnpj ? onlyDigits(input.cnpj) : null;
+            // Se vier client_id, carrega o cliente existente para herdar campos faltantes
+            // (especialmente documento) e evitar exigir CPF/CNPJ novamente.
+            let existingClient: {
+              id: string;
+              name: string | null;
+              cpf: string | null;
+              cnpj: string | null;
+            } | null = null;
+            if (input.client_id) {
+              const { data: r } = await supabase
+                .from("clients")
+                .select("id,name,cpf,cnpj")
+                .eq("id", input.client_id)
+                .eq("user_id", userId)
+                .maybeSingle();
+              if (!r) {
+                return {
+                  ok: false,
+                  error_code: "CLIENT_NOT_FOUND",
+                  message_pt: "Cliente não encontrado para atualização.",
+                };
+              }
+              existingClient = r;
+            }
+
+            const cpf = input.cpf ? onlyDigits(input.cpf) : existingClient?.cpf ?? null;
+            const cnpj = input.cnpj ? onlyDigits(input.cnpj) : existingClient?.cnpj ?? null;
             if (!cpf && !cnpj) {
               return {
                 ok: false,
@@ -215,8 +251,8 @@ export const Route = createFileRoute("/api/chat")({
               throw e;
             }
 
-            let existingId: string | null = null;
-            if (cpf) {
+            let existingId: string | null = existingClient?.id ?? null;
+            if (!existingId && cpf) {
               const { data: r } = await supabase
                 .from("clients")
                 .select("id")
@@ -234,9 +270,18 @@ export const Route = createFileRoute("/api/chat")({
                 .maybeSingle();
               if (r) existingId = r.id;
             }
+            const resolvedName = input.name ?? existingClient?.name ?? null;
+            if (!existingId && !resolvedName) {
+              return {
+                ok: false,
+                error_code: "INVALID_INPUT",
+                field: "name",
+                message_pt: "Informe o nome do cliente.",
+              };
+            }
             const payload = {
               user_id: userId,
-              name: input.name,
+              name: resolvedName ?? "",
               cpf,
               cnpj,
               rg: input.rg ?? null,
@@ -256,7 +301,25 @@ export const Route = createFileRoute("/api/chat")({
             let resultClientId: string;
             let created: boolean;
             if (existingId) {
-              const { error } = await supabase.from("clients").update(payload).eq("id", existingId);
+              // Em updates, não sobrescreve campos que não vieram no input (mantém o que existe).
+              const updatePayload: Record<string, unknown> = { user_id: userId };
+              if (input.name !== undefined && input.name !== null) updatePayload.name = input.name;
+              if (input.cpf !== undefined) updatePayload.cpf = cpf;
+              if (input.cnpj !== undefined) updatePayload.cnpj = cnpj;
+              if (input.rg !== undefined) updatePayload.rg = input.rg;
+              if (input.nacionalidade !== undefined) updatePayload.nacionalidade = input.nacionalidade;
+              if (input.estado_civil !== undefined) updatePayload.estado_civil = input.estado_civil;
+              if (input.data_nascimento !== undefined) updatePayload.data_nascimento = dataNascimento;
+              if (input.cep !== undefined) updatePayload.cep = cep;
+              if (input.endereco !== undefined) updatePayload.endereco = input.endereco;
+              if (input.complemento !== undefined) updatePayload.complemento = input.complemento;
+              if (input.bairro !== undefined) updatePayload.bairro = input.bairro;
+              if (input.cidade !== undefined) updatePayload.cidade = input.cidade;
+              if (input.uf !== undefined) updatePayload.uf = input.uf ? input.uf.toUpperCase().slice(0, 2) : null;
+              if (input.email !== undefined) updatePayload.email = input.email;
+              if (input.phone !== undefined) updatePayload.phone = phone;
+              if (input.is_pj !== undefined) updatePayload.is_pj = input.is_pj;
+              const { error } = await supabase.from("clients").update(updatePayload as never).eq("id", existingId);
               if (error) {
                 console.error("[chat] upsert_cliente update error", error);
                 return { ok: false, error_code: "DB_ERROR", message_pt: "Não consegui salvar o cliente. Tente novamente." };
@@ -266,7 +329,7 @@ export const Route = createFileRoute("/api/chat")({
             } else {
               const { data, error } = await supabase
                 .from("clients")
-                .insert(payload)
+                .insert(payload as never)
                 .select("id")
                 .single();
               if (error) {
@@ -288,7 +351,7 @@ export const Route = createFileRoute("/api/chat")({
               if (tx && tx.status === "draft" && !tx.client_id) {
                 await supabase
                   .from("transactions")
-                  .update({ client_id: resultClientId, client_name: input.name } as never)
+                  .update({ client_id: resultClientId, client_name: resolvedName ?? "" } as never)
                   .eq("id", body.contractId);
               }
             }
@@ -745,9 +808,75 @@ export const Route = createFileRoute("/api/chat")({
         }
 
 
+        // Monta um bloco de CONTEXTO com o estado atual da transação para que o
+        // modelo nunca peça novamente algo que já foi informado/persistido.
+        let contextBlock = "\n\nCONTEXTO DA CONVERSA:\n- (sem transação ativa)";
+        if (body.contractId) {
+          const { data: tx } = await supabase
+            .from("transactions")
+            .select(
+              "id,status,client_id,client_name,client_doc,produtos,value_cents,forma_pagamento,entrada_cents",
+            )
+            .eq("id", body.contractId)
+            .maybeSingle();
+          const lines: string[] = [`- transaction_id: ${body.contractId}`];
+          if (tx?.status) lines.push(`- status: ${tx.status}`);
+          if (tx?.client_id) {
+            lines.push(`- active_client_id: ${tx.client_id}`);
+            const { data: cli } = await supabase
+              .from("clients")
+              .select(
+                "name,cpf,cnpj,rg,nacionalidade,estado_civil,data_nascimento,cep,endereco,complemento,bairro,cidade,uf,email,phone",
+              )
+              .eq("id", tx.client_id)
+              .maybeSingle();
+            if (cli) {
+              const mask = (d: string | null) =>
+                d ? `***.***.${d.slice(-5, -2)}-${d.slice(-2)}` : "(não informado)";
+              lines.push(`- cliente: ${cli.name ?? "(sem nome)"}`);
+              lines.push(`- documento: ${mask(cli.cpf ?? cli.cnpj ?? null)} (já cadastrado — NÃO peça de novo)`);
+              const camposPresentes: string[] = [];
+              const camposFaltando: string[] = [];
+              const checkField = (label: string, val: unknown) => {
+                if (val != null && String(val).trim() !== "") camposPresentes.push(label);
+                else camposFaltando.push(label);
+              };
+              checkField("rg", cli.rg);
+              checkField("nacionalidade", cli.nacionalidade);
+              checkField("estado_civil", cli.estado_civil);
+              checkField("data_nascimento", cli.data_nascimento);
+              checkField("cep", cli.cep);
+              checkField("endereco", cli.endereco);
+              checkField("bairro", cli.bairro);
+              checkField("cidade", cli.cidade);
+              checkField("uf", cli.uf);
+              checkField("email", cli.email);
+              checkField("phone", cli.phone);
+              if (camposPresentes.length)
+                lines.push(`- cliente_campos_preenchidos: ${camposPresentes.join(", ")}`);
+              if (camposFaltando.length)
+                lines.push(`- cliente_campos_faltando: ${camposFaltando.join(", ")}`);
+            }
+          }
+          if (tx?.produtos) {
+            try {
+              const arr = Array.isArray(tx.produtos) ? tx.produtos : JSON.parse(String(tx.produtos));
+              if (Array.isArray(arr) && arr.length) {
+                lines.push(`- produtos: ${arr.map((p) => `${p.quantidade ?? "?"}x ${p.descricao ?? "?"}`).join("; ")}`);
+              }
+            } catch {
+              // ignora parse
+            }
+          }
+          if (tx?.value_cents) lines.push(`- valor_cents: ${tx.value_cents}`);
+          if (tx?.forma_pagamento) lines.push(`- forma_pagamento: ${tx.forma_pagamento}`);
+          if (tx?.entrada_cents) lines.push(`- entrada_cents: ${tx.entrada_cents}`);
+          contextBlock = `\n\nCONTEXTO DA CONVERSA:\n${lines.join("\n")}`;
+        }
+
         const result = streamText({
           model,
-          system: SYSTEM_PROMPT,
+          system: BASE_SYSTEM_PROMPT + contextBlock,
           messages: await convertToModelMessages(body.messages),
           tools: {
             buscar_cliente,
