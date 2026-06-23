@@ -49,6 +49,19 @@ export const upsertClient = createServerFn({ method: "POST" })
     if (cpf && !validateCPF(cpf)) throw new Error("CPF inválido.");
     if (cnpj && !validateCNPJ(cnpj)) throw new Error("CNPJ inválido.");
 
+    let dataNascimento: string | null;
+    let cep: string | null;
+    let phone: string | null;
+    try {
+      dataNascimento = normalizeDateBR(data.data_nascimento ?? null);
+      cep = normalizeCEP(data.cep ?? null);
+      phone = normalizePhoneBR(data.phone ?? null);
+    } catch (e) {
+      if (e instanceof InputFormatError) throw new Error(e.message);
+      throw e;
+    }
+
+
     // procura existente pelo doc
     let existingId: string | null = null;
     if (cpf) {
