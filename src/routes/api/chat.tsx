@@ -355,7 +355,6 @@ export const Route = createFileRoute("/api/chat")({
                   .eq("id", body.contractId);
               }
             }
-            }
             return { client_id: resultClientId, created };
           },
         });
