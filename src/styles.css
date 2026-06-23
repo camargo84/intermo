@@ -80,64 +80,64 @@
   --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
 }
 
-/* Light fallback (não exposto na landing) */
+/* LIGHT — contraste editorial (warm coral primary) */
 :root {
   --radius: 0.75rem;
 
-  --background: 0 0% 100%;
-  --foreground: 0 0% 4%;
-  --card: 0 0% 98%;
-  --card-foreground: 0 0% 4%;
+  --background: 0 0% 99%;
+  --foreground: 0 0% 9%;
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 9%;
   --popover: 0 0% 100%;
-  --popover-foreground: 0 0% 4%;
+  --popover-foreground: 0 0% 9%;
 
   --surface-1: 0 0% 100%;
-  --surface-2: 0 0% 96%;
-  --surface-3: 0 0% 92%;
+  --surface-2: 0 0% 97%;
+  --surface-3: 0 0% 93%;
 
-  --primary: 146 73% 57%;
-  --primary-foreground: 0 0% 4%;
-  --secondary: 0 0% 96%;
-  --secondary-foreground: 0 0% 4%;
-  --muted: 0 0% 96%;
-  --muted-foreground: 0 0% 36%;
-  --accent: 146 73% 57%;
-  --accent-foreground: 0 0% 4%;
+  --primary: 15 55% 45%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 0 0% 95%;
+  --secondary-foreground: 0 0% 9%;
+  --muted: 0 0% 95%;
+  --muted-foreground: 0 0% 30%;
+  --accent: 0 0% 94%;
+  --accent-foreground: 0 0% 9%;
 
-  --destructive: 0 70% 45%;
+  --destructive: 0 75% 42%;
   --destructive-foreground: 0 0% 100%;
-  --success: 146 73% 57%;
-  --success-foreground: 0 0% 4%;
-  --warning: 35 90% 45%;
+  --success: 146 60% 35%;
+  --success-foreground: 0 0% 100%;
+  --warning: 35 90% 40%;
   --warning-foreground: 0 0% 100%;
-  --info: 146 73% 57%;
-  --info-foreground: 0 0% 4%;
+  --info: 210 80% 45%;
+  --info-foreground: 0 0% 100%;
 
-  --border: 0 0% 90%;
-  --input: 0 0% 90%;
-  --ring: 146 73% 57%;
+  --border: 0 0% 86%;
+  --input: 0 0% 86%;
+  --ring: 15 55% 45%;
 
-  --border-subtle: rgba(0, 0, 0, 0.06);
-  --border-hairline: rgba(0, 0, 0, 0.1);
-  --border-strong: rgba(0, 0, 0, 0.16);
+  --border-subtle: rgba(0, 0, 0, 0.10);
+  --border-hairline: rgba(0, 0, 0, 0.14);
+  --border-strong: rgba(0, 0, 0, 0.22);
 
-  --shadow-deep: 0 1px 0 rgba(0, 0, 0, 0.04), 0 8px 24px -12px rgba(15, 23, 42, 0.1);
-  --shadow-glass: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 8px 24px -12px rgba(15, 23, 42, 0.1);
+  --shadow-deep: 0 1px 0 rgba(0, 0, 0, 0.04), 0 8px 24px -12px rgba(15, 23, 42, 0.12);
+  --shadow-glass: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 8px 24px -12px rgba(15, 23, 42, 0.12);
 
-  --chart-1: 146 73% 57%;
-  --chart-2: 0 0% 60%;
-  --chart-3: 0 0% 40%;
-  --chart-4: 35 90% 45%;
-  --chart-5: 0 70% 45%;
+  --chart-1: 15 55% 45%;
+  --chart-2: 0 0% 45%;
+  --chart-3: 0 0% 25%;
+  --chart-4: 35 90% 40%;
+  --chart-5: 210 80% 45%;
 
-  --sidebar: 0 0% 98%;
-  --sidebar-foreground: 0 0% 4%;
-  --sidebar-primary: 146 73% 57%;
-  --sidebar-primary-foreground: 0 0% 4%;
-  --sidebar-accent: 0 0% 94%;
-  --sidebar-accent-foreground: 0 0% 4%;
-  --sidebar-border: 0 0% 90%;
-  --sidebar-ring: 146 73% 57%;
+  --sidebar: 0 0% 97%;
+  --sidebar-foreground: 0 0% 9%;
+  --sidebar-primary: 15 55% 45%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 0 0% 92%;
+  --sidebar-accent-foreground: 0 0% 9%;
+  --sidebar-border: 0 0% 88%;
+  --sidebar-ring: 15 55% 45%;
 }
 
 /* DARK — Sandclock */
