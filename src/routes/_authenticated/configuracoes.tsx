@@ -261,7 +261,7 @@ function ConfiguracoesPage() {
                 type="file"
                 accept="image/png,image/jpeg"
                 className="hidden"
-                onChange={(e) => e.target.files?.[0] && handleLogoFile(e.target.files[0])}
+                onChange={(e) => e.target.files?.[0] && handleLogoPick(e.target.files[0])}
               />
               <span className="inline-flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-sm hover:bg-accent">
                 {uploading ? (
@@ -269,7 +269,7 @@ function ConfiguracoesPage() {
                 ) : (
                   <Upload className="h-4 w-4" />
                 )}
-                Enviar logo (PNG/JPG, até 2MB)
+                Enviar logo (PNG/JPG, até 8MB — você recorta antes do upload)
               </span>
             </Label>
           </div>
@@ -278,6 +278,16 @@ function ConfiguracoesPage() {
           </p>
         </CardContent>
       </Card>
+
+      <LogoCropDialog
+        open={cropOpen}
+        file={pendingLogoFile}
+        onClose={() => {
+          setCropOpen(false);
+          setPendingLogoFile(null);
+        }}
+        onConfirm={handleCroppedLogo}
+      />
 
       <Card>
         <CardHeader>
