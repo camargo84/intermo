@@ -1,4 +1,4 @@
-import { createFileRoute, useParams } from "@tanstack/react-router";
+import { createFileRoute, useParams, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useChat } from "@ai-sdk/react";
@@ -407,9 +407,61 @@ const TOOL_LABELS: Record<string, { running: string; done: string }> = {
 function toolLabel(name: string, state?: string, errorMessage?: string) {
   const entry = TOOL_LABELS[name];
   const isDone = state === "output-available" || state === "result";
-  if (errorMessage) return `Falha: ${errorMessage}`;
+  if (errorMessage) return errorMessage;
   if (entry) return isDone ? entry.done : entry.running;
   return isDone ? "Concluído" : "Processando…";
+}
+
+type ToolOutput = {
+  ok?: boolean;
+  error?: unknown;
+  error_code?: string;
+  message_pt?: string;
+  missing_fields?: string[];
+  field?: string;
+};
+
+function friendlyErrorFromOutput(out: ToolOutput | null | undefined): {
+  message: string;
+  code?: string;
+} | null {
+  if (!out) return null;
+  // formato legado { error: string }
+  if (out.ok === undefined && out.error) {
+    return { message: typeof out.error === "string" ? out.error : "Algo deu errado. Tente novamente." };
+  }
+  if (out.ok === false) {
+    const code = out.error_code;
+    const missing = (out.missing_fields ?? []).join(", ");
+    const field = out.field;
+    const base = out.message_pt;
+    switch (code) {
+      case "PROFILE_INCOMPLETE":
+        return { code, message: `Faltam dados do seu perfil${missing ? `: ${missing}` : ""}.` };
+      case "CLIENT_INCOMPLETE":
+        return { code, message: `Faltam dados do cliente${missing ? `: ${missing}` : ""}.` };
+      case "INVALID_INPUT":
+        return { code, message: base ?? `Dado inválido${field ? ` em ${field}` : ""}.` };
+      case "PDF_RENDER_FAILED":
+      case "PDF_UPLOAD_FAILED":
+        return { code, message: base ?? "Não foi possível gerar o PDF. Tente novamente." };
+      case "RATE_LIMITED":
+        return { code, message: base ?? "Muitas tentativas. Aguarde um instante." };
+      case "TERMS_OUTDATED":
+        return { code, message: base ?? "Aceite os novos termos em Configurações." };
+      case "NO_SUBSCRIPTION":
+        return { code, message: base ?? "Sua assinatura não está ativa." };
+      case "CONFIRMATION_PENDING":
+        return { code, message: base ?? "Aguardando confirmação do resumo." };
+      case "CLIENT_NOT_FOUND":
+      case "CONTRACT_NOT_FOUND":
+      case "CONTRACT_INCOMPLETE":
+        return { code, message: base ?? "Não encontrei esse registro." };
+      default:
+        return { code, message: base ?? "Algo deu errado. Tente novamente." };
+    }
+  }
+  return null;
 }
 
 function MessageBlock({
@@ -425,7 +477,11 @@ function MessageBlock({
       <div className="flex justify-end">
         <div className="max-w-[80%] rounded-2xl bg-[color:var(--color-signal-mint)] px-4 py-2 text-sm text-[color:var(--color-abyss)]">
           {message.parts.map((part, idx) =>
-            part.type === "text" ? <div key={idx}>{part.text}</div> : null,
+            part.type === "text" ? (
+              <div key={idx} className="whitespace-pre-wrap break-words">
+                {part.text}
+              </div>
+            ) : null,
           )}
         </div>
       </div>
@@ -476,29 +532,37 @@ function MessageBlock({
           const toolName = part.type.replace("tool-", "");
           const state = (part as { state?: string }).state;
           const isDone = state === "output-available" || state === "result";
-          const output = (part as { output?: unknown }).output;
-          const errorMessage =
-            isDone && output && typeof output === "object" && "error" in output
-              ? String((output as { error?: unknown }).error ?? "")
-              : undefined;
+          const output = (part as { output?: unknown }).output as ToolOutput | undefined;
+          const friendly = isDone ? friendlyErrorFromOutput(output) : null;
+          const errorMessage = friendly?.message;
           const hasError = Boolean(errorMessage);
+          const showProfileLink = friendly?.code === "PROFILE_INCOMPLETE";
           return (
             <div
               key={idx}
               className={
                 hasError
-                  ? "mt-2 inline-flex items-center gap-2 rounded-full border border-destructive/40 bg-destructive/10 px-3 py-1 text-[11px] text-destructive"
-                  : "mt-2 inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-[11px] text-muted-foreground"
+                  ? "mt-2 inline-flex max-w-full items-center gap-2 rounded-full border border-destructive/40 bg-destructive/10 px-3 py-1 text-[11px] text-destructive"
+                  : "mt-2 inline-flex max-w-full items-center gap-2 rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-[11px] text-muted-foreground"
               }
+              title={errorMessage}
             >
               {hasError ? (
-                <AlertCircle className="h-3 w-3" />
+                <AlertCircle className="h-3 w-3 shrink-0" />
               ) : isDone ? (
-                <CheckCircle2 className="h-3 w-3 text-[color:var(--color-signal-mint)]" />
+                <CheckCircle2 className="h-3 w-3 shrink-0 text-[color:var(--color-signal-mint)]" />
               ) : (
-                <Loader2 className="h-3 w-3 animate-spin" />
+                <Loader2 className="h-3 w-3 shrink-0 animate-spin" />
               )}
-              {toolLabel(toolName, state, errorMessage)}
+              <span className="truncate">{toolLabel(toolName, state, errorMessage)}</span>
+              {showProfileLink ? (
+                <Link
+                  to="/configuracoes"
+                  className="ml-1 shrink-0 rounded-full border border-destructive/40 px-2 py-0.5 text-[10px] font-medium underline-offset-2 hover:underline"
+                >
+                  Abrir Configurações
+                </Link>
+              ) : null}
             </div>
           );
         }

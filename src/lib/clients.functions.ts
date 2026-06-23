@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { onlyDigits, validateCPF, validateCNPJ } from "./validators";
+import { normalizeDateBR, normalizeCEP, normalizePhoneBR, InputFormatError } from "./normalize-input";
 
 const upsertSchema = z.object({
   name: z.string().min(2).max(160),
@@ -48,6 +49,19 @@ export const upsertClient = createServerFn({ method: "POST" })
     if (cpf && !validateCPF(cpf)) throw new Error("CPF inválido.");
     if (cnpj && !validateCNPJ(cnpj)) throw new Error("CNPJ inválido.");
 
+    let dataNascimento: string | null;
+    let cep: string | null;
+    let phone: string | null;
+    try {
+      dataNascimento = normalizeDateBR(data.data_nascimento ?? null);
+      cep = normalizeCEP(data.cep ?? null);
+      phone = normalizePhoneBR(data.phone ?? null);
+    } catch (e) {
+      if (e instanceof InputFormatError) throw new Error(e.message);
+      throw e;
+    }
+
+
     // procura existente pelo doc
     let existingId: string | null = null;
     if (cpf) {
@@ -77,15 +91,15 @@ export const upsertClient = createServerFn({ method: "POST" })
       rg: data.rg ?? null,
       nacionalidade: data.nacionalidade ?? null,
       estado_civil: data.estado_civil ?? null,
-      data_nascimento: data.data_nascimento ?? null,
-      cep: data.cep ? onlyDigits(data.cep) : null,
+      data_nascimento: dataNascimento,
+      cep,
       endereco: data.endereco ?? null,
       complemento: data.complemento ?? null,
       bairro: data.bairro ?? null,
       cidade: data.cidade ?? null,
       uf: data.uf ? data.uf.toUpperCase().slice(0, 2) : null,
       email: data.email ?? null,
-      phone: data.phone ? onlyDigits(data.phone) : null,
+      phone,
       is_pj: data.is_pj ?? Boolean(cnpj && !cpf),
     };
 

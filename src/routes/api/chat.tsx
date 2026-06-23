@@ -6,16 +6,26 @@ import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { onlyDigits, validateCPF, validateCNPJ, lookupCEP } from "@/lib/validators";
 import { profileMissingFields, clientMissingFields } from "@/lib/contract-requirements";
+import {
+  normalizeDateBR,
+  normalizeCEP,
+  normalizePhoneBR,
+  InputFormatError,
+} from "@/lib/normalize-input";
 
 const SYSTEM_PROMPT = `Você é o assistente do Intermo, ajudando o vendedor a registrar uma venda e gerar um contrato de validade jurídica.
 
 Fluxo padrão:
 1. Identifique o cliente: peça nome + CPF (ou CNPJ se for pessoa jurídica). SEMPRE peça o CPF/CNPJ antes de chamar buscar_cliente — a busca é feita apenas por documento, nunca por nome (dois clientes podem ter o mesmo nome).
-2. Se não existir, peça os dados que faltam: RG, nacionalidade (default: brasileiro/a), estado civil, data de nascimento, CEP (use consultar_cep para autocompletar endereço), número, complemento, e-mail e telefone. Chame upsert_cliente. O endereço do cliente é obrigatório no contrato — não pule.
+2. Se não existir, peça os dados que faltam: RG, nacionalidade (default: brasileiro/a), estado civil, data de nascimento (aceita DD/MM/AAAA — repasse o que o usuário escreveu, o sistema normaliza), CEP (use consultar_cep para autocompletar endereço), número, complemento, e-mail e telefone. Chame upsert_cliente. O endereço do cliente é obrigatório no contrato — não pule.
 3. Peça produtos (descrição, quantidade, preço unitário em centavos), valor total em centavos e forma de pagamento ("avista", "parcelado" ou "misto"). Para "misto", peça entrada (> 0 e < valor total). Para "parcelado" e "misto", peça quantidade de parcelas.
-4. ANTES de propor gerar contrato, chame preflight_contrato com o client_id. Se vier "missing_profile", oriente o vendedor a abrir Configurações (não tente preencher por ele — são dados da empresa dele). Se vier "missing_client", peça os dados que faltam e use upsert_cliente para completar antes de seguir.
+4. ANTES de propor gerar contrato, chame preflight_contrato com o client_id. Se vier "missing_profile", oriente o vendedor a abrir Configurações (não tente preencher por ele — são dados da empresa dele). Se vier "missing_client", peça os dados que faltam e use upsert_cliente para completar antes de seguir. NUNCA chame criar_contrato sem o preflight retornar ok=true.
 5. Confirme o resumo e só chame criar_contrato com confirmado=true depois que o vendedor responder afirmativamente.
 6. Em seguida chame gerar_pdf_contrato passando o contract_id retornado e o número de parcelas (quando aplicável). Avise que o PDF está pronto para download.
+
+Tratamento de erros:
+- Toda ferramenta devolve { ok: true, ... } ou { ok: false, error_code, message_pt, ... }.
+- Em { ok: false }: NÃO tente novamente automaticamente. Traduza message_pt para o vendedor em UMA mensagem clara, e pare. Se for PROFILE_INCOMPLETE, peça para ele abrir Configurações. Se for CLIENT_INCOMPLETE ou INVALID_INPUT, peça o(s) campo(s) que faltam/estão errados.
 
 Após o contrato assinado (etapas financeiras da transação):
 - Quando o vendedor informar que o cliente pagou, chame registrar_pagamento_cliente (contract_id, valor_cents, método e data opcionais).
@@ -170,9 +180,40 @@ export const Route = createFileRoute("/api/chat")({
           execute: async (input) => {
             const cpf = input.cpf ? onlyDigits(input.cpf) : null;
             const cnpj = input.cnpj ? onlyDigits(input.cnpj) : null;
-            if (!cpf && !cnpj) return { error: "Informe CPF ou CNPJ." };
-            if (cpf && !validateCPF(cpf)) return { error: "CPF inválido." };
-            if (cnpj && !validateCNPJ(cnpj)) return { error: "CNPJ inválido." };
+            if (!cpf && !cnpj) {
+              return {
+                ok: false,
+                error_code: "INVALID_INPUT",
+                field: "documento",
+                message_pt: "Informe CPF ou CNPJ.",
+              };
+            }
+            if (cpf && !validateCPF(cpf)) {
+              return { ok: false, error_code: "INVALID_INPUT", field: "cpf", message_pt: "CPF inválido." };
+            }
+            if (cnpj && !validateCNPJ(cnpj)) {
+              return { ok: false, error_code: "INVALID_INPUT", field: "cnpj", message_pt: "CNPJ inválido." };
+            }
+
+            // Normalização tolerante (DD/MM/AAAA, CEP/telefone com pontuação, etc.)
+            let dataNascimento: string | null = null;
+            let cep: string | null = null;
+            let phone: string | null = null;
+            try {
+              dataNascimento = normalizeDateBR(input.data_nascimento ?? null);
+              cep = normalizeCEP(input.cep ?? null);
+              phone = normalizePhoneBR(input.phone ?? null);
+            } catch (e) {
+              if (e instanceof InputFormatError) {
+                return {
+                  ok: false,
+                  error_code: "INVALID_INPUT",
+                  field: e.field,
+                  message_pt: e.message,
+                };
+              }
+              throw e;
+            }
 
             let existingId: string | null = null;
             if (cpf) {
@@ -201,22 +242,25 @@ export const Route = createFileRoute("/api/chat")({
               rg: input.rg ?? null,
               nacionalidade: input.nacionalidade ?? null,
               estado_civil: input.estado_civil ?? null,
-              data_nascimento: input.data_nascimento ?? null,
-              cep: input.cep ? onlyDigits(input.cep) : null,
+              data_nascimento: dataNascimento,
+              cep,
               endereco: input.endereco ?? null,
               complemento: input.complemento ?? null,
               bairro: input.bairro ?? null,
               cidade: input.cidade ?? null,
               uf: input.uf ? input.uf.toUpperCase().slice(0, 2) : null,
               email: input.email ?? null,
-              phone: input.phone ? onlyDigits(input.phone) : null,
+              phone,
               is_pj: input.is_pj ?? Boolean(cnpj && !cpf),
             };
             let resultClientId: string;
             let created: boolean;
             if (existingId) {
               const { error } = await supabase.from("clients").update(payload).eq("id", existingId);
-              if (error) return { error: error.message };
+              if (error) {
+                console.error("[chat] upsert_cliente update error", error);
+                return { ok: false, error_code: "DB_ERROR", message_pt: "Não consegui salvar o cliente. Tente novamente." };
+              }
               resultClientId = existingId;
               created = false;
             } else {
@@ -225,10 +269,14 @@ export const Route = createFileRoute("/api/chat")({
                 .insert(payload)
                 .select("id")
                 .single();
-              if (error) return { error: error.message };
+              if (error) {
+                console.error("[chat] upsert_cliente insert error", error);
+                return { ok: false, error_code: "DB_ERROR", message_pt: "Não consegui cadastrar o cliente. Tente novamente." };
+              }
               resultClientId = data.id;
               created = true;
             }
+
             // Vincula o cliente à transação corrente se ainda for um rascunho sem cliente,
             // para que a sidebar (e o resumo) reflitam o nome do cliente imediatamente.
             if (body.contractId) {
@@ -275,26 +323,28 @@ export const Route = createFileRoute("/api/chat")({
           execute: async (input) => {
             if (!input.confirmado) {
               return {
-                error:
+                ok: false,
+                error_code: "CONFIRMATION_PENDING",
+                message_pt:
                   'Confirmação pendente: apresente o resumo completo (cliente, produtos, valores, forma de pagamento) e peça ao vendedor que confirme com "sim" antes de criar o contrato.',
               };
             }
-            const { criarContrato } = await import("@/lib/agent.functions");
             try {
-              // Chamamos a serverFn diretamente — ela usa o bearer pelo middleware.
-              // Como estamos dentro de uma route handler com a request original,
-              // a serverFn via useServerFn não está disponível; replicamos a lógica core:
-              const r = await contractInsertCore(input);
-              return r;
+              return await contractInsertCore(input);
             } catch (e) {
-              return { error: e instanceof Error ? e.message : String(e) };
+              console.error("[chat] criar_contrato fatal", e);
+              return {
+                ok: false,
+                error_code: "INTERNAL_ERROR",
+                message_pt: "Não consegui criar o contrato. Tente novamente.",
+              };
             }
           },
         });
 
         const gerar_pdf_contrato = tool({
           description:
-            "Gera o PDF do contrato e retorna uma URL temporária (10 min) para download.",
+            "Gera o PDF do contrato e retorna uma URL temporária (10 min) para download. Devolve ok:false em caso de erro — não tente novamente sem orientar o usuário.",
           inputSchema: z.object({
             contract_id: z.string().uuid(),
             parcelas: z.number().int().positive().max(36).nullable().optional(),
@@ -303,10 +353,16 @@ export const Route = createFileRoute("/api/chat")({
             try {
               return await pdfCore(contract_id, parcelas ?? null);
             } catch (e) {
-              return { error: e instanceof Error ? e.message : String(e) };
+              console.error("[chat] gerar_pdf_contrato fatal", e);
+              return {
+                ok: false,
+                error_code: "PDF_RENDER_FAILED",
+                message_pt: "Não foi possível gerar o PDF. Tente novamente em instantes.",
+              };
             }
           },
         });
+
 
         // -------- Ferramentas de etapas financeiras (pós-contrato) --------
         const registrar_pagamento_cliente = tool({
@@ -398,12 +454,23 @@ export const Route = createFileRoute("/api/chat")({
             )
             .eq("id", userId)
             .maybeSingle();
-          if (profile?.accepted_terms_version !== TERMS_VERSION)
-            return { error: "Aceite os novos termos para continuar." };
+          if (profile?.accepted_terms_version !== TERMS_VERSION) {
+            return {
+              ok: false,
+              error_code: "TERMS_OUTDATED",
+              message_pt: "Aceite os novos termos em Configurações para continuar.",
+            };
+          }
           const { data: hasSub } = await supabase.rpc("has_active_subscription", {
             _user_id: userId,
           });
-          if (!hasSub) return { error: "Sua assinatura não está ativa." };
+          if (!hasSub) {
+            return {
+              ok: false,
+              error_code: "NO_SUBSCRIPTION",
+              message_pt: "Sua assinatura não está ativa.",
+            };
+          }
           // anti-abuso
           const { data: count } = await supabase.rpc("current_month_transaction_count");
           const { data: sub } = await supabase
@@ -412,27 +479,56 @@ export const Route = createFileRoute("/api/chat")({
             .eq("user_id", userId)
             .maybeSingle();
           const ceil = sub?.monthly_contract_quota ?? 2000;
-          if ((count ?? 0) >= ceil) return { error: "Uso anormal detectado." };
+          if ((count ?? 0) >= ceil) {
+            return {
+              ok: false,
+              error_code: "RATE_LIMITED",
+              message_pt: "Limite mensal atingido. Tente novamente mais tarde.",
+            };
+          }
           if (input.forma_pagamento === "misto") {
             if (!(input.entrada_cents > 0 && input.entrada_cents < input.valor_cents)) {
-              return { error: "Entrada inválida (deve ser > 0 e < valor total)." };
+              return {
+                ok: false,
+                error_code: "INVALID_INPUT",
+                field: "entrada_cents",
+                message_pt: "Entrada inválida: deve ser maior que zero e menor que o valor total.",
+              };
             }
           }
-          const missing: string[] = [];
-          if (!profile?.company_legal_name) missing.push("razão social");
-          if (!profile?.company_cnpj) missing.push("CNPJ");
-          if (!profile?.company_address) missing.push("endereço");
-          if (!profile?.company_city || !profile?.company_uf) missing.push("cidade/UF");
-          if (!profile?.representative_name) missing.push("representante");
-          if (!profile?.comarca) missing.push("comarca");
-          if (missing.length) return { error: `Complete em Configurações: ${missing.join(", ")}.` };
+          // Preflight de perfil — bloqueia a criação se faltar dado obrigatório.
+          const missingProfile = profileMissingFields(profile);
+          if (missingProfile.length) {
+            return {
+              ok: false,
+              error_code: "PROFILE_INCOMPLETE",
+              missing_fields: missingProfile,
+              message_pt: `Faltam dados do seu perfil: ${missingProfile.join(", ")}. Abra Configurações para completar.`,
+            };
+          }
 
           const { data: cli } = await supabase
             .from("clients")
-            .select("id,name,email,cpf,cnpj")
+            .select("id,name,email,cpf,cnpj,endereco,cidade,uf,cep")
             .eq("id", input.client_id)
             .maybeSingle();
-          if (!cli) return { error: "Cliente não encontrado." };
+          if (!cli) {
+            return {
+              ok: false,
+              error_code: "CLIENT_NOT_FOUND",
+              message_pt: "Cliente não encontrado.",
+            };
+          }
+          const missingClient = clientMissingFields(cli);
+          if (missingClient.length) {
+            return {
+              ok: false,
+              error_code: "CLIENT_INCOMPLETE",
+              missing_fields: missingClient,
+              message_pt: `Faltam dados do cliente: ${missingClient.join(", ")}.`,
+            };
+          }
+
 
           const tenant_snapshot = {
             company_legal_name: profile.company_legal_name,
@@ -483,8 +579,16 @@ export const Route = createFileRoute("/api/chat")({
                 .from("transactions")
                 .update(basePayload as never)
                 .eq("id", thread.id);
-              if (upErr) return { error: upErr.message };
+              if (upErr) {
+                console.error("[chat] criar_contrato promote error", upErr);
+                return {
+                  ok: false,
+                  error_code: "DB_ERROR",
+                  message_pt: "Não consegui salvar o contrato. Tente novamente.",
+                };
+              }
               return {
+                ok: true,
                 contract_id: thread.id as string,
                 parcelas: input.parcelas ?? null,
                 promoted: true,
@@ -507,6 +611,7 @@ export const Route = createFileRoute("/api/chat")({
             .maybeSingle();
           if (recent) {
             return {
+              ok: true,
               contract_id: recent.id as string,
               parcelas: input.parcelas ?? null,
               deduped: true,
@@ -518,8 +623,15 @@ export const Route = createFileRoute("/api/chat")({
             .insert({ user_id: userId, ...basePayload } as never)
             .select("id")
             .single();
-          if (error) return { error: error.message };
-          return { contract_id: row.id as string, parcelas: input.parcelas ?? null };
+          if (error) {
+            console.error("[chat] criar_contrato insert error", error);
+            return {
+              ok: false,
+              error_code: "DB_ERROR",
+              message_pt: "Não consegui salvar o contrato. Tente novamente.",
+            };
+          }
+          return { ok: true, contract_id: row.id as string, parcelas: input.parcelas ?? null };
         }
 
         async function pdfCore(contract_id: string, parcelas: number | null) {
@@ -528,14 +640,42 @@ export const Route = createFileRoute("/api/chat")({
             .select("*")
             .eq("id", contract_id)
             .maybeSingle();
-          if (!contract) return { error: "Contrato não encontrado." };
-          if (!contract.client_id) return { error: "Contrato sem cliente." };
+          if (!contract) {
+            return { ok: false, error_code: "CONTRACT_NOT_FOUND", message_pt: "Contrato não encontrado." };
+          }
+          if (!contract.client_id) {
+            return { ok: false, error_code: "CONTRACT_INCOMPLETE", message_pt: "Contrato sem cliente." };
+          }
+          // Preflight: validar snapshot do vendedor antes de renderizar.
+          const tenantSnap = (contract.tenant_snapshot ?? null) as
+            | Parameters<typeof profileMissingFields>[0]
+            | null;
+          const missingProfile = profileMissingFields(tenantSnap);
+          if (missingProfile.length) {
+            return {
+              ok: false,
+              error_code: "PROFILE_INCOMPLETE",
+              missing_fields: missingProfile,
+              message_pt: `Faltam dados do seu perfil: ${missingProfile.join(", ")}. Abra Configurações para completar e tente novamente.`,
+            };
+          }
           const { data: cliente } = await supabase
             .from("clients")
             .select("*")
             .eq("id", contract.client_id)
             .maybeSingle();
-          if (!cliente) return { error: "Cliente não encontrado." };
+          if (!cliente) {
+            return { ok: false, error_code: "CLIENT_NOT_FOUND", message_pt: "Cliente não encontrado." };
+          }
+          const missingClient = clientMissingFields(cliente);
+          if (missingClient.length) {
+            return {
+              ok: false,
+              error_code: "CLIENT_INCOMPLETE",
+              missing_fields: missingClient,
+              message_pt: `Faltam dados do cliente: ${missingClient.join(", ")}.`,
+            };
+          }
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
           const { data: prof } = await supabase
             .from("profiles")
@@ -558,20 +698,30 @@ export const Route = createFileRoute("/api/chat")({
           }
           const { renderContractPdf } = await import("@/lib/contracts.pdf.server");
           const tenant = contract.tenant_snapshot as never;
-          const pdfBytes = await renderContractPdf({
-            tenant,
-            cliente: cliente as never,
-            produtos: (contract.produtos as never) ?? [],
-            valor_cents: contract.value_cents ?? 0,
-            forma_pagamento: (contract.forma_pagamento ?? "avista") as
-              | "avista"
-              | "parcelado"
-              | "misto",
-            entrada_cents: contract.entrada_cents ?? 0,
-            parcelas,
-            logoBytes,
-            logoMime,
-          });
+          let pdfBytes: Uint8Array;
+          try {
+            pdfBytes = await renderContractPdf({
+              tenant,
+              cliente: cliente as never,
+              produtos: (contract.produtos as never) ?? [],
+              valor_cents: contract.value_cents ?? 0,
+              forma_pagamento: (contract.forma_pagamento ?? "avista") as
+                | "avista"
+                | "parcelado"
+                | "misto",
+              entrada_cents: contract.entrada_cents ?? 0,
+              parcelas,
+              logoBytes,
+              logoMime,
+            });
+          } catch (e) {
+            console.error("[chat] renderContractPdf failed", e);
+            return {
+              ok: false,
+              error_code: "PDF_RENDER_FAILED",
+              message_pt: "Não foi possível gerar o PDF. Tente novamente em instantes.",
+            };
+          }
           const path = `${userId}/${contract.id}.pdf`;
           const { error: upErr } = await supabaseAdmin.storage
             .from("contract-pdfs")
@@ -579,13 +729,21 @@ export const Route = createFileRoute("/api/chat")({
               upsert: true,
               contentType: "application/pdf",
             });
-          if (upErr) return { error: upErr.message };
+          if (upErr) {
+            console.error("[chat] pdf upload failed", upErr);
+            return {
+              ok: false,
+              error_code: "PDF_UPLOAD_FAILED",
+              message_pt: "Não consegui salvar o PDF. Tente novamente.",
+            };
+          }
           await supabase.from("transactions").update({ pdf_path: path }).eq("id", contract.id);
           const { data: s } = await supabaseAdmin.storage
             .from("contract-pdfs")
             .createSignedUrl(path, 600);
-          return { pdf_path: path, signed_url: s?.signedUrl ?? null };
+          return { ok: true, pdf_path: path, signed_url: s?.signedUrl ?? null };
         }
+
 
         const result = streamText({
           model,
