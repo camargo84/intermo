@@ -595,6 +595,7 @@ export const Route = createFileRoute("/api/chat")({
             buscar_cliente,
             consultar_cep,
             upsert_cliente,
+            preflight_contrato,
             criar_contrato,
             gerar_pdf_contrato,
             registrar_pagamento_cliente,
