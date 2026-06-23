@@ -216,6 +216,24 @@ export const Route = createFileRoute("/api/chat")({
                 };
               }
               existingClient = r;
+            } else if (!input.cpf && !input.cnpj && body.contractId) {
+              // Hardening: se o modelo "esquecer" de passar client_id mas a
+              // transação corrente já tem um cliente vinculado, usa esse cliente
+              // como existente — evita pedir CPF/CNPJ de novo.
+              const { data: tx } = await supabase
+                .from("transactions")
+                .select("client_id")
+                .eq("id", body.contractId)
+                .maybeSingle();
+              if (tx?.client_id) {
+                const { data: r } = await supabase
+                  .from("clients")
+                  .select("id,name,cpf,cnpj")
+                  .eq("id", tx.client_id)
+                  .eq("user_id", userId)
+                  .maybeSingle();
+                if (r) existingClient = r;
+              }
             }
 
             const cpf = input.cpf ? onlyDigits(input.cpf) : existingClient?.cpf ?? null;
