@@ -168,6 +168,7 @@ export const gerarPdfContrato = createServerFn({ method: "POST" })
         .update({ tenant_snapshot: tenant as unknown as Record<string, unknown> } as never)
         .eq("id", contract.id);
     }
+    if (!tenant) throw new Error("Snapshot do tenant ausente.");
 
     // logo (download privado)
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
