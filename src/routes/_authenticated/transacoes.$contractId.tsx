@@ -127,6 +127,8 @@ function ContractDetailsPage() {
   const checkProfileFn = useServerFn(checkProfileReadiness);
   const getPdfFn = useServerFn(getContractPdfSignedUrl);
   const getSignedPdfFn = useServerFn(getSignedContractPdfUrl);
+  const createTokenFn = useServerFn(createSignatureToken);
+  const listTokensFn = useServerFn(listSignatureTokens);
 
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [downloading, setDownloading] = useState(false);
